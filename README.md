@@ -1,3 +1,4 @@
+
 # 🌿 EcoSmart - Plataforma de Agricultura Inteligente
 
 ## 📌 Descripción
@@ -88,3 +89,45 @@ Sigue los siguientes pasos para tener EcoSmart funcionando en tu equipo local (W
 ```bash
 git clone https://github.com/Ecosmart1/eco-smart.git
 cd eco-smart
+```
+### 2. Instalar dependencias del backend
+
+Esto instalará todos los paquetes necesarios para ejecutar el backend con Flask:
+
+```bash
+cd backend
+pip install -r requerimientos.txt
+```
+
+### 3. Ejecutar el servidor del backend
+Este comando inicia el backend en http://localhost:5000, donde responde a las solicitudes de la plataforma.
+Aunque el usuario nunca entra directamente a este enlace, este servidor procesa las peticiones que llegan desde el frontend (como iniciar sesión, mostrar sensores, enviar alertas, consultar la IA, etc.).
+```bash
+python configuracion.py
+```
+
+### 4. Instalar dependencias del frontend
+Esto descargará todas las dependencias necesarias para React en el frontend:
+```bash
+cd ../frontend
+npm install
+```
+
+### 5. Iniciar el servidor del frontend
+Abre automáticamente la aplicación web en http://localhost:3000:
+```bash
+npm start
+```
+
+### 6. Ejecutar el simulador de sensores
+Este módulo simula sensores agrícolas generando datos como humedad, temperatura y pH del suelo.
+Si está corriendo, el backend recibirá estos datos automáticamente, lo que permite activar alertas y alimentar el dashboard.
+```bash
+cd ../simulador
+npm install
+npm start
+```
+
+
+
+
