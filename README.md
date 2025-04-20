@@ -20,3 +20,13 @@ Entre sus funciones principales se incluyen:
 - Simulación de sensores para pruebas en entorno local.
 
 EcoSmart está pensado como una herramienta simple, modular y útil para distintos tipos de usuarios en el mundo agrícola.
+
+## ⚙️ Requisitos del sistema 
+
+Para ejecutar **EcoSmart** , necesitarás tener instalado lo siguiente:
+
+  * **Python:** Versión 3.9 o superior
+  * **Node.js:** Versión 18.x o superior
+  * **npm:** (Viene con Node.js)
+  * **Git:** Versión 2.x o superior
+  * **SQLite** 
