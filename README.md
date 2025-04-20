@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="ecosmarlogo.png" alt="EcoSmart Logo" width="180"/>
+  <img src="assets/ecosmarlogo.png" alt="EcoSmart Logo" width="180"/>
 </p>
 
 # 🌿 EcoSmart - Plataforma de Agricultura Inteligente
+
 
 ## 📌 Descripción
 
@@ -141,7 +142,41 @@ Los comandos de instalación son prácticamente iguales. Solo asegúrate de:
 - Tener permisos de ejecución para scripts (puedes usar `chmod +x archivo.py` si lo necesitas).
 - Usar `python3` y `pip3` en vez de `python` y `pip` si tu sistema lo requiere.
 
+## 🟢 Uso de la plataforma
 
+Una vez que el frontend está corriendo en `http://localhost:3000`, puedes:
 
+- Iniciar sesión con tus credenciales
+- Crear y gestionar parcelas y cultivos agrícolas
+- Ver el estado de humedad, temperatura y pH del suelo
+- Recibir alertas críticas si alguna variable supera umbrales
+- Consultar recomendaciones generadas por IA
+- Registrar actividades agrícolas desde el panel
+
+## ❗ Problemas comunes
+
+- **Error: 'npm' no se reconoce como un comando interno**  
+  → Asegúrate de tener Node.js instalado y agregado a las variables de entorno.
+
+- **Error de permisos en Mac/Linux**  
+  → Intenta con `chmod +x archivo.py` antes de ejecutarlo.
+
+- **El backend no responde**  
+  → Asegúrate de que el archivo `configuracion.py` esté corriendo antes de abrir el frontend.
+
+## 👥 Equipo de trabajo
+
+El desarrollo de **EcoSmart** ha sido realizado por el equipo **Los NN**, compuesto por cuatro integrantes que desempeñan roles complementarios para cubrir todas las áreas del proyecto:
+
+- **Víctor Quezada** — Diseño UX/UI  
+- **Mauricio Oyarce** — Backend  
+- **Juan Vásquez** — Frontend  
+- **Vicente Zapata** — Integración de IA
+
+## 📬 Contacto
+
+Para consultas sobre el proyecto **EcoSmart**, puedes escribir directamente a los integrantes del equipo **Los NN** mediante GitHub o correo institucional.
+
+> Proyecto académico — Universidad de Talca, 2025.
 
 
