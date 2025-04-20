@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="ecosmarlogo.png" width="150" />
+  <img src="ecosmarlogo.png" alt="EcoSmart Logo" width="180"/>
 </p>
 
 # 🌿 EcoSmart - Plataforma de Agricultura Inteligente
