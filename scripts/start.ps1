@@ -2,7 +2,7 @@
 
 Write-Host "Iniciando el Backend..."
 cd backend
-#  Se omite la activación del entorno virtual
+
 Start-Process -FilePath "flask" -ArgumentList "run --debug"
 
 Write-Host "Iniciando el Frontend..."
