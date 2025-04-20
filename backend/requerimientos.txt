@@ -1,0 +1,6 @@
+Flask==2.3.2  # El framework web de Python que se está utilizando.
+Flask-SQLAlchemy==3.0.3 # Para interactuar con la base de datos 
+Flask-Migrate==4.0.5 # Para manejar migraciones de la base de datos.
+Flask-RESTful==2.0.0 # En caso de API Rest
+requests==2.31.0  #  Para hacer peticiones HTTP
+psycopg2-binary==2.9.9  #  Para PostgreSQL
