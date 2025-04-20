@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="assets/logo.png" alt="ecosmarlogo.png" width="150" />
+</p>
 
 # 🌿 EcoSmart - Plataforma de Agricultura Inteligente
 
@@ -127,6 +130,17 @@ cd ../simulador
 npm install
 npm start
 ```
+
+---
+
+### 💡 Nota para usuarios de MacOS / Linux
+
+Los comandos de instalación son prácticamente iguales. Solo asegúrate de:
+
+- Usar `/` en lugar de `\` para rutas si estás usando terminal.
+- Tener permisos de ejecución para scripts (puedes usar `chmod +x archivo.py` si lo necesitas).
+- Usar `python3` y `pip3` en vez de `python` y `pip` si tu sistema lo requiere.
+
 
 
 
