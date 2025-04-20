@@ -19,7 +19,3 @@ if __name__ == '__main__':
     num_lecturas = 10
     datos_simulados = simular_sensores(num_lecturas)
     print(json.dumps(datos_simulados, indent=2))
-
-    #  Opcional: Guardar los datos en un archivo
-    #  with open("datos_sensores.json", "w") as f:
-    #  json.dump(datos_simulados, f, indent=2)
