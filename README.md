@@ -1,2 +1,3 @@
-# eco-smart
-app ecológica para eficiencia y control
+#EcoSmart - Plataforma de agricultura inteligente
+
+
