@@ -9,6 +9,7 @@ echo "Dependencias del Backend instaladas."
 echo "Instalando dependencias del Frontend (JavaScript)..."
 cd ../frontend
 npm install
+npm install @fortawesome/fontawesome-free
 echo "Dependencias del Frontend instaladas."
 
 echo "¡Todas las dependencias instaladas!"
