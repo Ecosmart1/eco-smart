@@ -1,0 +1,8 @@
+Flask2.3.2  
+Flask-SQLAlchemy3.0.3 
+Flask-Migrate4.0.5  
+Flask-RESTful0.3.10  
+requests2.31.0  
+openai1.69.0   
+python-dotenv
+psycopg2-binary==2.9.9  
