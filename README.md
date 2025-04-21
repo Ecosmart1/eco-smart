@@ -52,6 +52,17 @@ EcoSmart está pensado como una herramienta simple, modular y útil para distint
   - `servicios/` - Servicios del simulador
 - `package.json` - Dependencias
 
+### `Scripts/` Scripts automatización del proyecto
+Esta carpeta contiene scripts que permiten ejecutar y configurar rápidamente todo el entorno de desarrollo de **EcoSmart**, tanto en sistemas Windows como Mac/Linux.
+
+| Script                    | Descripción                                                                 |
+|---------------------------|------------------------------------------------------------------------------|
+| `start.sh` / `start.ps1`         | Inicia simultáneamente el backend y el frontend en entorno local.        |
+| `setup.sh` / `setup.ps1`         | Instala todas las dependencias necesarias del proyecto (Python y Node.js).|
+| `init_db.py`                     | Inicializa la base de datos PostgreSQL creando automáticamente las tablas.|
+| `simulate_data.py`              | Simula datos falsos de sensores (humedad, pH, temperatura) para pruebas.  |
+| `run_test.sh` / `run_test.ps1`  | Ejecuta pruebas básicas o de integración para validar que todo funcione.  |
+
 ---
 
 ## 🛠️ Tecnologías
