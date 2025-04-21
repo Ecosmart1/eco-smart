@@ -26,31 +26,36 @@ EcoSmart está pensado como una herramienta simple, modular y útil para distint
 
 ## 🗂️ Estructura del proyecto
 
-### `frontend/` - Interfaz de usuario
-- `public/` - Archivos estáticos
-- `src/` - Código fuente
-  - `componentes/` - Componentes reusables
-  - `paginas/` - Vistas principales
-  - `servicios/` - Servicios y APIs
-- `App.js` - Componente principal
-- `index.js` - Punto de entrada
-- `package.json` - Dependencias
+### **EcoSmart/** - Proyecto principal  
+- **frontend/** - Interfaz de usuario  
+  - **public/** - Archivos estáticos  
+  - **src/** - Código fuente  
+    - **assets/** - Archivos estáticos como imágenes y estilos  
+    - **componentes/** - Componentes reusables  
+    - **paginas/** - Vistas principales  
+    - **App.js** - Componente principal  
+    - **index.js** - Punto de entrada  
+  - **package.json** - Dependencias y scripts del frontend  
+  - **.gitignore** - Archivos ignorados por Git en el frontend  
 
-### `backend/` - Servidor y lógica de negocio
-- `app/` - Aplicación principal
-  - `__init__.py` - Inicialización
-  - `rutas/` - Endpoints de la API
-  - `modulos/` - Módulos funcionales
-  - `servicios/` - Servicios externos
-- `configuracion.py` - Configuración
-- `requerimientos.txt` - Dependencias
+- **backend/** - Servidor y lógica de negocio  
+  - **src/** - Código fuente  
+    - **base de datos/** - Gestión de la base de datos  
+    - **rutas/** - Endpoints de la API  
+    - **modelos/** - Modelos de datos y estructuras clave  
+    - **servicios/** - Servicios externos y funciones auxiliares  
+    - **main.py** - Aplicación principal que inicializa el servidor  
+    - **config.py** - Configuración general del backend  
+  - **requerimientos.txt** - Dependencias del backend  
+  - **.env** - Variables de entorno para claves y configuraciones  
+  - **.gitignore** - Archivos ignorados por Git en el backend  
 
-### `simulador/` - Simulador de sensores agrícolas
-- `src/` - Código fuente
-  - `componentes/` - Componentes del simulador
-  - `paginas/` - Interfaces del simulador
-  - `servicios/` - Servicios del simulador
-- `package.json` - Dependencias
+- **simulador/** - Simulador de sensores agrícolas  
+  - **src/** - Código fuente del simulador  
+    - **__init__.py** - Inicialización del módulo  
+    - **sensor.py** - Algoritmo principal de simulación de datos  
+    - **config.py** - Configuración inicial del simulador (parámetros)  
+    - **logs/** - Registros generados por el simulador  
 
 ### `Scripts/` Scripts automatización del proyecto
 Esta carpeta contiene scripts que permiten ejecutar y configurar rápidamente todo el entorno de desarrollo de **EcoSmart**, tanto en sistemas Windows como Mac/Linux.
