@@ -9,7 +9,6 @@ Write-Host "Dependencias del Backend instaladas."
 Write-Host "Instalando dependencias del Frontend (JavaScript)..."
 cd ../frontend
 npm install
-npm install @fortawesome/fontawesome-free
 Write-Host "Dependencias del Frontend instaladas."
 
 Write-Host "¡Todas las dependencias instaladas!"
