@@ -5,14 +5,12 @@ import os
 
 app = Flask(__name__)
 
-# Configura la conexión a la base de datos SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI') or 'sqlite:///eco-smart.db'
+# Configura la conexión a la base de datos PostgreSQL
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI') or 'postgresql://usuario:contraseña@localhost:5432/nombre_de_la_base_de_datos'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Para evitar warnings
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-
-# Define tus modelos aquí
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(80), unique=True, nullable=False)
@@ -57,4 +55,3 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # Crea las tablas
         print("¡Base de datos inicializada!")
-
