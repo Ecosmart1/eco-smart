@@ -96,6 +96,9 @@ Antes de ejecutar **EcoSmart** en tu equipo local, asegúrate de tener instalada
 - **[Git](https://git-scm.com/)**  
   Para clonar el repositorio desde GitHub y gestionar versiones.
 
+- **Tener conexión a internet**  
+  Para poder realizar las consultas a la IA.
+
 ---
 
 ### ✅ Instalación paso a paso
