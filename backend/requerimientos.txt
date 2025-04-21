@@ -3,5 +3,6 @@ Flask-SQLAlchemy==3.0.3 # Para interactuar con la base de datos
 Flask-Migrate==4.0.5 # Para manejar migraciones de la base de datos.
 Flask-RESTful==0.3.10 # En caso de API Rest
 requests==2.31.0  #  Para hacer peticiones HTTP
-psycopg2-binary==2.9.9  #  Para PostgreSQL
 openai==1.69.0  # Librerías de OpenAI para realizar consultas a DeepSeek
+
+#psycopg2-binary==2.9.9  #  Para PostgreSQL
