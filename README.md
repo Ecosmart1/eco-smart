@@ -88,9 +88,6 @@ Antes de ejecutar **EcoSmart** en tu equipo local, asegúrate de tener instalada
 - **[Python](https://www.python.org/downloads/)** (v3.10 o superior)  
   Requerido para levantar el backend (Flask).
 
-- **pip**  
-  Gestor de paquetes para Python (incluido con Python).
-
 - **[Git](https://git-scm.com/)**  
   Para clonar el repositorio desde GitHub y gestionar versiones.
 
