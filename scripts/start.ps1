@@ -9,4 +9,4 @@ Write-Host "Iniciando el Frontend..."
 cd ../frontend
 Start-Process -FilePath "npm" -ArgumentList "start"
 
-Write-Host "¡Entorno local iniciado! Abre el frontend en tu navegador."
+Write-Host "¡Entorno local iniciado!"
