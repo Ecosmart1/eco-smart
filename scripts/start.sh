@@ -1,15 +1,14 @@
 #!/bin/bash
 
 echo "Iniciando el Backend..."
-cd backend
+cd backend/app  # Navega al directorio 'app'
 
-python app.py &  #  Ejecuta Flask en segundo plano (&)
+python __init__.py &  # Ejecuta el archivo __init__.py
 
 echo "Iniciando el Frontend..."
 cd ../frontend
-npm start &  #  Ejecuta React en segundo plano (&)
+npm start &  # Ejecuta React en segundo plano (&)
 
-echo "¡Entorno local iniciado! Abre el frontend en tu navegador."
+echo "¡Entorno local iniciado!"
 
-#  Espera a que terminen los procesos (opcional)
 wait
