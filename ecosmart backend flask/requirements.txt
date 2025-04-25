@@ -1,0 +1,8 @@
+Flask==2.3.2  
+Flask-SQLAlchemy==3.0.3 
+Flask-Migrate==4.0.5  
+Flask-RESTful==0.3.10  
+requests==2.31.0  
+openai==1.69.0   
+python-dotenv
+flask-cors==4.0.0
