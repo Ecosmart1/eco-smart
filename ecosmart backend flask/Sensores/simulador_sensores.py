@@ -137,6 +137,9 @@ def simular_condiciones(condicion):
     return jsonify({"mensaje": mensaje})
 
 
+@app.route('/')
+def home():
+    return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
