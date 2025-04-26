@@ -22,7 +22,7 @@ fi
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-gnome-terminal -- bash -c "cd '$(pwd)'; source venv/bin/activate; python3 Sensores/Config.py; exec bash"
+gnome-terminal -- bash -c "cd '$(pwd)'; source venv/bin/activate; python3 Sensores/simulador_sensores.py; exec bash"
 deactivate
 cd ../..
 
