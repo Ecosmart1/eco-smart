@@ -4,195 +4,328 @@
 
 # 🌿 EcoSmart - Plataforma de Agricultura Inteligente
 
-
 ## 📌 Descripción
 
-**EcoSmart** es una plataforma web de agricultura inteligente que permite a agricultores y técnicos monitorear cultivos, gestionar parcelas, recibir alertas en tiempo real y tomar decisiones basadas en datos.
+**EcoSmart** es una plataforma web de agricultura inteligente que permite a agricultores y técnicos monitorear cultivos, gestionar sensores, recibir alertas en tiempo real y tomar decisiones basadas en datos simulados o reales.
 
-La plataforma entrega recomendaciones automáticas generadas por inteligencia artificial y visualiza información clave como humedad, temperatura, pH del suelo y pronóstico climático. Su objetivo es mejorar la eficiencia en el uso de recursos y optimizar el rendimiento de los cultivos.
+La plataforma entrega recomendaciones automáticas y visualiza información clave como humedad, temperatura, pH del suelo y nutrientes. Su objetivo es mejorar la eficiencia en el uso de recursos y optimizar el rendimiento de los cultivos.
 
 Entre sus funciones principales se incluyen:
 
-- Visualización del estado de los cultivos desde un dashboard central.
-- Gestión de múltiples parcelas por usuario.
-- Sistema de alertas críticas personalizadas según condiciones del terreno o el clima.
-- Asistente inteligente que sugiere acciones específicas como riego o aplicación de fertilizantes.
-- Registro de actividades agrícolas.
-- Simulación de sensores para pruebas en entorno local.
-
-EcoSmart está pensado como una herramienta simple, modular y útil para distintos tipos de usuarios en el mundo agrícola.
+- Visualización del estado de los sensores desde un dashboard central.
+- Simulación de sensores agrícolas para pruebas sin hardware real.
+- Sistema de alertas y condiciones adversas simuladas.
+- Panel de control interactivo para iniciar/detener simulaciones y cambiar condiciones.
+- Código modular y fácil de desplegar en cualquier entorno.
 
 ---
 
 ## 🗂️ Estructura del proyecto
 
-### **EcoSmart/** - Proyecto principal  
-- **frontend/** - Interfaz de usuario  
-  - **public/** - Archivos estáticos  
-  - **src/** - Código fuente  
-    - **assets/** - Archivos estáticos como imágenes y estilos  
-    - **componentes/** - Componentes reusables  
-    - **paginas/** - Vistas principales  
-    - **App.js** - Componente principal  
-    - **index.js** - Punto de entrada  
-  - **package.json** - Dependencias y scripts del frontend  
-  - **.gitignore** - Archivos ignorados por Git en el frontend  
 
-- **backend/** - Servidor y lógica de negocio  
-  - **src/** - Código fuente  
-    - **base de datos/** - Gestión de la base de datos  
-    - **rutas/** - Endpoints de la API  
-    - **modelos/** - Modelos de datos y estructuras clave  
-    - **servicios/** - Servicios externos y funciones auxiliares  
-    - **main.py** - Aplicación principal que inicializa el servidor  
-    - **config.py** - Configuración general del backend  
-  - **requerimientos.txt** - Dependencias del backend  
-  - **.env** - Variables de entorno para claves y configuraciones  
-  - **.gitignore** - Archivos ignorados por Git en el backend  
+EcoSmart/  
+│  
+├── backend/  # Servidor y lógica de negocio (Flask)  
+│   ├── src/  
+│   │   ├── sensores/  # Módulo de sensores  
+│   │   │   ├── simulador_sensores.py  # Simulación de sensores  
+│   │   │   ├── sensor.py  # Lógica de sensores y red  
+│   │   │   ├── __init__.py  # Inicialización del módulo  
+│   │   ├── rutas/  # Endpoints de la API  
+│   │   ├── modelos/  # Modelos de datos  
+│   │   ├── servicios/  # Lógica de negocio y funciones auxiliares  
+│   ├── requirements.txt  # Dependencias Python  
+│   ├── .gitignore  # Archivos ignorados en Git  
+│   ├── config.py  # Configuración general del backend  
+│   ├── main.py  # Archivo principal que inicia el backend  
+│  
+├── frontend/  # Interfaz de usuario (React)  
+│   ├── public/  # Archivos estáticos  
+│   ├── src/  
+│   │   ├── componentes/  # Componentes reusables  
+│   │   ├── paginas/  # Vistas principales  
+│   │   ├── estilos/  # Archivos CSS  
+│   │   ├── App.jsx  # Componente principal  
+│   │   ├── main.jsx  # Punto de entrada  
+│   ├── package.json  # Dependencias y scripts  
+│   ├── vite.config.js  # Configuración de Vite  
+│   ├── .gitignore  # Archivos ignorados en Git  
+│  
+├── simulador/  # Simulador de sensores agrícolas  
+│   ├── src/  
+│   │   ├── componentes/  # Componentes del simulador  
+│   │   ├── paginas/  # Interfaces del simulador  
+│   │   ├── servicios/  # Servicios del simulador  
+│   │   ├── sensor.py  # Algoritmo principal de simulación de datos  
+│   │   ├── config.py  # Configuración de parámetros de simulación  
+│   │   ├── logs/  # Registros generados por el simulador  
+│  
+├── scripts/  # Scripts para ejecutar el proyecto  
+│   ├── start-ecosmart.ps1  # Script de inicio para Windows  
+│   ├── start-ecosmart.sh  # Script de inicio para Linux/Mac  
+│  
+├── assets/  # Recursos gráficos y archivos estáticos  
+│   ├── ecosmart-logo.png  # Logotipo del proyecto  
+│  
+└── README.md  # Documentación principal del proyecto  
 
-- **simulador/** - Simulador de sensores agrícolas  
-  - **src/** - Código fuente del simulador  
-    - **__init__.py** - Inicialización del módulo  
-    - **sensor.py** - Algoritmo principal de simulación de datos  
-    - **config.py** - Configuración inicial del simulador (parámetros)  
-    - **logs/** - Registros generados por el simulador  
-
-### `Scripts/` Scripts automatización del proyecto
-Esta carpeta contiene scripts que permiten ejecutar y configurar rápidamente todo el entorno de desarrollo de **EcoSmart**, tanto en sistemas Windows como Mac/Linux.
-
-| Script                    | Descripción                                                                 |
-|---------------------------|------------------------------------------------------------------------------|
-| `start.sh` / `start.ps1`         | Inicia simultáneamente el backend y el frontend en entorno local.        |
-| `setup.sh` / `setup.ps1`         | Instala todas las dependencias necesarias del proyecto (Python y Node.js).|
-| `init_db.py`                     | Inicializa la base de datos PostgreSQL creando automáticamente las tablas.|
-| `simulate_data.py`              | Simula datos falsos de sensores (humedad, pH, temperatura) para pruebas.  |
-| `run_test.sh` / `run_test.ps1`  | Ejecuta pruebas básicas o de integración para validar que todo funcione.  |
 
 ---
 
 ## 🛠️ Tecnologías
 
-- **Frontend**: React.js
-- **Backend**: Python con Flask
-- **Base de Datos**: PostgreSQL
-- **IA**: Deepseek
-- **Simulación**: JavaScript
-- **APIs externas**: OpenWeatherMap
+- **Frontend:** React.js (Vite)
+- **Backend:** Python con Flask
+- **Simulación:** Python (simulador de sensores)
+- **APIs:** Flask Cors
+- **Automatización:** Scripts Bash y PowerShell
 
 ---
 
-## ⚙️ Instalación
+## ⚙️ Instalación y ejecución rápida
 
 ### 📌 Requisitos previos
 
-Antes de ejecutar **EcoSmart** en tu equipo local, asegúrate de tener instaladas las siguientes herramientas:
-
-- **[Node.js](https://nodejs.org/)** (v18 o superior)  
-  Necesario para ejecutar el frontend (React) y el simulador.
-
-- **[Python](https://www.python.org/downloads/)** (v3.10 o superior)  
-  Requerido para levantar el backend (Flask).
-
-- **[Git](https://git-scm.com/)**  
-  Para clonar el repositorio desde GitHub y gestionar versiones.
-
-- **Tener conexión a internet**  
-  Para poder realizar las consultas a la IA.
+- **[Node.js](https://nodejs.org/)** (v18 o superior)
+- **[Python](https://www.python.org/downloads/)** (v3.10 o superior)
+- **[Git](https://git-scm.com/)**
+- **Permisos para ejecutar scripts** (`.sh` en Linux/Mac, `.ps1` en Windows)
 
 ---
 
-### ✅ Instalación paso a paso
+### 🚀 Instalación automática (recomendado)
 
-Sigue los siguientes pasos para tener EcoSmart funcionando en tu equipo local (Windows):
+### **Windows**
 
-#### 1. Clonar el repositorio
+.\start-ecosmart.ps1
+
+### **Linux/Mac**
+
+chmod +x start-ecostmart.sh
+./start-ecostmart.sh
+
+Estos scripts:
+
+- **Crean y activan el entorno virtual de Python.**
+- **Instalan dependencias del backend y frontend.**
+- **Verifican Node.js y npm (e instalan si es posible en Linux).**
+- **Inician el backend Flask y el frontend React en terminales separadas.**
+
+
+### 📝** Instalación manual (alternativa)**
+
+**1. Clona el repositorio**
+
+git clone https://github.com/Ecosmart1/eco-smart.git
+cd eco-smart
+
+**2. Backend (Flask)**
+
+cd "ecosmart backend flask"
+python -m venv venv
+# Activa el entorno virtual:
+# Windows:
+.\venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+pip install -r requirements.txt
+python Sensores/simulador_sensores.py
+
+**3. Frontend (React)**
+
+cd "../Ecosmart frontend react"
+npm install
+npm run dev
+
+🟢 Uso de la plataforma
+- Accede a http://localhost:5173 para la interfaz web.
+- El backend responde en http://localhost:5000 y muestra un mensaje de estado.
+- Usa el panel de control para iniciar/detener la simulación y cambiar condiciones.
+
+❗ Problemas comunes
+Node.js o npm no instalados:
+Instálalos manualmente desde https://nodejs.org/.
+
+Permisos en scripts Linux/Mac:
+Usa chmod +x start-ecostmart.sh antes de ejecutarlo.
+
+El backend no responde:
+Asegúrate de que el archivo simulador_sensores.py esté corriendo y que el entorno virtual esté activado.
+
+
+### 👥 **Equipo de trabajo**
+- Víctor Quezada — UX/UI
+- Mauricio Oyarce — Backend
+- Juan Vásquez — Frontend
+- Vicente Zapata — IA
+
+Claro, aquí tienes un ejemplo de README.md adaptado a tu estructura real, scripts y enfoque, siguiendo el estilo del que ya tienes en el repositorio:
+
+```md
+<p align="center">
+  <img src="assets/ecosmarlogo.png" alt="EcoSmart Logo" width="180"/>
+</p>
+
+# 🌿 EcoSmart - Plataforma de Agricultura Inteligente
+
+## 📌 Descripción
+
+**EcoSmart** es una plataforma web de agricultura inteligente que permite a agricultores y técnicos monitorear cultivos, gestionar sensores, recibir alertas en tiempo real y tomar decisiones basadas en datos simulados o reales.
+
+La plataforma entrega recomendaciones automáticas y visualiza información clave como humedad, temperatura, pH del suelo y nutrientes. Su objetivo es mejorar la eficiencia en el uso de recursos y optimizar el rendimiento de los cultivos.
+
+Entre sus funciones principales se incluyen:
+
+- Visualización del estado de los sensores desde un dashboard central.
+- Simulación de sensores agrícolas para pruebas sin hardware real.
+- Sistema de alertas y condiciones adversas simuladas.
+- Panel de control interactivo para iniciar/detener simulaciones y cambiar condiciones.
+- Código modular y fácil de desplegar en cualquier entorno.
+
+---
+
+## 🗂️ Estructura del proyecto
+
+```
+EcoSmart/
+│
+├── ecosmart backend flask/
+│   ├── Sensores/
+│   │   ├── simulador_sensores.py   # Backend principal Flask
+│   │   ├── Sensor.py               # Lógica de sensores y red
+│   │   └── __init__.py
+│   ├── requirements.txt            # Dependencias Python
+│   └── .gitignore
+│
+├── Ecosmart frontend react/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   ├── App.css
+│   │   └── index.css
+│   ├── package.json
+│   ├── vite.config.js
+│   └── .gitignore
+│
+├── start-ecosmart.ps1              # Script de inicio para Windows
+├── start-ecostmart.sh              # Script de inicio para Linux/Mac
+├── README.md
+└── assets/
+    └── ecosmarlogo.png
+```
+
+---
+
+## 🛠️ Tecnologías
+
+- **Frontend:** React.js (Vite)
+- **Backend:** Python con Flask
+- **Simulación:** Python (simulador de sensores)
+- **APIs:** Flask RESTful
+- **Automatización:** Scripts Bash y PowerShell
+
+---
+
+## ⚙️ Instalación y ejecución rápida
+
+### 📌 Requisitos previos
+
+- **[Node.js](https://nodejs.org/)** (v18 o superior)
+- **[Python](https://www.python.org/downloads/)** (v3.10 o superior)
+- **[Git](https://git-scm.com/)**
+- **Permisos para ejecutar scripts** (`.sh` en Linux/Mac, `.ps1` en Windows)
+
+---
+
+### 🚀 Instalación automática (recomendado)
+
+#### **Windows**
+
+```powershell
+# Desde la raíz del proyecto
+start-ecosmart.ps1
+```
+
+#### **Linux/Mac**
+
+```bash
+# Desde la raíz del proyecto
+chmod +x start-ecostmart.sh
+start-ecostmart.sh
+```
+
+Estos scripts:
+- Crean y activan el entorno virtual de Python.
+- Instalan dependencias del backend y frontend.
+- Verifican Node.js y npm (e instalan si es posible en Linux).
+- Inician el backend Flask y el frontend React en terminales separadas.
+
+---
+
+### 📝 Instalación manual (alternativa)
+
+#### 1. Clona el repositorio
+
 ```bash
 git clone https://github.com/Ecosmart1/eco-smart.git
 cd eco-smart
 ```
-### 2. Instalar dependencias del backend
 
-Esto instalará todos los paquetes necesarios para ejecutar el backend con Flask:
+#### 2. Backend (Flask)
 
 ```bash
-cd backend
-pip install -r requerimientos.txt
+cd "ecosmart backend flask"
+python -m venv venv
+# Activa el entorno virtual:
+# Windows:
+.\venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+pip install -r requirements.txt
+python simulador_sensores.py
 ```
 
-### 3. Ejecutar el servidor del backend
-Este comando inicia el backend en http://localhost:5000, donde responde a las solicitudes de la plataforma.
-Aunque el usuario nunca entra directamente a este enlace, este servidor procesa las peticiones que llegan desde el frontend (como iniciar sesión, mostrar sensores, enviar alertas, consultar la IA, etc.).
-```bash
-python configuracion.py
-```
+#### 3. Frontend (React)
 
-### 4. Instalar dependencias del frontend
-Esto descargará todas las dependencias necesarias para React en el frontend:
 ```bash
-cd ../frontend
+cd "../../Ecosmart frontend react"
 npm install
-```
-
-### 5. Iniciar el servidor del frontend
-Abre automáticamente la aplicación web en http://localhost:3000:
-```bash
-npm start
-```
-
-### 6. Ejecutar el simulador de sensores
-Este módulo simula sensores agrícolas generando datos como humedad, temperatura y pH del suelo.
-Si está corriendo, el backend recibirá estos datos automáticamente, lo que permite activar alertas y alimentar el dashboard.
-```bash
-cd ../simulador
-npm install
-npm start
+npm run dev
 ```
 
 ---
 
-### 💡 Nota para usuarios de MacOS / Linux
-
-Los comandos de instalación son prácticamente iguales. Solo asegúrate de:
-
-- Usar `/` en lugar de `\` para rutas si estás usando terminal.
-- Tener permisos de ejecución para scripts (puedes usar `chmod +x archivo.py` si lo necesitas).
-- Usar `python3` y `pip3` en vez de `python` y `pip` si tu sistema lo requiere.
-
 ## 🟢 Uso de la plataforma
 
-Una vez que el frontend está corriendo en `http://localhost:3000`, puedes:
+- Accede a [http://localhost:5173](http://localhost:5173) para la interfaz web.
+- El backend responde en [http://localhost:5000](http://localhost:5000) y muestra un mensaje de estado.
+- Usa el panel de control para iniciar/detener la simulación y cambiar condiciones.
 
-- Iniciar sesión con tus credenciales
-- Crear y gestionar parcelas y cultivos agrícolas
-- Ver el estado de humedad, temperatura y pH del suelo
-- Recibir alertas críticas si alguna variable supera umbrales
-- Consultar recomendaciones generadas por IA
-- Registrar actividades agrícolas desde el panel
+---
 
 ## ❗ Problemas comunes
 
-- **Error: 'npm' no se reconoce como un comando interno**  
-  → Asegúrate de tener Node.js instalado y agregado a las variables de entorno.
+- **Node.js o npm no instalados:**  
+  Instálalos manualmente desde [nodejs.org](https://nodejs.org/).
 
-- **Error de permisos en Mac/Linux**  
-  → Intenta con `chmod +x archivo.py` antes de ejecutarlo.
+- **Permisos en scripts Linux/Mac:**  
+  Usa `chmod +x start-ecostmart.sh` antes de ejecutarlo.
 
-- **El backend no responde**  
-  → Asegúrate de que el archivo `configuracion.py` esté corriendo antes de abrir el frontend.
+- **El backend no responde:**  
+  Asegúrate de que el archivo `simulador_sensores.py` esté corriendo y que el entorno virtual esté activado.
+
+---
 
 ## 👥 Equipo de trabajo
 
-El desarrollo de **EcoSmart** ha sido realizado por el equipo **Los NN**, compuesto por cuatro integrantes que desempeñan roles complementarios para cubrir todas las áreas del proyecto:
-
-- **Víctor Quezada** — Diseño UX/UI  
+- **Víctor Quezada** — UX/UI  
 - **Mauricio Oyarce** — Backend  
 - **Juan Vásquez** — Frontend  
-- **Vicente Zapata** — Integración de IA
+- **Vicente Zapata** — IA
 
-## 📬 Contacto
-
-Para consultas sobre el proyecto **EcoSmart**, puedes escribir directamente a los integrantes del equipo **Los NN** mediante GitHub o correo institucional.
+---
 
 > Proyecto académico — Universidad de Talca, 2025.
-
-
+```
