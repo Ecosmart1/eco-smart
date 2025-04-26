@@ -32,10 +32,14 @@ if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
     if sudo -n true 2>/dev/null; then
         echo "Instalando Node.js y npm con sudo..."
         sudo apt update
-        sudo apt install -y nodejs npm
-    else
-        echo "No tienes permisos sudo sin contraseña. Por favor instala Node.js y npm manualmente."
-        exit 1
+        sudo apt install nodejs
+        sudo apt install npm 
+        if command -v node &> /dev/null && command -v npm &> /dev/null; then
+            echo "Node.js y npm instalados correctamente."
+        else
+            echo "Error al instalar Node.js y npm. Por favor instálalos manualmente."
+            exit 1
+        fi
     fi
 else
     echo "Node.js y npm ya están instalados."
