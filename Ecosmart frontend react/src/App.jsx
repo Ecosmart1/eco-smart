@@ -6,10 +6,10 @@ function App() {
   const [datos, setDatos] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // URL de la API - cambia a tu dirección del servidor Flask
+  const [simulacionActiva, setSimulacionActiva] = useState(false);
+
   const API_URL = 'http://localhost:5000/api';
-  
+
   // Obtener lista de sensores
   useEffect(() => {
     const fetchSensores = async () => {
@@ -26,17 +26,28 @@ function App() {
         setLoading(false);
       }
     };
-    
     fetchSensores();
-    
-    // Configurar actualización periódica de datos
-    const interval = setInterval(() => {
-      fetchDatosSensores();
-    }, 5000); // Actualizar cada 5 segundos
-    
-    return () => clearInterval(interval);
   }, []);
-  
+
+  // Fetch de datos periódicamente solo si la simulación está activa
+  useEffect(() => {
+    let interval;
+    if (simulacionActiva) {
+      interval = setInterval(() => {
+        fetchDatosSensores();
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [simulacionActiva]);
+
+  // Fetch único cuando la simulación se detiene (para mostrar últimos datos)
+  useEffect(() => {
+    if (!simulacionActiva) {
+      fetchDatosSensores();
+    }
+    // eslint-disable-next-line
+  }, [simulacionActiva]);
+
   // Función para obtener datos actuales de los sensores
   const fetchDatosSensores = async () => {
     try {
@@ -50,7 +61,7 @@ function App() {
       setError(err.message);
     }
   };
-  
+
   // Iniciar simulación
   const iniciarSimulacion = async () => {
     try {
@@ -59,11 +70,12 @@ function App() {
       });
       const data = await response.json();
       alert(data.mensaje);
+      setSimulacionActiva(true);
     } catch (err) {
       setError(err.message);
     }
   };
-  
+
   // Detener simulación
   const detenerSimulacion = async () => {
     try {
@@ -72,11 +84,12 @@ function App() {
       });
       const data = await response.json();
       alert(data.mensaje);
+      setSimulacionActiva(false);
     } catch (err) {
       setError(err.message);
     }
   };
-  
+
   // Simular condición específica
   const simularCondicion = async (condicion) => {
     try {
@@ -93,7 +106,7 @@ function App() {
   if (loading) {
     return <div className="loading">Cargando sensores...</div>;
   }
-  
+
   if (error) {
     return <div className="error">Error: {error}</div>;
   }
@@ -106,9 +119,9 @@ function App() {
         <h2>Panel de Control</h2>
         <div className="buttons">
           <button onClick={iniciarSimulacion}>Iniciar Simulación</button>
-            <div className="buttons-terminar">
-              <button onClick={detenerSimulacion}>Detener Simulación</button>
-            </div>
+          <div className="buttons-terminar">
+            <button onClick={detenerSimulacion}>Detener Simulación</button>
+          </div>
         </div>
         
         <div className="conditions">
