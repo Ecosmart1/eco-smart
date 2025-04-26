@@ -5,6 +5,7 @@ if (-not (Test-Path "venv")) {
 }
 . .\venv\Scripts\Activate.ps1
 pip install --upgrade pip
+pip install pandas
 pip install -r requirements.txt
 
 # Abrir una nueva ventana de PowerShell para el backend

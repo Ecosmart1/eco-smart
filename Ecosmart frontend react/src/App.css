@@ -45,6 +45,10 @@ button:hover {
   background-color: #e74c3c;
 }
 
+.buttons-exportar_csv button{
+  background-color: #4333d4;
+}
+
 .conditions button {
   background-color: #2ecc71;
 }

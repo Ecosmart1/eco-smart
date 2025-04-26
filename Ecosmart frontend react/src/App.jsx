@@ -90,6 +90,14 @@ function App() {
     }
   };
 
+  const exportar_csv = async () => {
+    try {
+      window.open(`${API_URL}/exportar_csv`, '_blank');
+    } catch (err) {
+      setError(err.message);
+    } 
+  };
+
   // Simular condición específica
   const simularCondicion = async (condicion) => {
     try {
@@ -121,6 +129,9 @@ function App() {
           <button onClick={iniciarSimulacion}>Iniciar Simulación</button>
           <div className="buttons-terminar">
             <button onClick={detenerSimulacion}>Detener Simulación</button>
+          </div>
+          <div className="buttons-exportar">
+            <button onClick={exportar_csv}>Exportar Datos</button>
           </div>
         </div>
         

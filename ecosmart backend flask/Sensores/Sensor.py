@@ -14,15 +14,36 @@ class Sensor:
         self.ultima_lectura = None
         self.historial = []
     
+
+
+
+
     def generar_dato(self):
-        dato = round(random.uniform(self.valor_minimo, self.valor_maximo), 5)
+        if self.ultima_lectura is None:
+            # Primera medición: valor aleatorio dentro del rango
+            valor = round(random.uniform(self.valor_minimo, self.valor_maximo), 2)
+        else:
+            anterior = self.ultima_lectura["valor"]
+            if self.tipo == "Temperatura":
+                # Cambios suaves: +/- 0.2 a 0.8 grados por medición
+                cambio = random.uniform(-0.8, 0.8)
+            elif self.tipo == "Humedad":
+                    cambio = random.uniform(-2, 2)
+            elif self.tipo == "pH del suelo":
+                    cambio = random.uniform(-0.05, 0.05)
+            elif self.tipo == "Nutrientes":
+                    cambio = random.uniform(-1, 1)
+            else:
+                    cambio = random.uniform(-1, 1)
+            valor = anterior + cambio
+            valor = max(self.valor_minimo, min(self.valor_maximo, valor))
+            valor = round(valor, 2)
         timestamp = datetime.now().isoformat()
-        self.ultima_lectura = {"valor": dato, "timestamp": timestamp}
+        self.ultima_lectura = {"valor": valor, "timestamp": timestamp}
         self.historial.append(self.ultima_lectura)
-        # Mantener historial limitado
         if len(self.historial) > 100:
             self.historial.pop(0)
-        return dato
+        return valor
     
     def to_dict(self):
         return {

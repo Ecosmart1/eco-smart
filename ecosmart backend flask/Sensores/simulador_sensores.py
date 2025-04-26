@@ -1,12 +1,13 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import os
 import sys
 import time
 import threading
+import pandas as pd
 
 # Agregar el directorio de sensores al path
-from Sensor import Sensor, RedSensores  # Import directly since Sensor.py is in the same folder
+from Sensor import Sensor, RedSensores  
 
 app = Flask(__name__)
 CORS(app)  # Permitir solicitudes CORS para la API
@@ -17,11 +18,13 @@ ultimos_datos= {}
 
 # Inicializar sensores predefinidos
 sensores_iniciales = [
-    Sensor("Temperatura", "°C", 1, -10, 40, 5),
-    Sensor("Humedad", "%", 2, 20, 90, 5),
-    Sensor("pH del suelo", "", 3, 3, 9, 10),
-    Sensor("Nutrientes", "mg/L", 4, 0, 50, 10)
+    Sensor("Temperatura", "°C", 1, 4, 20, 5),
+    Sensor("Humedad", "%", 2, 40, 90, 5),
+    Sensor("pH del suelo", "", 3, 3, 9, 5),
+    Sensor("Nutrientes", "mg/L", 4, 0, 50, 5)
 ]
+
+
 
 for sensor in sensores_iniciales:
     red_sensores.agregar_sensor(sensor)
@@ -36,7 +39,32 @@ def simulacion_continua():
     while simulacion_activa:
         ultimos_datos = red_sensores.generar_todos_datos()
         print(f"Datos generados: {ultimos_datos}")
-        time.sleep(1)  # Pausa de 1 segundo entre lecturas
+        time.sleep(5)  # Pausa de 5 segundo entre lecturas
+
+@app.route('/api/exportar_csv', methods=['GET'])
+def exportar_csv():
+    # Junta los datos de todos los sensores en una lista de diccionarios
+    datos = []
+    for sensor in red_sensores.sensores.values():
+        for lectura in sensor.historial:
+            datos.append({
+                "id_sensor": sensor.id_sensor,
+                "tipo": sensor.tipo,
+                "valor": lectura["valor"],
+                "unidad": sensor.unidad,
+                "timestamp": lectura["timestamp"]
+            })
+    if not datos:
+        return jsonify({"error": "No hay datos para exportar"}), 400
+
+    # Crea un DataFrame y exprta a CSV
+    df = pd.DataFrame(datos)
+    ruta_csv = os.path.join(os.path.dirname(__file__), "datos_sensores.csv")
+    df.to_csv(ruta_csv, index=False)
+    return send_file(ruta_csv, as_attachment=True)
+
+
+
 
 @app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
@@ -65,26 +93,17 @@ def actualizar_sensor(id_sensor):
         sensor.valor_maximo = datos['valor_maximo']
     if 'frecuencia' in datos:
         sensor.frecuencia = datos['frecuencia']
-    #if 'ubicacion' in datos:
-     #   sensor.ubicacion = datos['ubicacion']
     
     return jsonify(sensor.to_dict())
 
 @app.route('/api/datos', methods=['GET'])
 def obtener_datos():
-    """Genera y devuelve una lectura de todos los sensores"""
     global ultimos_datos
-    
-    # Si la simulación está activa, devuelve los últimos datos generados
-    # Si no está activa, solo genera nuevos datos si no hay datos previos
-    if not simulacion_activa and ultimos_datos:
+    # Solo devuelve el último dato, nunca genera uno nuevo aquí
+    if ultimos_datos:
         return jsonify(ultimos_datos)
     else:
-        # Si no hay simulación activa o no hay datos previos, genera datos nuevos
-        nuevos_datos = red_sensores.generar_todos_datos()
-        if not simulacion_activa:
-            ultimos_datos = nuevos_datos  # Almacena los datos para futuras consultas
-        return jsonify(nuevos_datos)
+        return jsonify({"error": "No hay datos disponibles"}), 404
 
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
