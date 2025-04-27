@@ -26,13 +26,13 @@ class Sensor:
             anterior = self.ultima_lectura["valor"]
             if self.tipo == "Temperatura":
                 # Cambios suaves: +/- 0.2 a 0.8 grados por medición
-                cambio = random.uniform(-0.8, 0.8)
+                cambio = random.uniform(-0.2, 0.2)
             elif self.tipo == "Humedad":
-                    cambio = random.uniform(-2, 2)
-            elif self.tipo == "pH del suelo":
-                    cambio = random.uniform(-0.05, 0.05)
-            elif self.tipo == "Nutrientes":
                     cambio = random.uniform(-1, 1)
+            elif self.tipo == "pH del suelo":
+                    cambio = random.uniform(-0.02, 0.02)
+            elif self.tipo == "Nutrientes":
+                    cambio = random.uniform(-0.3, 0.3)
             else:
                     cambio = random.uniform(-1, 1)
             valor = anterior + cambio
