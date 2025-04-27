@@ -3,8 +3,11 @@ from flask_cors import CORS
 import os
 import sys
 import time
+from datetime import datetime
 import threading
 import pandas as pd
+from Sensor import obtener_parametros_estacion
+
 
 # Agregar el directorio de sensores al path
 from Sensor import Sensor, RedSensores  
@@ -17,17 +20,20 @@ red_sensores = RedSensores()
 ultimos_datos= {}
 
 # Inicializar sensores predefinidos
+parametros = obtener_parametros_estacion()
 sensores_iniciales = [
-    Sensor("Temperatura", "°C", 1, 4, 20, 5),
-    Sensor("Humedad", "%", 2, 40, 90, 5),
-    Sensor("pH del suelo", "", 3, 3, 9, 5),
-    Sensor("Nutrientes", "mg/L", 4, 0, 50, 5)
+    Sensor("Temperatura", "°C", 1, parametros["temperatura"][0], parametros["temperatura"][1], 5),
+    Sensor("Humedad", "%", 2, parametros["humedad"][0], parametros["humedad"][1], 5),
+    Sensor("pH del suelo", "", 3, parametros["ph"][0], parametros["ph"][1], 10),
+    Sensor("Nutrientes", "mg/L", 4, parametros["nutrientes"][0], parametros["nutrientes"][1], 10)
 ]
 
-
-
+# Agrega cada sensor a la red de sensores
 for sensor in sensores_iniciales:
     red_sensores.agregar_sensor(sensor)
+
+# Genera los datos iniciales
+ultimos_datos = red_sensores.generar_todos_datos()
 
 # Variable para controlar la simulación en segundo plano
 simulacion_activa = False
@@ -70,31 +76,6 @@ def exportar_csv():
 def obtener_sensores():
     """Devuelve la lista de todos los sensores"""
     return jsonify(red_sensores.listar_sensores())
-
-@app.route('/api/sensores/<int:id_sensor>', methods=['GET'])
-def obtener_sensor(id_sensor):
-    """Devuelve información de un sensor específico"""
-    sensor = red_sensores.obtener_sensor(id_sensor)
-    if sensor:
-        return jsonify(sensor.to_dict())
-    return jsonify({"error": "Sensor no encontrado"}), 404
-
-@app.route('/api/sensores/<int:id_sensor>', methods=['PUT'])
-def actualizar_sensor(id_sensor):
-    """Actualiza los parámetros de un sensor"""
-    sensor = red_sensores.obtener_sensor(id_sensor)
-    if not sensor:
-        return jsonify({"error": "Sensor no encontrado"}), 404
-    
-    datos = request.json
-    if 'valor_minimo' in datos:
-        sensor.valor_minimo = datos['valor_minimo']
-    if 'valor_maximo' in datos:
-        sensor.valor_maximo = datos['valor_maximo']
-    if 'frecuencia' in datos:
-        sensor.frecuencia = datos['frecuencia']
-    
-    return jsonify(sensor.to_dict())
 
 @app.route('/api/datos', methods=['GET'])
 def obtener_datos():

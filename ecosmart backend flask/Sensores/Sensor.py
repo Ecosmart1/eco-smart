@@ -2,6 +2,41 @@ import random
 import time
 from datetime import datetime
 
+
+def obtener_parametros_estacion():
+    hoy = datetime.now()
+    mes = hoy.month
+    dia = hoy.day
+
+    # Verano: 21 dic - 20 mar
+    if (mes == 12 and dia >= 21) or (mes in [1, 2]) or (mes == 3 and dia <= 20):
+        estacion = "verano"
+        temp_min, temp_max = 15, 35
+        hum_min, hum_max = 30, 80
+    # Otoño: 21 mar - 21 jun
+    elif (mes == 3 and dia >= 21) or (mes in [4, 5]) or (mes == 6 and dia <= 21):
+        estacion = "otoño"
+        temp_min, temp_max = 4, 20
+        hum_min, hum_max = 40, 90
+    # Invierno: 22 jun - 23 sep
+    elif (mes == 6 and dia >= 22) or (mes in [7, 8]) or (mes == 9 and dia <= 23):
+        estacion = "invierno"
+        temp_min, temp_max = -2, 15
+        hum_min, hum_max = 50, 100
+    # Primavera: 24 sep - 20 dic
+    else:
+        estacion = "primavera"
+        temp_min, temp_max = 8, 25
+        hum_min, hum_max = 35, 85
+
+    return {
+        "estacion": estacion,
+        "temperatura": (temp_min, temp_max),
+        "humedad": (hum_min, hum_max),
+        "ph": (3, 9),
+        "nutrientes": (0, 50)
+    }
+
 class Sensor:
     def __init__(self, tipo, unidad, id_sensor, valor_minimo, valor_maximo, frecuencia):
         self.tipo = tipo
@@ -16,7 +51,7 @@ class Sensor:
     
 
 
-
+    
 
     def generar_dato(self):
         if self.ultima_lectura is None:
@@ -88,8 +123,8 @@ class RedSensores:
         self.condicion_actual = "heladas"
         for sensor in self.sensores.values():
             if sensor.tipo == "Temperatura":
-                sensor.valor_minimo = -20
-                sensor.valor_maximo = 0
+                sensor.valor_minimo = -5
+                sensor.valor_maximo = 3
             elif sensor.tipo == "Humedad":
                 sensor.valor_minimo = 60
                 sensor.valor_maximo = 80
@@ -102,7 +137,7 @@ class RedSensores:
                 sensor.valor_maximo = 45
             elif sensor.tipo == "Humedad":
                 sensor.valor_minimo = 5
-                sensor.valor_maximo = 20
+                sensor.valor_maximo = 10
     
     def simular_lluvia_intensa(self):
         self.condicion_actual = "lluvia intensa"
@@ -113,17 +148,17 @@ class RedSensores:
     
     def restaurar_condiciones_normales(self):
         self.condicion_actual = "normal"
-        # Restaurar valores predeterminados
+        parametros = obtener_parametros_estacion()
         for sensor in self.sensores.values():
             if sensor.tipo == "Temperatura":
-                sensor.valor_minimo = -10
-                sensor.valor_maximo = 40
+                sensor.valor_minimo = parametros["temperatura"][0]
+                sensor.valor_maximo = parametros["temperatura"][1]
             elif sensor.tipo == "Humedad":
-                sensor.valor_minimo = 20
-                sensor.valor_maximo = 90
+                sensor.valor_minimo = parametros["humedad"][0]
+                sensor.valor_maximo = parametros["humedad"][1]
             elif sensor.tipo == "pH del suelo":
-                sensor.valor_minimo = 3
-                sensor.valor_maximo = 9
+                sensor.valor_minimo = parametros["ph"][0]
+                sensor.valor_maximo = parametros["ph"][1]
             elif sensor.tipo == "Nutrientes":
-                sensor.valor_minimo = 0
-                sensor.valor_maximo = 50
+                sensor.valor_minimo = parametros["nutrientes"][0]
+                sensor.valor_maximo = parametros["nutrientes"][1]
