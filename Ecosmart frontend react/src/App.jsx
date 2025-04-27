@@ -121,6 +121,26 @@ function App() {
 
   return (
     <div className="app-container">
+      <div className="header">
+  <div className="logo-container">
+  <img src="/assets/logo-ecosmart.png" />
+    <span className="logo-text">EcoSmart</span>
+  </div>
+  
+  <div className="nav-menu">
+    <div className="nav-item">Panel de control</div>
+    <div className="nav-item active">Sensores</div>
+    <div className="nav-item">Alertas</div>
+  </div>
+  
+  <div className="user-section">
+    <div className="user-avatar">U</div>
+    <div className="user-info">
+      <span className="user-name">Nombre de Usuario</span>
+      <span className="user-role">Configuración</span>
+    </div>
+  </div>
+</div>
       <h1>EcoSmart - Sistema de Sensores Agrícolas</h1>
       
       <div className="control-panel">
