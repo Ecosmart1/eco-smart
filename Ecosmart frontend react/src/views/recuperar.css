@@ -1,0 +1,202 @@
+/* frontend/src/views/RecuperarContrasena.css */
+
+.recuperar-page {
+    min-height: 100vh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+  }
+  
+  .recuperar-container {
+    width: 100%;
+    max-width: 500px; /* Más estrecho que el de registro */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .recuperar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+  
+  .recuperar-logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 10px;
+  }
+  
+  .recuperar-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+  }
+  
+  /* Contenedor del formulario */
+  .recuperar-form-container {
+    background-color: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 100%;
+  }
+  
+  .recuperar-form-container h2 {
+    color: #2e7d32;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 24px;
+  }
+  
+  .recuperar-description {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 15px;
+  }
+  
+  /* Mensajes de éxito y error */
+  .success-message {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    text-align: center;
+  }
+  
+  .error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    text-align: center;
+  }
+  
+  /* Formulario */
+  .recuperar-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+  }
+  
+  .form-group label {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 15px;
+    transition: border-color 0.3s;
+  }
+  
+  .form-group input:focus {
+    border-color: #2e7d32;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
+  }
+  
+  /* Botones */
+  .form-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  
+  .btn-volver, .btn-enviar {
+    flex: 1;
+    padding: 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    font-size: 16px;
+    transition: all 0.3s;
+  }
+  
+  .btn-volver {
+    background-color: #f5f5f5;
+    color: #555;
+    border: 1px solid #ddd;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .btn-enviar {
+    background-color: #2e7d32;
+    color: white;
+    border: none;
+  }
+  
+  .btn-volver:hover {
+    background-color: #eeeeee;
+  }
+  
+  .btn-enviar:hover {
+    background-color: #1b5e20;
+  }
+  
+  .btn-enviar:disabled {
+    background-color: #a5d6a7;
+    cursor: not-allowed;
+  }
+  
+  /* Footer */
+  .recuperar-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: white;
+  }
+  
+  .recuperar-footer a {
+    color: #a5d6a7;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .recuperar-footer a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Responsive */
+  @media (max-width: 576px) {
+    .recuperar-form-container {
+      padding: 20px;
+    }
+    
+    .form-buttons {
+      flex-direction: column;
+    }
+    
+    .recuperar-description {
+      font-size: 14px;
+    }
+  }

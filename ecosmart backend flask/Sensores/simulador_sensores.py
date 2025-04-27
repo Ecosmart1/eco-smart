@@ -7,7 +7,7 @@ from datetime import datetime
 import threading
 import pandas as pd
 from Sensor import obtener_parametros_estacion
-
+import json
 
 # Agregar el directorio de sensores al path
 from Sensor import Sensor, RedSensores  
@@ -28,6 +28,34 @@ sensores_iniciales = [
     Sensor("Nutrientes", "mg/L", 4, parametros["nutrientes"][0], parametros["nutrientes"][1], 10)
 ]
 
+# Parámetros configurables (inicialmente con valores predeterminados)
+parametros_configurables = {
+    "temperatura": {
+        "min": parametros["temperatura"][0],
+        "max": parametros["temperatura"][1],
+        "variacion": 1.0
+    },
+    "humedadSuelo": {
+        "min": parametros["humedad"][0],
+        "max": parametros["humedad"][1],
+        "variacion": 2.0
+    },
+    "phSuelo": {
+        "min": parametros["ph"][0],
+        "max": parametros["ph"][1],
+        "variacion": 0.1
+    },
+    "nutrientes": {
+        "nitrogeno": {"min": 100, "max": 300},
+        "fosforo": {"min": 20, "max": 80},
+        "potasio": {"min": 100, "max": 250}
+    },
+    "simulacion": {
+        "intervalo": 5,
+        "duracion": 60
+    }
+}
+
 # Agrega cada sensor a la red de sensores
 for sensor in sensores_iniciales:
     red_sensores.agregar_sensor(sensor)
@@ -45,7 +73,7 @@ def simulacion_continua():
     while simulacion_activa:
         ultimos_datos = red_sensores.generar_todos_datos()
         print(f"Datos generados: {ultimos_datos}")
-        time.sleep(5)  # Pausa de 5 segundo entre lecturas
+        time.sleep(parametros_configurables["simulacion"]["intervalo"])  # Usar intervalo configurable
 
 @app.route('/api/exportar_csv', methods=['GET'])
 def exportar_csv():
@@ -70,8 +98,6 @@ def exportar_csv():
     return send_file(ruta_csv, as_attachment=True)
 
 
-
-
 @app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
     """Devuelve la lista de todos los sensores"""
@@ -86,20 +112,82 @@ def obtener_datos():
     else:
         return jsonify({"error": "No hay datos disponibles"}), 404
 
+@app.route('/api/parametros', methods=['GET'])
+def obtener_parametros_config():
+    """Devuelve los parámetros configurables actuales"""
+    return jsonify(parametros_configurables)
+
+@app.route('/api/parametros', methods=['POST'])
+def actualizar_parametros():
+    """Actualiza los parámetros configurables"""
+    global parametros_configurables
+    nuevos_parametros = request.json
+    
+    if not nuevos_parametros:
+        return jsonify({"error": "No se recibieron parámetros"}), 400
+    
+    # Actualizar parámetros
+    parametros_configurables = nuevos_parametros
+    
+    # Actualizar rangos de los sensores si están activos
+    try:
+        # Temperatura (ID 1)
+        if 1 in red_sensores.sensores:
+            red_sensores.sensores[1].valor_minimo = parametros_configurables["temperatura"]["min"]
+            red_sensores.sensores[1].valor_maximo = parametros_configurables["temperatura"]["max"]
+        
+        # Humedad (ID 2)
+        if 2 in red_sensores.sensores:
+            red_sensores.sensores[2].valor_minimo = parametros_configurables["humedadSuelo"]["min"]
+            red_sensores.sensores[2].valor_maximo = parametros_configurables["humedadSuelo"]["max"]
+        
+        # pH (ID 3)
+        if 3 in red_sensores.sensores:
+            red_sensores.sensores[3].valor_minimo = parametros_configurables["phSuelo"]["min"]
+            red_sensores.sensores[3].valor_maximo = parametros_configurables["phSuelo"]["max"]
+    except Exception as e:
+        print(f"Error al actualizar sensores: {e}")
+    
+    return jsonify({"mensaje": "Parámetros actualizados correctamente", "parametros": parametros_configurables})
+
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
     """Inicia la simulación continua en segundo plano"""
-    global simulacion_activa, hilo_simulacion
+    global simulacion_activa, hilo_simulacion, parametros_configurables
     
     if simulacion_activa:
         return jsonify({"mensaje": "La simulación ya está en ejecución"})
+    
+    # Recibir parámetros personalizados si existen
+    if request.json:
+        nuevos_parametros = request.json
+        parametros_configurables = nuevos_parametros
+        
+        # Actualizar rangos de sensores antes de iniciar
+        try:
+            # Temperatura (ID 1)
+            if 1 in red_sensores.sensores:
+                red_sensores.sensores[1].valor_minimo = parametros_configurables["temperatura"]["min"]
+                red_sensores.sensores[1].valor_maximo = parametros_configurables["temperatura"]["max"]
+            
+            # Humedad (ID 2)
+            if 2 in red_sensores.sensores:
+                red_sensores.sensores[2].valor_minimo = parametros_configurables["humedadSuelo"]["min"]
+                red_sensores.sensores[2].valor_maximo = parametros_configurables["humedadSuelo"]["max"]
+            
+            # pH (ID 3)
+            if 3 in red_sensores.sensores:
+                red_sensores.sensores[3].valor_minimo = parametros_configurables["phSuelo"]["min"]
+                red_sensores.sensores[3].valor_maximo = parametros_configurables["phSuelo"]["max"]
+        except Exception as e:
+            print(f"Error al actualizar sensores: {e}")
     
     simulacion_activa = True
     hilo_simulacion = threading.Thread(target=simulacion_continua)
     hilo_simulacion.daemon = True
     hilo_simulacion.start()
     
-    return jsonify({"mensaje": "Simulación iniciada"})
+    return jsonify({"mensaje": "Simulación iniciada con los parámetros configurados"})
 
 @app.route('/api/simulacion/detener', methods=['POST'])
 def detener_simulacion():
