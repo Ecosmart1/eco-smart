@@ -58,6 +58,14 @@ class SensorService {
     }
   }
 
+  guardarParametrosDesdeCondicion(parametros) {
+    // Similar a guardarParametros pero no envía a la API porque ya viene de ella
+    this.parametros = parametros;
+    localStorage.setItem('ecosmart_parametros', JSON.stringify(parametros));
+    this.notificarCambios();
+    return true;
+  }
+
   suscribirse(callback) {
     this.suscriptores.push(callback);
     return () => {

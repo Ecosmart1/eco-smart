@@ -1,295 +1,312 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import "./vistascompartidas.css";
-import './AjusteParametros.css';
+import { Link } from 'react-router-dom';
+import './ajusteparametros.css';
 import SensorService from '../services/serviciossensores';
 
-const AjusteParametros = () => {
-  const navigate = useNavigate();
-  
-  // Estado para los parámetros y UI
+function AjusteParametros() {
   const [parametros, setParametros] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [guardadoExitoso, setGuardadoExitoso] = useState(false);
-  
-  // Verificar autenticación
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState('');
+
   useEffect(() => {
-    const userStr = localStorage.getItem('ecosmart_user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    
-    // Temporalmente comentado para pruebas
-    /*
-    if (!user || user.rol !== 'tecnico') {
-      navigate('/login');
-    }
-    */
-    
-    // Cargar parámetros iniciales
-    cargarParametros();
-  }, [navigate]);
-
-  // Función para cargar parámetros
-  const cargarParametros = async () => {
-    try {
-      console.log("Cargando parámetros...");
+    const cargarParametros = async () => {
       const params = await SensorService.obtenerParametros();
-      console.log("Parámetros obtenidos:", params);
       setParametros(params);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error cargando parámetros:", error);
-      // En caso de error, usar valores por defecto
-      setParametros({
-        temperatura: { min: 10, max: 35, variacion: 1.0 },
-        humedadSuelo: { min: 20, max: 80, variacion: 2.0 },
-        phSuelo: { min: 5.5, max: 7.5, variacion: 0.1 },
-        nutrientes: {
-          nitrogeno: { min: 100, max: 300 },
-          fosforo: { min: 20, max: 80 },
-          potasio: { min: 100, max: 250 }
-        },
-        simulacion: { intervalo: 5, duracion: 60 }
-      });
-      setLoading(false);
-    }
-  };
-
-  // Manejar cambios en los inputs
-  const handleChange = (categoria, parametro, valor) => {
-    if (!parametros) return;
+    };
     
-    if (categoria === 'nutrientes') {
-      const [nutriente, propiedad] = parametro.split('.');
-      setParametros(prev => ({
-        ...prev,
-        nutrientes: {
-          ...prev.nutrientes,
-          [nutriente]: {
-            ...prev.nutrientes[nutriente],
-            [propiedad]: Number(valor)
-          }
-        }
-      }));
-    } else {
-      setParametros(prev => ({
-        ...prev,
-        [categoria]: {
-          ...prev[categoria],
-          [parametro]: Number(valor)
-        }
-      }));
-    }
+    cargarParametros();
+  }, []);
+
+  const handleChange = (categoria, subcategoria, valor) => {
+    setParametros(prevParams => {
+      // Copia profunda para prevenir modificación directa del estado
+      const nuevoParams = JSON.parse(JSON.stringify(prevParams));
+      
+      if (subcategoria) {
+        nuevoParams[categoria][subcategoria] = parseFloat(valor);
+      } else {
+        nuevoParams[categoria] = parseFloat(valor);
+      }
+      
+      return nuevoParams;
+    });
   };
 
-  // Guardar configuración
-  const guardarConfiguracion = async () => {
+  const handleNutrienteChange = (nutriente, tipo, valor) => {
+    setParametros(prevParams => {
+      const nuevoParams = JSON.parse(JSON.stringify(prevParams));
+      nuevoParams.nutrientes[nutriente][tipo] = parseFloat(valor);
+      return nuevoParams;
+    });
+  };
+
+  const handleSimulacionChange = (campo, valor) => {
+    setParametros(prevParams => {
+      const nuevoParams = JSON.parse(JSON.stringify(prevParams));
+      nuevoParams.simulacion[campo] = parseFloat(valor);
+      return nuevoParams;
+    });
+  };
+
+  const guardarCambios = async () => {
+    setGuardando(true);
+    setMensaje('');
+    
     try {
-      console.log("Guardando configuración...", parametros);
       const resultado = await SensorService.guardarParametros(parametros);
       if (resultado) {
-        setGuardadoExitoso(true);
-        setTimeout(() => {
-          setGuardadoExitoso(false);
-        }, 3000);
+        setMensaje('Parámetros guardados correctamente');
+      } else {
+        setMensaje('Error al guardar los parámetros');
       }
     } catch (error) {
-      console.error("Error guardando configuración:", error);
+      setMensaje(`Error: ${error.message}`);
+    } finally {
+      setGuardando(false);
     }
   };
 
-  // Ir a la pantalla de sensores
-  const irASensores = () => {
-    navigate('/sensores');
-  };
-
-  if (loading || !parametros) {
+  if (!parametros) {
     return <div className="loading">Cargando parámetros...</div>;
   }
 
   return (
     <div className="ajuste-parametros-container">
-      <header className="dashboard-header">
-        <div className="logo-container">
-          <img src="/assets/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
-          <span className="logo-text">EcoSmart</span>
-        </div>
-        <div className="user-menu">
-          <span className="user-name">Usuario Técnico</span>
-          <Link to="/login" className="logout-button">Cerrar sesión</Link>
-        </div>
-      </header>
-
-      <div className="dashboard-layout">
-        <aside className="sidebar">
-          <nav className="sidebar-nav">
-            <div className="sidebar-header">Panel de Técnico</div>
-            <ul className="sidebar-menu">
-              <li className="sidebar-item">
-                <Link to="/dashboard/tecnico" className="sidebar-link">
-                  <i className="fas fa-tachometer-alt"></i>
-                  <span>Dashboard</span>
-                </Link>
-              </li>
-              <li className="sidebar-item">
-                <Link to="/sensores" className="sidebar-link">
-                  <i className="fas fa-microchip"></i>
-                  <span>Sensores</span>
-                </Link>
-              </li>
-              <li className="sidebar-item active">
-                <Link to="/dashboard/tecnico/ajustes" className="sidebar-link">
-                  <i className="fas fa-sliders-h"></i>
-                  <span>Ajuste de Parámetros</span>
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </aside>
-
-        <main className="main-content">
-          <div className="page-header">
-            <h1>Ajuste de Parámetros</h1>
-            <p>Configure los parámetros para los sensores y la simulación.</p>
+      <h2>Ajuste de Parámetros</h2>
+      
+      <div className="panel-parametros">
+        <h3>Parámetros de Sensores</h3>
+        
+        <div className="seccion-parametro">
+          <h4>Temperatura (°C)</h4>
+          <div className="rango-parametro">
+            <div className="ajuste-campo">
+              <label>Mínimo:</label>
+              <input 
+                type="number" 
+                value={parametros.temperatura.min}
+                onChange={(e) => handleChange('temperatura', 'min', e.target.value)}
+                step="0.1"
+              />
+            </div>
+            <div className="ajuste-campo">
+              <label>Máximo:</label>
+              <input 
+                type="number" 
+                value={parametros.temperatura.max}
+                onChange={(e) => handleChange('temperatura', 'max', e.target.value)}
+                step="0.1"
+              />
+            </div>
+            <div className="ajuste-campo">
+              <label>Variación:</label>
+              <input 
+                type="number" 
+                value={parametros.temperatura.variacion}
+                onChange={(e) => handleChange('temperatura', 'variacion', e.target.value)}
+                step="0.1"
+                min="0.1"
+              />
+            </div>
           </div>
-
-          {guardadoExitoso && (
-            <div className="alerta-exito">
-              ¡Configuración guardada con éxito!
+        </div>
+        
+        <div className="seccion-parametro">
+          <h4>Humedad del Suelo (%)</h4>
+          <div className="rango-parametro">
+            <div className="ajuste-campo">
+              <label>Mínimo:</label>
+              <input 
+                type="number" 
+                value={parametros.humedadSuelo.min}
+                onChange={(e) => handleChange('humedadSuelo', 'min', e.target.value)}
+                step="1"
+                min="0"
+                max="100"
+              />
             </div>
-          )}
-
-          <div className="parametros-form">
-            <div className="parametros-section">
-              <h2>Temperatura</h2>
-              <div className="param-group">
-                <label>Mínimo (°C):</label>
-                <input 
-                  type="number"
-                  value={parametros.temperatura.min}
-                  onChange={(e) => handleChange('temperatura', 'min', e.target.value)}
-                />
-              </div>
-              <div className="param-group">
-                <label>Máximo (°C):</label>
-                <input 
-                  type="number"
-                  value={parametros.temperatura.max}
-                  onChange={(e) => handleChange('temperatura', 'max', e.target.value)}
-                />
-              </div>
-              <div className="param-group">
-                <label>Variación:</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  value={parametros.temperatura.variacion}
-                  onChange={(e) => handleChange('temperatura', 'variacion', e.target.value)}
-                />
-              </div>
+            <div className="ajuste-campo">
+              <label>Máximo:</label>
+              <input 
+                type="number" 
+                value={parametros.humedadSuelo.max}
+                onChange={(e) => handleChange('humedadSuelo', 'max', e.target.value)}
+                step="1"
+                min="0"
+                max="100"
+              />
             </div>
-
-            <div className="parametros-section">
-              <h2>Humedad del Suelo</h2>
-              <div className="param-group">
-                <label>Mínimo (%):</label>
-                <input 
-                  type="number"
-                  value={parametros.humedadSuelo.min}
-                  onChange={(e) => handleChange('humedadSuelo', 'min', e.target.value)}
-                />
-              </div>
-              <div className="param-group">
-                <label>Máximo (%):</label>
-                <input 
-                  type="number"
-                  value={parametros.humedadSuelo.max}
-                  onChange={(e) => handleChange('humedadSuelo', 'max', e.target.value)}
-                />
-              </div>
-              <div className="param-group">
-                <label>Variación:</label>
-                <input 
-                  type="number"
-                  step="0.1"
-                  value={parametros.humedadSuelo.variacion}
-                  onChange={(e) => handleChange('humedadSuelo', 'variacion', e.target.value)}
-                />
-              </div>
+            <div className="ajuste-campo">
+              <label>Variación:</label>
+              <input 
+                type="number" 
+                value={parametros.humedadSuelo.variacion}
+                onChange={(e) => handleChange('humedadSuelo', 'variacion', e.target.value)}
+                step="0.1"
+                min="0.1"
+              />
             </div>
-
-            <div className="parametros-section">
-              <h2>pH del Suelo</h2>
-              <div className="param-group">
+          </div>
+        </div>
+        
+        <div className="seccion-parametro">
+          <h4>pH del Suelo</h4>
+          <div className="rango-parametro">
+            <div className="ajuste-campo">
+              <label>Mínimo:</label>
+              <input 
+                type="number" 
+                value={parametros.phSuelo.min}
+                onChange={(e) => handleChange('phSuelo', 'min', e.target.value)}
+                step="0.1"
+                min="0"
+                max="14"
+              />
+            </div>
+            <div className="ajuste-campo">
+              <label>Máximo:</label>
+              <input 
+                type="number" 
+                value={parametros.phSuelo.max}
+                onChange={(e) => handleChange('phSuelo', 'max', e.target.value)}
+                step="0.1"
+                min="0"
+                max="14"
+              />
+            </div>
+            <div className="ajuste-campo">
+              <label>Variación:</label>
+              <input 
+                type="number" 
+                value={parametros.phSuelo.variacion}
+                onChange={(e) => handleChange('phSuelo', 'variacion', e.target.value)}
+                step="0.01"
+                min="0.01"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Nueva sección para nutrientes separados */}
+        <div className="seccion-parametro">
+          <h4>Nutrientes (mg/L)</h4>
+          
+          <div className="nutriente-ajuste">
+            <h5>Nitrógeno</h5>
+            <div className="rango-parametro">
+              <div className="ajuste-campo">
                 <label>Mínimo:</label>
                 <input 
-                  type="number"
-                  step="0.1"
-                  value={parametros.phSuelo.min}
-                  onChange={(e) => handleChange('phSuelo', 'min', e.target.value)}
+                  type="number" 
+                  value={parametros.nutrientes.nitrogeno.min}
+                  onChange={(e) => handleNutrienteChange('nitrogeno', 'min', e.target.value)}
+                  step="1"
+                  min="0"
                 />
               </div>
-              <div className="param-group">
+              <div className="ajuste-campo">
                 <label>Máximo:</label>
                 <input 
-                  type="number"
-                  step="0.1"
-                  value={parametros.phSuelo.max}
-                  onChange={(e) => handleChange('phSuelo', 'max', e.target.value)}
+                  type="number" 
+                  value={parametros.nutrientes.nitrogeno.max}
+                  onChange={(e) => handleNutrienteChange('nitrogeno', 'max', e.target.value)}
+                  step="1"
+                  min="0"
                 />
               </div>
-              <div className="param-group">
-                <label>Variación:</label>
-                <input 
-                  type="number"
-                  step="0.01"
-                  value={parametros.phSuelo.variacion}
-                  onChange={(e) => handleChange('phSuelo', 'variacion', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="parametros-section">
-              <h2>Simulación</h2>
-              <div className="param-group">
-                <label>Intervalo de lectura (s):</label>
-                <input 
-                  type="number"
-                  value={parametros.simulacion.intervalo}
-                  onChange={(e) => handleChange('simulacion', 'intervalo', e.target.value)}
-                />
-              </div>
-              <div className="param-group">
-                <label>Duración (min):</label>
-                <input 
-                  type="number"
-                  value={parametros.simulacion.duracion}
-                  onChange={(e) => handleChange('simulacion', 'duracion', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="buttons-container">
-              <button 
-                className="btn-guardar"
-                onClick={guardarConfiguracion}
-              >
-                Guardar Configuración
-              </button>
-              <button 
-                className="btn-sensores"
-                onClick={irASensores}
-              >
-                Ver Sensores
-              </button>
-              <Link to="/dashboard/tecnico" className="btn-volver">
-                Volver al Dashboard
-              </Link>
             </div>
           </div>
-        </main>
+          
+          <div className="nutriente-ajuste">
+            <h5>Fósforo</h5>
+            <div className="rango-parametro">
+              <div className="ajuste-campo">
+                <label>Mínimo:</label>
+                <input 
+                  type="number" 
+                  value={parametros.nutrientes.fosforo.min}
+                  onChange={(e) => handleNutrienteChange('fosforo', 'min', e.target.value)}
+                  step="1"
+                  min="0"
+                />
+              </div>
+              <div className="ajuste-campo">
+                <label>Máximo:</label>
+                <input 
+                  type="number" 
+                  value={parametros.nutrientes.fosforo.max}
+                  onChange={(e) => handleNutrienteChange('fosforo', 'max', e.target.value)}
+                  step="1"
+                  min="0"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="nutriente-ajuste">
+            <h5>Potasio</h5>
+            <div className="rango-parametro">
+              <div className="ajuste-campo">
+                <label>Mínimo:</label>
+                <input 
+                  type="number" 
+                  value={parametros.nutrientes.potasio.min}
+                  onChange={(e) => handleNutrienteChange('potasio', 'min', e.target.value)}
+                  step="1"
+                  min="0"
+                />
+              </div>
+              <div className="ajuste-campo">
+                <label>Máximo:</label>
+                <input 
+                  type="number" 
+                  value={parametros.nutrientes.potasio.max}
+                  onChange={(e) => handleNutrienteChange('potasio', 'max', e.target.value)}
+                  step="1"
+                  min="0"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="seccion-parametro">
+          <h4>Configuración de Simulación</h4>
+          <div className="rango-parametro">
+            <div className="ajuste-campo">
+              <label>Intervalo (segundos):</label>
+              <input 
+                type="number" 
+                value={parametros.simulacion.intervalo}
+                onChange={(e) => handleSimulacionChange('intervalo', e.target.value)}
+                step="1"
+                min="1"
+              />
+            </div>
+            <div className="ajuste-campo">
+              <label>Duración (minutos):</label>
+              <input 
+                type="number" 
+                value={parametros.simulacion.duracion}
+                onChange={(e) => handleSimulacionChange('duracion', e.target.value)}
+                step="1"
+                min="1"
+              />
+            </div>
+          </div>
+        </div>
       </div>
+      
+      <div className="botones-accion">
+        <button onClick={guardarCambios} disabled={guardando}>
+          {guardando ? 'Guardando...' : 'Guardar Cambios'}
+        </button>
+        <Link to="/sensores" className="boton-volver">Volver a Sensores</Link>
+      </div>
+      
+      {mensaje && <div className="mensaje">{mensaje}</div>}
     </div>
   );
-};
+}
 
 export default AjusteParametros;
