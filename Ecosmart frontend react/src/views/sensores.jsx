@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import './sensores.css';  // Asegúrate de crear este archivo CSS
+import './sensores.css';
 import "./vistascompartidas.css";
 import SensorService from '../services/serviciossensores';
 
@@ -13,22 +13,27 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [parametros, setParametros] = useState(null);
 
   // Obtener lista de sensores y parámetros
-  useEffect(() => {
-    const fetchSensores = async () => {
-      try {
-        const response = await fetch(`${API_URL}/sensores`);
-        if (!response.ok) {
-          throw new Error('Error al cargar los sensores');
-        }
-        const data = await response.json();
-        setSensores(data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
+  const fetchSensores = async () => {
+    try {
+      const response = await fetch(`${API_URL}/sensores`);
+      if (!response.ok) {
+        throw new Error('Error al cargar los sensores');
       }
-    };
-    
+      const data = await response.json();
+      setSensores(data);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+  
+  const actualizarSensores = () => {
+    fetchSensores();
+  };
+  
+  // Asegúrate de que esta función se llame después de guardar parámetros
+  useEffect(() => {
     const cargarParametros = async () => {
       try {
         const params = await SensorService.obtenerParametros();
@@ -44,17 +49,20 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
     
     // Suscribirse a cambios en los parámetros
     const unsuscribir = SensorService.suscribirse((nuevosParams) => {
-      setParametros(nuevosParams);
-      console.log("Actualizados parámetros en Sensores:", nuevosParams);
-      
-      // Si hay simulación activa, reiniciarla con nuevos parámetros
-      if (simulacionActiva) {
-        detenerSimulacion().then(() => iniciarSimulacionConParametros(nuevosParams));
-      }
-    });
+        setParametros(nuevosParams);
+        console.log("Actualizados parámetros en Sensores:", nuevosParams);
+        
+        // Refrescar la lista de sensores para mostrar frecuencia actualizada
+        fetchSensores();
+        
+        // Si hay simulación activa, reiniciarla con nuevos parámetros
+        if (simulacionActiva) {
+          detenerSimulacion().then(() => iniciarSimulacionConParametros(nuevosParams));
+        }
+      });
     
-    return () => unsuscribir();
-  }, [API_URL]);
+      return () => unsuscribir();
+    }, [API_URL]);
 
   // Fetch de datos periódicamente si la simulación está activa
   useEffect(() => {
@@ -144,7 +152,9 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
         setParametros(data.parametros);
         
         // También actualizar el servicio para que otros componentes se enteren
-        if (SensorService && typeof SensorService.guardarParametros === 'function') {
+        if (SensorService && typeof SensorService.guardarParametrosDesdeCondicion === 'function') {
+          await SensorService.guardarParametrosDesdeCondicion(data.parametros);
+        } else if (SensorService && typeof SensorService.guardarParametros === 'function') {
           await SensorService.guardarParametros(data.parametros);
         }
       }
@@ -229,16 +239,43 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
               <h3>{sensor.tipo} ({sensor.id})</h3>
               <div className="sensor-info">
                 <p>Unidad: {sensor.unidad}</p>
-                <p>Rango: {sensor.valor_minimo} - {sensor.valor_maximo}</p>
+                {sensor.id !== 4 && (
+                  <p>Rango: {sensor.valor_minimo} - {sensor.valor_maximo}</p>
+                )}
                 <p>Frecuencia: {sensor.frecuencia}s</p>
               </div>
               <div className="sensor-reading">
                 {datos[sensor.id] ? (
                   <>
                     <h4>Última lectura</h4>
-                    <p className="reading-value">
-                      {datos[sensor.id].valor} {sensor.unidad}
-                    </p>
+                    {sensor.id === 4 ? (
+                      // Vista especial para nutrientes
+                      <div className="nutrientes-container">
+                        <div className="nutriente-item">
+                          <span className="nutriente-label">Nitrógeno:</span>
+                          <span className="nutriente-value">
+                            {datos[sensor.id].valor.nitrogeno} {sensor.unidad}
+                          </span>
+                        </div>
+                        <div className="nutriente-item">
+                          <span className="nutriente-label">Fósforo:</span>
+                          <span className="nutriente-value">
+                            {datos[sensor.id].valor.fosforo} {sensor.unidad}
+                          </span>
+                        </div>
+                        <div className="nutriente-item">
+                          <span className="nutriente-label">Potasio:</span>
+                          <span className="nutriente-value">
+                            {datos[sensor.id].valor.potasio} {sensor.unidad}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      // Vista normal para otros sensores
+                      <p className="reading-value">
+                        {datos[sensor.id].valor} {sensor.unidad}
+                      </p>
+                    )}
                   </>
                 ) : (
                   <p>Sin lecturas</p>
