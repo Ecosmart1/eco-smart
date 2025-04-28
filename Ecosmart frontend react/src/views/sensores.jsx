@@ -138,6 +138,17 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
         method: 'POST'
       });
       const data = await response.json();
+      
+      // Actualizar los parámetros locales con los recibidos del servidor
+      if (data.parametros) {
+        setParametros(data.parametros);
+        
+        // También actualizar el servicio para que otros componentes se enteren
+        if (SensorService && typeof SensorService.guardarParametros === 'function') {
+          await SensorService.guardarParametros(data.parametros);
+        }
+      }
+      
       alert(data.mensaje);
     } catch (err) {
       setError(err.message);
