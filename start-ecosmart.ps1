@@ -4,7 +4,7 @@ if (-not (Test-Path "venv")) {
     python -m venv venv
 }
 . .\venv\Scripts\Activate.ps1
-pip install --upgrade pip
+python.exe -m pip install --upgrade pip
 pip install pandas
 pip install -r requirements.txt
 
