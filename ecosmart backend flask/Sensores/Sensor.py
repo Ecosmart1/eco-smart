@@ -23,26 +23,22 @@ def obtener_parametros_estacion():
         "verano": {
             "temperatura": [15, 35],
             "humedad": [30, 80],
-            "ph": [5.5, 7.5],
-            "nutrientes": [50, 300]
+            "ph": [5.5, 7.5]
         },
         "otono": {
             "temperatura": [4, 20],
             "humedad": [40, 90],
-            "ph": [5.0, 7.0],
-            "nutrientes": [100, 250]
+            "ph": [5.0, 7.0]
         },
         "invierno": {
             "temperatura": [-2, 15],
             "humedad": [50, 100],
-            "ph": [4.5, 6.5],
-            "nutrientes": [150, 200]
+            "ph": [4.5, 6.5]
         },
         "primavera": {
             "temperatura": [8, 25],
             "humedad": [35, 85],
-            "ph": [5.0, 7.0],
-            "nutrientes": [100, 300]
+            "ph": [5.0, 7.0]
         }
     }
     
