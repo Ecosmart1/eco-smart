@@ -35,6 +35,8 @@ EcoSmart/
 │
 ├── Ecosmart frontend react/
 │   ├── src/
+|   |   ├──services/               #Exportacion de datos 
+|   |   |──views/                  #Vistas de la pagina 
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   ├── App.css
