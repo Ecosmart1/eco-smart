@@ -110,9 +110,10 @@
   }
   
   .hero h1 {
-    font-size: 60px;
+    font-size: 70px;
     margin-bottom: 15px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    color: #ffffff;
   }
   
   .hero-subtitle {
