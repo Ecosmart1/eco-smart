@@ -48,7 +48,8 @@
   .logo-text {
     font-size: 22px;
     font-weight: 600;
-    color: #2e7d32;
+    color: white; /* Nuevo color */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* Opcional: sombra para mejor legibilidad */
   }
   
   .navigation ul {
@@ -296,7 +297,8 @@
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 6px;
-    font-size: 16px;
+    font-size: 18px;
+    background-color: #ddd;
   }
   
   .form-group textarea {
