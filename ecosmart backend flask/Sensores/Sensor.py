@@ -76,15 +76,12 @@ class Sensor:
 
 class SensorNutrientes(Sensor):
     """Clase especializada para sensor de nutrientes con múltiples valores"""
-    
+
     def __init__(self, tipo, unidad, id_sensor, valor_minimo, valor_maximo, frecuencia):
         super().__init__(tipo, unidad, id_sensor, valor_minimo, valor_maximo, frecuencia)
-    
-    def generar_dato(self):
-        """Genera valores separados para cada nutriente"""
-        # Importamos aquí para evitar ciclos de importación
-        from simulador_sensores import parametros_configurables
-        
+
+    def generar_dato(self, parametros_configurables):
+        """Genera valores separados para cada nutriente usando los parámetros recibidos"""
         # Generar valores separados para cada nutriente
         nitrogeno = random.uniform(
             parametros_configurables["nutrientes"]["nitrogeno"]["min"],
@@ -98,37 +95,40 @@ class SensorNutrientes(Sensor):
             parametros_configurables["nutrientes"]["potasio"]["min"],
             parametros_configurables["nutrientes"]["potasio"]["max"]
         )
-        
+
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         valor = {
             "nitrogeno": round(nitrogeno, 2),
             "fosforo": round(fosforo, 2),
             "potasio": round(potasio, 2)
         }
-        
+
         # Guardar en historial
         if len(self.historial) >= self.max_historial:
             self.historial.pop(0)
         self.historial.append({"valor": valor, "timestamp": timestamp})
-        
+
         return valor, timestamp
 
 class RedSensores:
     """Gestiona una red de sensores y sus datos"""
-    
+
     def __init__(self):
         self.sensores = {}
-    
+
     def agregar_sensor(self, sensor):
         """Agrega un sensor a la red"""
         self.sensores[sensor.id_sensor] = sensor
         return sensor.id_sensor
-    
-    def generar_todos_datos(self):
+
+    def generar_todos_datos(self, parametros_configurables):
         """Genera datos para todos los sensores en la red"""
         datos = {}
         for id_sensor, sensor in self.sensores.items():
-            valor, timestamp = sensor.generar_dato()
+            if isinstance(sensor, SensorNutrientes):
+                valor, timestamp = sensor.generar_dato(parametros_configurables)
+            else:
+                valor, timestamp = sensor.generar_dato()
             datos[id_sensor] = {
                 "valor": valor,
                 "timestamp": timestamp

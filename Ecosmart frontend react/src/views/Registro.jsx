@@ -76,24 +76,44 @@ const Registro = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
+  
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
       return;
     }
-    
+  
     setIsSubmitting(true);
-    
-    // Aquí iría la lógica de registro con el backend
-    // Simulamos una petición exitosa después de 1 segundo
-    setTimeout(() => {
+  
+    try {
+      const response = await fetch('http://localhost:5000/api/registro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: formData.nombres + ' ' + formData.apellidoPaterno + ' ' + formData.apellidoMaterno,
+          email: formData.email,
+          password: formData.password,
+          rol: formData.tipoUsuario,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        // Registro exitoso, redirige al login
+        navigate('/login');
+      } else {
+        setErrors({ api: data.error || 'Error en el registro' });
+      }
+    } catch (error) {
+      setErrors({ api: 'Error de conexión con el servidor' });
+    } finally {
       setIsSubmitting(false);
-      // Redirigir al login después del registro exitoso
-      navigate('/login');
-    }, 1500);
+    }
   };
 
   return (

@@ -2,30 +2,71 @@ from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import os
 import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from Sensores.Sensor import obtener_parametros_estacion, Sensor, RedSensores, SensorNutrientes
 import time
 from datetime import datetime
 import threading
 import pandas as pd
-from Sensor import obtener_parametros_estacion, SensorNutrientes
 import json
+from modelos.models import db, Usuario, LecturaSensor
+from werkzeug.security import generate_password_hash, check_password_hash
 
-# Agregar el directorio de sensores al path
-from Sensor import Sensor, RedSensores  
+
+
+
+
 
 app = Flask(__name__)
 CORS(app)  # Permitir solicitudes CORS para la API
 
+#base de datos
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
+
+@app.route('/api/registro', methods=['POST'])
+def registrar_usuario():
+    data = request.json
+    if Usuario.query.filter_by(email=data['email']).first():
+        return jsonify({'error': 'El correo ya está registrado'}), 400
+    usuario = Usuario(
+        nombre=data['nombre'],
+        email=data['email'],
+        password=generate_password_hash(data['password']),
+        rol=data['rol']
+    )
+    db.session.add(usuario)
+    db.session.commit()
+    return jsonify({'mensaje': 'Usuario registrado correctamente'})
+
+@app.route('/api/login', methods=['POST'])
+def login_usuario():
+    data = request.json
+    usuario = Usuario.query.filter_by(email=data['email']).first()
+    if usuario and check_password_hash(usuario.password, data['password']):
+        return jsonify({
+            'id': usuario.id,
+            'nombre': usuario.nombre,
+            'email': usuario.email,
+            'rol': usuario.rol
+        })
+    else:
+        return jsonify({'error': 'Credenciales incorrectas'}), 401
+
+
 # Crear la red de sensores
 red_sensores = RedSensores()
-ultimos_datos= {}
 
-# Inicializar sensores predefinidos
+
+
 parametros = obtener_parametros_estacion()
 sensores_iniciales = [
     Sensor("Temperatura", "°C", 1, parametros["temperatura"][0], parametros["temperatura"][1], 5),
     Sensor("Humedad", "%", 2, parametros["humedad"][0], parametros["humedad"][1], 5),
     Sensor("pH del suelo", "", 3, parametros["ph"][0], parametros["ph"][1], 5),
-    SensorNutrientes("Nutrientes", "mg/L", 4, 0, 0, 5)  # Los valores min/max se usan de parametros_configurables
+    SensorNutrientes("Nutrientes", "mg/L", 4, 0, 0, 5)
 ]
 
 # Parámetros configurables (inicialmente con valores predeterminados)
@@ -56,47 +97,60 @@ parametros_configurables = {
     }
 }
 
-# Agrega cada sensor a la red de sensores
+# Crear la red de sensores
+red_sensores = RedSensores()
 for sensor in sensores_iniciales:
     red_sensores.agregar_sensor(sensor)
 
 # Genera los datos iniciales
-ultimos_datos = red_sensores.generar_todos_datos()
+ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
 
 # Variable para controlar la simulación en segundo plano
 simulacion_activa = False
 hilo_simulacion = None
 
 def simulacion_continua():
-    """Función para ejecutar en un hilo separado que genera datos continuamente"""
     global ultimos_datos, simulacion_activa
-    
-    # Calcular tiempo de finalización
-    duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60  # convertir minutos a segundos
-    intervalo = parametros_configurables["simulacion"]["intervalo"]  # intervalo en segundos
-    tiempo_inicio = time.time()
-    tiempo_fin = tiempo_inicio + duracion_segundos
-    
-    print(f"Simulación iniciada por {duracion_segundos} segundos ({parametros_configurables['simulacion']['duracion']} minutos)")
-    print(f"Intervalo entre lecturas: {intervalo} segundos")
-    
-    while simulacion_activa and time.time() < tiempo_fin:
-        ultimos_datos = red_sensores.generar_todos_datos()
-        print(f"Datos generados en {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        # Calcular tiempo restante
-        tiempo_restante = tiempo_fin - time.time()
-        if tiempo_restante <= 0:
-            break
-            
-        # Dormir hasta la próxima iteración o hasta que termine el tiempo
-        tiempo_espera = min(intervalo, tiempo_restante)
-        time.sleep(tiempo_espera)
-    
-    # Si terminamos por tiempo y no por cancelación manual
-    if time.time() >= tiempo_fin and simulacion_activa:
-        print("Simulación completada: se alcanzó la duración configurada")
-        simulacion_activa = False
+
+    # Abre el contexto de aplicación para este hilo
+    with app.app_context():
+        # Calcular tiempo de finalización
+        duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60  # convertir minutos a segundos
+        intervalo = parametros_configurables["simulacion"]["intervalo"]  # intervalo en segundos
+        tiempo_inicio = time.time()
+        tiempo_fin = tiempo_inicio + duracion_segundos
+
+        print(f"Simulación iniciada por {duracion_segundos} segundos ({parametros_configurables['simulacion']['duracion']} minutos)")
+        print(f"Intervalo entre lecturas: {intervalo} segundos")
+
+        while simulacion_activa and time.time() < tiempo_fin:
+            ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
+            print(f"Datos generados en {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            # Guardar en la base de datos
+            for id_sensor, dato in ultimos_datos.items():
+                sensor = red_sensores.sensores[id_sensor]
+                lectura = LecturaSensor(
+                    timestamp=dato["timestamp"],
+                    sensor_id=id_sensor,
+                    tipo=sensor.tipo,
+                    valor=json.dumps(dato["valor"]),  # Si es dict, como nutrientes
+                    unidad=sensor.unidad
+                )
+                db.session.add(lectura)
+            db.session.commit()
+            # Calcular tiempo restante
+            tiempo_restante = tiempo_fin - time.time()
+            if tiempo_restante <= 0:
+                break
+
+            # Dormir hasta la próxima iteración o hasta que termine el tiempo
+            tiempo_espera = min(intervalo, tiempo_restante)
+            time.sleep(tiempo_espera)
+
+        # Si terminamos por tiempo y no por cancelación manual
+        if time.time() >= tiempo_fin and simulacion_activa:
+            print("Simulación completada: se alcanzó la duración configurada")
+            simulacion_activa = False
 
 @app.route('/api/exportar_csv', methods=['GET'])
 def exportar_csv():

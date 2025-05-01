@@ -177,7 +177,7 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
     <div className="app-container">
       <div className="header">
         <div className="logo-container">
-          <img src="/assets/logo-ecosmart.png" alt="Logo EcoSmart" />
+        <img src="/logo-ecosmart.png" alt="Logo EcoSmart" />
           <span className="logo-text">EcoSmart</span>
         </div>
         

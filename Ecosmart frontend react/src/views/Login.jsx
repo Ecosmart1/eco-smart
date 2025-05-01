@@ -1,15 +1,12 @@
-// frontend/src/views/Login.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Login.css';
-import "./vistascompartidas.css";
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
   });
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -22,62 +19,59 @@ const Login = () => {
     }));
   };
 
-  const handleRememberChange = () => {
-    setRememberMe(!rememberMe);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      // Simulamos un tiempo de espera como si fuera una petición real
-      setTimeout(() => {
-        // Usuarios simulados para pruebas
-        if (credentials.email === 'tecnico@ecosmart.com' && credentials.password === 'tecnico123') {
-          // Usuario técnico
-          localStorage.setItem('ecosmart_user', JSON.stringify({
-            id: 1,
-            nombre: 'Roberto Técnico',
-            email: credentials.email,
-            rol: 'tecnico'
-          }));
-          
-          // Redirigir al dashboard de técnico
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Guarda el usuario en localStorage
+        localStorage.setItem('ecosmart_user', JSON.stringify(data));
+        // Redirige según el rol
+        if (data.rol === 'tecnico') {
           navigate('/dashboard/tecnico');
-        } 
-        else if (credentials.email === 'agricultor@ecosmart.com' && credentials.password === 'agricultor123') {
-          // Usuario agricultor
-          localStorage.setItem('ecosmart_user', JSON.stringify({
-            id: 2,
-            nombre: 'Juan Agricultor',
-            email: credentials.email,
-            rol: 'agricultor'
-          }));
-          
-          // Aquí redirigirías al dashboard de agricultor
+        } else if (data.rol === 'agricultor') {
           navigate('/dashboard/agricultor');
-        } 
-        else {
-          setError('Credenciales incorrectas. Intente de nuevo.');
+        } else if (data.rol === 'agronomo') {
+          navigate('/dashboard/agronomo');
+        } else {
+          navigate('/'); // O la ruta por defecto
         }
-        
-        setIsLoading(false);
-      }, 1000);
+      } else {
+        setError(data.error || 'Credenciales incorrectas');
+      }
     } catch (err) {
-      console.error('Error de login:', err);
-      setError('Error en el servidor. Intente nuevamente.');
+      setError('Error de conexión con el servidor');
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="login-page view-container">
+    <div className="login-page">
       <div className="login-container">
         <div className="login-box">
+          <div className="back-to-home">
+            <Link to="/" className="btn-back-home">
+              <i className="fas fa-arrow-left"></i> Volver al inicio
+            </Link>
+          </div>
           <div className="login-header">
-            <img src="/assets/logo-ecosmart.png" alt="EcoSmart Logo" className="login-logo" />
+            <img src="/logo-ecosmart.png" alt="EcoSmart Logo" className="login-logo" />
             <h1>EcoSmart</h1>
           </div>
           
@@ -120,13 +114,7 @@ const Login = () => {
             
             <div className="remember-me">
               <label className="checkbox-container">
-                <input 
-                  type="checkbox" 
-                  id="remember" 
-                  name="remember" 
-                  checked={rememberMe}
-                  onChange={handleRememberChange}
-                />
+                <input type="checkbox" id="remember" name="remember" />
                 <span>Recordarme</span>
               </label>
             </div>
@@ -144,33 +132,61 @@ const Login = () => {
             <p>¿No tienes una cuenta? <Link to="/registro">Regístrate</Link></p>
           </div>
           
-          {/* Para pruebas - colocado dentro del login box */}
           <div className="test-credentials">
-            <p><strong>Para pruebas:</strong> tecnico@ecosmart.com / tecnico123</p>
+            <h4>Cuentas para prueba:</h4>
+            <div className="test-account">
+              <p><strong>Técnico:</strong> tecnico@ecosmart.com / tecnico123</p>
+            </div>
+            <div className="test-account">
+              <p><strong>Agricultor:</strong> agricultor@ecosmart.com / agricultor123</p>
+            </div>
+            <div className="test-account">
+              <p><strong>Agrónomo:</strong> agronomo@ecosmart.com / agronomo123</p>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Lado derecho - imagen de fondo con información */}
       <div className="login-background">
         <div className="login-info">
-          <h2>Agricultura Inteligente</h2>
-          <p>Optimiza tus cultivos con EcoSmart, la plataforma de monitoreo agrícola en tiempo real.</p>
+          <h2>Plataforma de Agricultura Inteligente</h2>
+          <p>Optimiza tus cultivos, ahorra recursos y mejora tu producción con nuestra tecnología de punta para la agricultura moderna.</p>
           
           <ul className="login-features">
             <li>
-              <i className="feature-icon">✓</i>
-              Monitoreo en tiempo real de condiciones ambientales
+              <i className="fas fa-chart-line"></i>
+              <span>Monitoreo en tiempo real de tus cultivos</span>
             </li>
             <li>
-              <i className="feature-icon">✓</i>
-              Alertas automáticas ante condiciones adversas
+              <i className="fas fa-tint"></i>
+              <span>Control inteligente de riego y recursos</span>
+            </li>
+            <li>
+              <i className="fas fa-leaf"></i>
+              <span>Detección temprana de problemas en cultivos</span>
+            </li>
+            <li>
+              <i className="fas fa-robot"></i>
+              <span>Recomendaciones personalizadas con IA</span>
+            </li>
+            <li>
+              <i className="fas fa-cloud-sun-rain"></i>
+              <span>Integración con datos meteorológicos</span>
             </li>
             <li>
               <i className="feature-icon">✓</i>
               Reportes detallados para optimizar tus cultivos
             </li>
           </ul>
+          
+          <div className="login-brands">
+            <p>Respaldado por:</p>
+            <div className="brand-logos">
+              <span className="brand-logo">Universidad de Talca</span>
+              <span className="brand-logo">Ministerio de Agricultura</span>
+              <span className="brand-logo">FIA</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

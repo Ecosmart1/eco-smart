@@ -1,79 +1,105 @@
-/* frontend/src/views/Login.css */
-
-/* Layout principal */
 /* Layout principal */
 .login-page {
   display: flex;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: #f5f5f5;
+  min-height: 100vh;
 }
 
-/* Contenedor del lado izquierdo - ajustado para mejor centrado */
+/* Botón de volver al inicio */
+.back-to-home {
+  align-self: flex-start;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.btn-back-home {
+  display: inline-flex;
+  align-items: center;
+  color: #2e7d32;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.btn-back-home:hover {
+  background-color: rgba(46, 125, 50, 0.1);
+}
+
+.btn-back-home i {
+  margin-right: 8px;
+  font-size: 12px;
+}
 .login-container {
-  min-height: 100vh;
-  width: 100%;  /* Cambia min-width: 100vw a width: 100% */
-  height: 100vh;
-  box-sizing: border-box;
+  width: 45%;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5; 
-  padding: 0;
-  margin: 0;
-  overflow-x: hidden; /* Evitar scroll horizontal */
-}
-  
-.login-box {
-  background-color: rgb(180, 236, 166);
-  border-radius: 12px;
+  align-items: center;
+  justify-content: center;
   padding: 40px;
-  max-width: 400px; /* Más estrecho para mejor proporción */
-  width: 90%; /* Usa porcentaje del contenedor */
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  margin: 0 auto; /* Centra horizontalmente */
+  background-color: #f8f9fa;
 }
 
-/* Header con logo - mejorar centrado */
+.login-box {
+  background-color: white;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.login-background {
+  width: 55%;
+  background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efectos decorativos para el fondo */
+.login-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 1%, transparent 10%),
+                    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 1%, transparent 10%),
+                    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 1%, transparent 10%);
+  background-size: 100px 100px;
+  opacity: 0.8;
+}
+
+/* Header con logo */
 .login-header {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 20px;
-  text-align: center;
 }
-  
-.login-background {
-  width: 55%;
-  background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
-  background-image: url('/assets/campo-agricultura.jpg'); /* Imagen de fondo */
-  background-size: cover;
-  background-position: center;
-  background-blend-mode: overlay; /* Mezcla el gradiente con la imagen */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgb(14, 119, 40);
-  padding: 40px;
-}
-  
-/* Header con logo */
-  
+
 .login-logo {
   width: 60px;
   height: 60px;
   margin-bottom: 10px;
 }
-  
+
 .login-header h1 {
   font-size: 28px;
   font-weight: 600;
   color: #2e7d32;
   margin: 0;
 }
-  
+
 /* Título y subtítulo */
 .login-box h2 {
   text-align: center;
@@ -81,14 +107,14 @@
   margin-bottom: 10px;
   font-size: 24px;
 }
-  
+
 .login-subtitle {
   text-align: center;
   color: #666;
   margin-bottom: 30px;
   font-size: 16px;
 }
-  
+
 /* Mensajes de error */
 .error-message {
   background-color: #ffebee;
@@ -99,44 +125,44 @@
   font-size: 14px;
   text-align: center;
 }
-  
+
 /* Formulario */
 .login-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-  
+
 .form-group {
   display: flex;
   flex-direction: column;
   margin-bottom: 5px;
 }
-  
+
 .form-group label {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 8px;
   color: #555;
 }
-  
+
 .password-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
-  
+
 .forgot-password {
   font-size: 14px;
   color: #2e7d32;
   text-decoration: none;
 }
-  
+
 .forgot-password:hover {
   text-decoration: underline;
 }
-  
+
 .form-group input {
   width: 100%;
   padding: 12px;
@@ -145,13 +171,13 @@
   font-size: 15px;
   transition: border-color 0.3s;
 }
-  
+
 .form-group input:focus {
   border-color: #2e7d32;
   outline: none;
   box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
 }
-  
+
 /* Checkbox "Recordarme" */
 .remember-me {
   display: flex;
@@ -159,7 +185,7 @@
   margin-top: 5px;
   margin-bottom: 10px;
 }
-  
+
 .checkbox-container {
   display: flex;
   align-items: center;
@@ -168,7 +194,7 @@
   color: #555;
   cursor: pointer;
 }
-  
+
 /* Botón de login */
 .login-button {
   background-color: #2e7d32;
@@ -181,18 +207,17 @@
   cursor: pointer;
   transition: background-color 0.3s;
   margin-top: 10px;
-  width: 100%;
 }
-  
+
 .login-button:hover {
   background-color: #1b5e20;
 }
-  
+
 .login-button:disabled {
   background-color: #a5d6a7;
   cursor: not-allowed;
 }
-  
+
 /* Footer del formulario */
 .login-footer {
   text-align: center;
@@ -202,101 +227,188 @@
   font-size: 14px;
   color: #666;
 }
-  
+
 .login-footer a {
   color: #2e7d32;
   text-decoration: none;
   font-weight: 500;
 }
-  
+
 .login-footer a:hover {
   text-decoration: underline;
 }
-  
+
+/* Credenciales de prueba */
+.test-credentials {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px dashed #eee;
+}
+
+.test-credentials h4 {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.test-account {
+  background-color: #f0f5f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.test-account p {
+  margin: 0;
+}
+
 /* Contenido del lado derecho */
 .login-info {
-  max-width: 450px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Mejora legibilidad sobre imagen */
+  max-width: 500px;
+  position: relative;
+  z-index: 1;
 }
-  
+
 .login-info h2 {
   font-size: 32px;
   margin-bottom: 20px;
+  position: relative;
 }
-  
+
+.login-info h2:after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background-color: #a5d6a7;
+}
+
 .login-info p {
   font-size: 16px;
   margin-bottom: 25px;
   opacity: 0.9;
+  line-height: 1.6;
 }
-  
+
 .login-features {
   list-style: none;
   padding: 0;
+  margin: 40px 0;
 }
-  
+
 .login-features li {
   display: flex;
   align-items: center;
   margin-bottom: 15px;
   font-size: 16px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: transform 0.2s, background-color 0.2s;
 }
-  
+
+.login-features li:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(5px);
+}
+
 .login-features i {
-  color: #4caf50;
-  margin-right: 10px;
-  font-size: 18px;
+  color: #a5d6a7;
+  margin-right: 15px;
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
 }
-  
+
+/* Sección de marcas/partners */
+.login-brands {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+
+.login-brands p {
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.brand-logos {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.brand-logo {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .login-page {
     flex-direction: column;
-    overflow-y: auto;
-    height: auto;
-    min-height: 100vh;
   }
-    
+  
   .login-container,
   .login-background {
     width: 100%;
   }
-    
+  
   .login-container {
     order: 2;
     padding: 30px 20px;
-    height: auto;
   }
-    
+  
   .login-background {
     order: 1;
-    height: 300px;
+    min-height: 450px;
     padding: 30px;
   }
-    
+  
   .login-box {
     padding: 30px;
   }
-}
   
+  .login-info {
+    max-width: 600px;
+  }
+}
+
 @media (max-width: 576px) {
   .login-box {
     padding: 25px;
   }
-    
+  
   .login-background {
-    height: 250px;
+    min-height: 400px;
   }
-    
+  
   .login-info h2 {
     font-size: 26px;
   }
-    
+  
   .login-info p {
     font-size: 14px;
   }
-    
+  
   .login-features li {
     font-size: 14px;
+  }
+  
+  .brand-logos {
+    gap: 10px;
+  }
+  
+  .brand-logo {
+    font-size: 12px;
+    padding: 6px 10px;
   }
 }

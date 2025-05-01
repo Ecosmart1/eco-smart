@@ -9,7 +9,7 @@ pip install pandas
 pip install -r requirements.txt
 
 # Abrir una nueva ventana de PowerShell para el backend
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$(Get-Location)'; .\venv\Scripts\Activate.ps1; python Sensores\simulador_sensores.py"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$(Get-Location)'; .\venv\Scripts\Activate.ps1; python rutas\api_principal.py"
 
 deactivate
 Set-Location ..
