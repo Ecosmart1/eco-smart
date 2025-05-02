@@ -436,6 +436,57 @@ def simular_condiciones(condicion):
         "parametros": parametros_configurables
     })
 
+#endpints para la API de administración usuarios
+@app.route('/api/usuarios/total', methods=['GET'])
+def total_usuarios():
+    total = Usuario.query.count()
+    return jsonify({'total': total})    
+
+@app.route('/api/usuarios', methods=['GET'])
+def listar_usuarios():
+    usuarios = Usuario.query.all()
+    return jsonify([
+        {
+            'id': u.id,
+            'nombre': u.nombre,
+            'email': u.email,
+            'rol': u.rol
+        } for u in usuarios
+    ])
+
+@app.route('/api/usuarios/<int:id>', methods=['PUT'])
+def actualizar_usuario(id):
+    data = request.json
+    usuario = Usuario.query.get(id)
+    if not usuario:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+
+    usuario.nombre = data.get('nombre', usuario.nombre)
+    usuario.email = data.get('email', usuario.email)
+    usuario.rol = data.get('rol', usuario.rol)
+
+    # Cambiar contraseña si se solicita
+    if data.get('newPassword'):
+        # Verifica la contraseña actual antes de cambiarla
+        if not data.get('password') or not check_password_hash(usuario.password, data['password']):
+            return jsonify({'error': 'La contraseña actual es incorrecta'}), 400
+        usuario.password = generate_password_hash(data['newPassword'])
+
+    db.session.commit()
+    return jsonify({'mensaje': 'Usuario actualizado'})
+
+@app.route('/api/usuarios/<int:id>', methods=['DELETE'])
+def eliminar_usuario(id):
+    usuario = Usuario.query.get(id)
+    if not usuario:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+    db.session.delete(usuario)
+    db.session.commit()
+    return jsonify({'mensaje': 'Usuario eliminado correctamente'})
+
+
+
+
 @app.route('/')
 def home():
     return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"

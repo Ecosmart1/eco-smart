@@ -1,6 +1,4 @@
-import { useState, useEffect } from 'react';
-import './App.css';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './views/LandingPage';
 import AjusteParametros from "./views/AjusteParametros";
 import Login from "./views/Login";
@@ -8,34 +6,11 @@ import Registro from "./views/Registro";
 import RecuperarContrasena from './views/recuperar';
 import DashboardTecnico from './views/DashboardTecnico';
 import SensoresPanel from './views/sensores';
+import Usuarios from './views/Usuarios';
+import HeaderTecnico from './views/headertecnico';
+import Configuracion from './views/configuracion';
+/*import HeaderAgronomo from './views/HeaderAgronomo';*/
 
-// Componente Header reutilizable
-function Header() {
-  return (
-    <div className="header">
-      <div className="logo-container">
-        <img src="/assets/logo-ecosmart.png" alt="EcoSmart Logo" />
-        <span className="logo-text">EcoSmart</span>
-      </div>
-      
-      <div className="nav-menu">
-        <Link to="/dashboard/tecnico" className="nav-item">Panel de control</Link>
-        <Link to="/sensores" className="nav-item">Sensores</Link>
-        <Link to="/alertas" className="nav-item">Alertas</Link>
-      </div>
-      
-      <div className="user-section">
-        <div className="user-avatar">U</div>
-        <div className="user-info">
-          <span className="user-name">Nombre de Usuario</span>
-          <Link to="/configuracion" className="user-role">Configuración</Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// App principal con rutas
 function App() {
   const API_URL = 'http://localhost:5000/api';
 
@@ -47,43 +22,58 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar-contrasena" element={<RecuperarContrasena />} />
-        
-        {/* Rutas que requieren layout con header */}
+
+        {/* Rutas para técnico */}
         <Route path="/sensores" element={
           <div className="app-container">
-            <Header />
+            <HeaderTecnico />
             <div className="content-container">
               <SensoresPanel API_URL={API_URL} />
             </div>
           </div>
         } />
-        
+
+        <Route path="/dashboard/tecnico/Usuarios" element={
+          <div className="app-container">
+            <HeaderTecnico />
+            <div className="content-container">
+              <Usuarios />
+            </div>
+          </div>
+        } />
+
         <Route path="/dashboard/tecnico" element={
           <div className="app-container">
+            <HeaderTecnico />
             <DashboardTecnico />
           </div>
         } />
-        
+
         <Route path="/dashboard/tecnico/ajustes" element={
           <div className="app-container">
+            <HeaderTecnico />
             <AjusteParametros />
           </div>
         } />
-        
-        <Route path="/alertas" element={
+
+        <Route path="/dashboard/tecnico/alertas" element={
           <div className="app-container">
-            <Header />
+            <HeaderTecnico />
             <div className="content-container">
               Página de alertas en construcción
             </div>
           </div>
         } />
-        
+
+        {/* Rutas para agrónomo */}
+
+        {/* Puedes agregar más rutas para otros roles aquí */}
+
         <Route path="/configuracion" element={
           <div className="app-container">
-            <Header />
+            <HeaderTecnico />
             <div className="content-container">
-              Página de configuración en construcción
+              <Configuracion />
             </div>
           </div>
         } />

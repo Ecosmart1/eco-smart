@@ -12,6 +12,13 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [simulacionActiva, setSimulacionActiva] = useState(false);
   const [parametros, setParametros] = useState(null);
 
+
+  // Obtener información del usuario almacenada al iniciar sesión
+  const [user, setUser] = useState(() => {
+    const userStr = localStorage.getItem('ecosmart_user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
   // Obtener lista de sensores y parámetros
   const fetchSensores = async () => {
     try {
@@ -175,26 +182,6 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
 
   return (
     <div className="app-container">
-      <div className="header">
-        <div className="logo-container">
-        <img src="/logo-ecosmart.png" alt="Logo EcoSmart" />
-          <span className="logo-text">EcoSmart</span>
-        </div>
-        
-        <div className="nav-menu">
-          <Link to="/dashboard/tecnico" className="nav-item">Panel de control</Link>
-          <Link to="/sensores" className="nav-item active">Sensores</Link>
-          <Link to="/alertas" className="nav-item">Alertas</Link>
-        </div>
-        
-        <div className="user-section">
-          <div className="user-avatar">U</div>
-          <div className="user-info">
-            <span className="user-name">Nombre de Usuario</span>
-            <span className="user-role">Configuración</span>
-          </div>
-        </div>
-      </div>
       
       <h1>EcoSmart - Sistema de Sensores Agrícolas</h1>
       

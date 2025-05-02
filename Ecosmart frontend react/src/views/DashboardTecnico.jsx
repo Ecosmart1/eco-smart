@@ -1,5 +1,5 @@
 // frontend/src/views/DashboardTecnico.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './DashboardTecnico.css';
 import "./vistascompartidas.css";
@@ -10,13 +10,19 @@ const DashboardTecnico = () => {
   // Obtener información del usuario almacenada al iniciar sesión
   const userStr = localStorage.getItem('ecosmart_user');
   const user = userStr ? JSON.parse(userStr) : null;
-  
+  const [totalUsuarios, setTotalUsuarios] = useState(0);
   // Protección básica de ruta
   useEffect(() => {
     // Si no hay usuario o no es técnico, redirigir al login
     if (!user || user.rol !== 'tecnico') {
       navigate('/login');
     }
+    // Obtener el total de usuarios desde la API
+    fetch('http://localhost:5000/api/usuarios/total')
+      .then(res => res.json())
+      .then(data => setTotalUsuarios(data.total))
+      .catch(() => setTotalUsuarios(0));
+
   }, [navigate, user]);
 
   // Función para cerrar sesión
@@ -32,19 +38,6 @@ const DashboardTecnico = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="logo-container">
-          <img src="/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
-          <span className="logo-text">EcoSmart</span>
-        </div>
-        <div className="user-menu">
-          <span className="user-name">{user.nombre}</span>
-          <button onClick={handleLogout} className="logout-button">
-            Cerrar sesión
-          </button>
-        </div>
-      </header>
 
       {/* Contenido principal */}
       <div className="dashboard-layout">
@@ -60,9 +53,9 @@ const DashboardTecnico = () => {
                 </Link>
               </li>
               <li className="sidebar-item">
-                <Link to="/dashboard/tecnico/clientes" className="sidebar-link">
+                <Link to="/dashboard/tecnico/Usuarios" className="sidebar-link">
                   <i className="fas fa-users"></i>
-                  <span>Clientes</span>
+                  <span>Usuarios</span>
                 </Link>
               </li>
               <li className="sidebar-item">
@@ -101,8 +94,8 @@ const DashboardTecnico = () => {
                 <i className="fas fa-users"></i>
               </div>
               <div className="stat-card-info">
-                <h3>Clientes Activos</h3>
-                <p className="stat-value">12</p>
+                <h3>Usuarios Activos</h3>
+                <p className="stat-value">{totalUsuarios}</p>
               </div>
             </div>
             
