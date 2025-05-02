@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Configuracion.css'; // Asegúrate de tener este archivo CSS
+import './configuracion.css'; // Asegúrate de tener este archivo CSS
 import './vistascompartidas.css'; // Asegúrate de tener este archivo CSS
 
 const Configuracion = () => {
