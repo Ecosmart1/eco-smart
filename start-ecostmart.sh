@@ -3,9 +3,9 @@
 
 echo "=== EcoSmart: Configurando entorno virtual de Python ==="
 cd "ecosmart backend flask"
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-fi
+
+python3 -m venv venv
+chmod +x venv/bin/activate
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt

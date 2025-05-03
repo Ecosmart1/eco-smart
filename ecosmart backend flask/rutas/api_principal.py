@@ -21,7 +21,7 @@ app = Flask(__name__)
 CORS(app)  # Permitir solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:pipe123@192.168.1.7:5432/Ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
