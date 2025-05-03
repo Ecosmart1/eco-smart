@@ -68,8 +68,6 @@ const Usuarios = () => {
     }
   };
 
-
-
   return (
     <div className="user-page">
       <div className="user-content">
@@ -133,16 +131,6 @@ const Usuarios = () => {
                         </select>
                       ) : (
                         usuario.rol
-                      )}
-                    </td>
-                    <td>
-                      {editUserId === usuario.id ? (
-                        <>
-                          <button onClick={() => handleEditSave(usuario.id)}>Guardar</button>
-                          <button onClick={handleEditCancel}>Cancelar</button>
-                        </>
-                      ) : (
-                        <button onClick={() => handleEditClick(usuario)}>Actualizar</button>
                       )}
                     </td>
                     <td>
