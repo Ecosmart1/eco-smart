@@ -9,6 +9,8 @@ import SensoresPanel from './views/sensores';
 import Usuarios from './views/Usuarios';
 import HeaderTecnico from './views/headertecnico';
 import Configuracion from './views/configuracion';
+import DashboardAgricultor from './views/DashboardAgricultor'; 
+
 /*import HeaderAgronomo from './views/HeaderAgronomo';*/
 
 function App() {
@@ -68,6 +70,7 @@ function App() {
         {/* Rutas para agrónomo */}
 
         {/* Puedes agregar más rutas para otros roles aquí */}
+        <Route path="/dashboard/agricultor" element={<DashboardAgricultor />} />
 
         <Route path="/configuracion" element={
           <div className="app-container">

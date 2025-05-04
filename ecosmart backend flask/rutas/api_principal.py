@@ -9,7 +9,7 @@ from datetime import datetime
 import threading
 import pandas as pd
 import json
-from modelos.models import db, Usuario, LecturaSensor
+from modelos.models import db, Usuario, LecturaSensor , Parcela
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -21,7 +21,8 @@ app = Flask(__name__)
 CORS(app)  # Permitir solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:pipe123@192.168.1.7:5432/Ecosmart'
+# ...existing code...
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -483,6 +484,41 @@ def eliminar_usuario(id):
     db.session.delete(usuario)
     db.session.commit()
     return jsonify({'mensaje': 'Usuario eliminado correctamente'})
+
+@app.route('/api/parcelas', methods=['POST'])
+def agregar_parcela():
+    data = request.json
+    parcela = Parcela(
+        nombre=data['nombre'],
+        ubicacion=data.get('ubicacion'),
+        hectareas=data.get('hectareas'),
+        latitud=data.get('latitud'),
+        longitud=data.get('longitud'),
+        fecha_creacion=data.get('fecha_creacion'),
+        cultivo_actual=data.get('cultivo_actual'),
+        fecha_siembra=data.get('fecha_siembra')
+    )
+    db.session.add(parcela)
+    db.session.commit()
+    return jsonify({'mensaje': 'Parcela agregada correctamente'})
+
+@app.route('/api/parcelas', methods=['GET'])
+def listar_parcelas():
+    parcelas = Parcela.query.all()
+    resultado = []
+    for p in parcelas:
+        resultado.append({
+            "id": p.id,
+            "nombre": p.nombre,
+            "ubicacion": p.ubicacion,
+            "hectareas": p.hectareas,
+            "latitud": p.latitud,
+            "longitud": p.longitud,
+            "fecha_creacion": p.fecha_creacion.isoformat() if p.fecha_creacion else None,
+            "cultivo_actual": p.cultivo_actual,
+            "fecha_siembra": p.fecha_siembra.isoformat() if p.fecha_siembra else None
+        })
+    return jsonify(resultado)
 
 
 

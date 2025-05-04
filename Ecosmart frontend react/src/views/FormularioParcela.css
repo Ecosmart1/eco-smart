@@ -1,0 +1,173 @@
+.parcela-form-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+  }
+  
+  .parcela-form-container {
+    background-color: white;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    border-radius: 8px;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .parcela-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #eaeaea;
+  }
+  
+  .parcela-form-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .btn-cerrar {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+  }
+  
+  .btn-cerrar:hover {
+    color: #ff3b30;
+  }
+  
+  .parcela-form {
+    padding: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.2rem;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-row .form-group {
+    flex: 1;
+  }
+  
+  .form-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eaeaea;
+  }
+  
+  .form-section h3 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+  }
+  
+  label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #333;
+  }
+  
+  input, select {
+    padding: 0.7rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  input:focus, select:focus {
+    border-color: #22963e;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 150, 62, 0.2);
+  }
+  
+  .input-error {
+    border-color: #ff3b30;
+  }
+  
+  .error-message {
+    color: #ff3b30;
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+  }
+  
+  .coordenadas-info {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eaeaea;
+  }
+  
+  .btn-cancelar, .btn-guardar {
+    padding: 0.7rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-cancelar {
+    background-color: #f0f0f0;
+    border: none;
+    color: #333;
+  }
+  
+  .btn-cancelar:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .btn-guardar {
+    background-color: #22963e;
+    border: none;
+    color: white;
+  }
+  
+  .btn-guardar:hover {
+    background-color: #1a7a32;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .form-row {
+      flex-direction: column;
+      gap: 0;
+    }
+    
+    .parcela-form-container {
+      width: 95%;
+      max-height: 95vh;
+    }
+  }
+  
