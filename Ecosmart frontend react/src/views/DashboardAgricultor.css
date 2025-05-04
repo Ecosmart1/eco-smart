@@ -273,21 +273,34 @@
     border-radius: 4px;
     font-size: 0.9rem;
   }
-  
-  .parcela-btn-detalle {
-    width: 100%;
-    padding: 0.5rem;
-    background-color: #22963e;
+  /* ...existing code... */
 
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s;
+/* Cambia todos los estilos del botón "Ver Detalles" a verde */
+.parcela-btn-detalle {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #22963e !important;
+  color: #fff !important;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.parcela-btn-detalle:hover {
+  background-color: #17682a !important;
+}
+
+.parcela-btn-detalle:disabled {
+  background-color: #22963e !important;
+  color: #fff !important;
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 
-  
   /* Estilos para el mapa de parcelas */
   .mapa-container {
     height: 280px;
