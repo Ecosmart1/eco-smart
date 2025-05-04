@@ -25,54 +25,38 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Simulamos un tiempo de espera como si fuera una petición real
-      setTimeout(() => {
-        // Usuarios simulados para pruebas
-        if (credentials.email === 'tecnico@ecosmart.com' && credentials.password === 'tecnico123') {
-          // Usuario técnico
-          localStorage.setItem('ecosmart_user', JSON.stringify({
-            id: 1,
-            nombre: 'Roberto Técnico',
-            email: credentials.email,
-            rol: 'tecnico'
-          }));
-          
-          // Redirigir al dashboard de técnico
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Guarda el usuario en localStorage
+        localStorage.setItem('ecosmart_user', JSON.stringify(data));
+        // Redirige según el rol
+        if (data.rol === 'tecnico') {
           navigate('/dashboard/tecnico');
-        } 
-        else if (credentials.email === 'agricultor@ecosmart.com' && credentials.password === 'agricultor123') {
-          // Usuario agricultor
-          localStorage.setItem('ecosmart_user', JSON.stringify({
-            id: 2,
-            nombre: 'Juan Agricultor',
-            email: credentials.email,
-            rol: 'agricultor'
-          }));
-          
-          // Aquí redirigirías al dashboard de agricultor
+        } else if (data.rol === 'agricultor') {
           navigate('/dashboard/agricultor');
-        }
-        else if (credentials.email === 'agronomo@ecosmart.com' && credentials.password === 'agronomo123') {
-          // Usuario agrónomo
-          localStorage.setItem('ecosmart_user', JSON.stringify({
-            id: 3,
-            nombre: 'Daniela Agrónomo',
-            email: credentials.email,
-            rol: 'agronomo'
-          }));
-          
-          // Aquí redirigirías al dashboard de agrónomo
+        } else if (data.rol === 'agronomo') {
           navigate('/dashboard/agronomo');
-        } 
-        else {
-          setError('Credenciales incorrectas. Intente de nuevo.');
+        } else {
+          navigate('/'); // O la ruta por defecto
         }
-        
-        setIsLoading(false);
-      }, 1000);
+      } else {
+        setError(data.error || 'Credenciales incorrectas');
+      }
     } catch (err) {
-      console.error('Error de login:', err);
-      setError('Error en el servidor. Intente nuevamente.');
+      setError('Error de conexión con el servidor');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -81,10 +65,10 @@ const Login = () => {
     <div className="login-page">
       <div className="login-container">
         <div className="login-box">
-        <div className="back-to-home">
-          <Link to="/" className="btn-back-home">
-            <i className="fas fa-arrow-left"></i> Volver al inicio
-     </Link>
+          <div className="back-to-home">
+            <Link to="/" className="btn-back-home">
+              <i className="fas fa-arrow-left"></i> Volver al inicio
+            </Link>
           </div>
           <div className="login-header">
             <img src="/logo-ecosmart.png" alt="EcoSmart Logo" className="login-logo" />

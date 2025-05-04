@@ -1,0 +1,210 @@
+/* Estilos para el widget de meteorología */
+
+.meteo-widget {
+  width: 100%;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.meteo-widget:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.meteo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+/* Estilos para meteorología actual */
+.meteo-actual {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.meteo-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.meteo-condicion {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.meteo-condicion i {
+  color: #ff9500;
+  font-size: 1.5rem;
+}
+
+.meteo-temperatura {
+  display: flex;
+  align-items: baseline;
+}
+
+.temp-valor {
+  font-size: 2.5rem;
+  font-weight: 300;
+}
+
+.temp-unidad {
+  font-size: 1.2rem;
+  margin-left: 3px;
+  color: #666;
+}
+
+.meteo-detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.meteo-detalle {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.detalle-label {
+  color: #666;
+  margin-right: 1rem;
+}
+
+.meteo-ubicacion {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+/* Estilos para el pronóstico */
+.meteo-pronostico {
+  display: flex;
+  justify-content: space-between;
+}
+
+.pronostico-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  width: 18%;
+}
+
+.pronostico-fecha {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.pronostico-condicion i {
+  font-size: 1.2rem;
+  color: #ff9500;
+}
+
+.pronostico-temp {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.temp-max {
+  font-weight: 500;
+}
+
+.temp-min {
+  color: #666;
+}
+
+/* Sección "Ver más" */
+.meteo-ver-mas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eaeaea;
+  color: #22963e;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.meteo-ver-mas i {
+  font-size: 0.8rem;
+}
+
+/* Estilos para estados de carga y error */
+.meteo-cargando, .meteo-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+  text-align: center;
+}
+
+.meteo-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #22963e;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.meteo-error i {
+  font-size: 2rem;
+  color: #ff3b30;
+}
+
+.meteo-error button {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #22963e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.meteo-error button:hover {
+  background-color: #1a7a32;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .meteo-actual {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .meteo-pronostico {
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  
+  .pronostico-dia {
+    min-width: 70px;
+  }
+}
