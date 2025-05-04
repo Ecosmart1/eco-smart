@@ -41,7 +41,6 @@ const traducirCondicion = (condicion) => {
     'snow': 'Nieve',
     'mist': 'Neblina',
     'fog': 'Niebla'
-    // Puedes agregar más traducciones según sea necesario
   };
   
   return traducciones[condicion.toLowerCase()] || condicion;

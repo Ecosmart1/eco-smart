@@ -9,7 +9,7 @@ import SensoresPanel from './views/sensores';
 import Usuarios from './views/Usuarios';
 import HeaderTecnico from './views/headertecnico';
 import Configuracion from './views/configuracion';
-import DashboardAgricultor from './views/DashboardAgricultor'; 
+import DashboardAgricultor from './views/DashboardAgricultor'; // Agrega esta línea
 
 /*import HeaderAgronomo from './views/HeaderAgronomo';*/
 
@@ -68,9 +68,27 @@ function App() {
         } />
 
         {/* Rutas para agrónomo */}
+        <Route path="/dashboard/agronomo" element={
+          <div className="app-container">
+            <HeaderTecnico />
+            <div className="content-container">
+              Página de agrónomo en construcción
+            </div>
+          </div>
+        } />
+
+        {/* Rutas */}
+        
+
+        {/* Rutas para agricultor */}
+        <Route path="/dashboard/agricultor" element={
+        <div className="app-container">
+        <DashboardAgricultor />
+        </div>
+        } />
+        
 
         {/* Puedes agregar más rutas para otros roles aquí */}
-        <Route path="/dashboard/agricultor" element={<DashboardAgricultor />} />
 
         <Route path="/configuracion" element={
           <div className="app-container">
