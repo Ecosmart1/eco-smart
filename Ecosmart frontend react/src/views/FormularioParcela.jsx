@@ -147,7 +147,7 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
           </div>
 
           <div className="form-section">
-            <h3>Coordenadas geográficas (opcional)</h3>
+            <h3>Coordenadas geográficas</h3>
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="latitud">Latitud</label>
