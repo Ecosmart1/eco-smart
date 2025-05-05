@@ -166,11 +166,19 @@ const LandingPage = () => {
             </div>
             
             <div className="footer-social">
-              <a href="#" className="social-icon"><i className="fab fa-twitter"></i></a>
-              <a href="#" className="social-icon"><i className="fab fa-instagram"></i></a>
-              <a href="#" className="social-icon"><i className="fab fa-youtube"></i></a>
-              <a href="#" className="social-icon"><i className="fab fa-linkedin"></i></a>
-            </div>
+            <a href="https://twitter.com/" className="social-icon" target="_blank" rel="noopener noreferrer">
+            <i className="fab fa-twitter"></i>
+            </a>
+            <a href="https://instagram.com/" className="social-icon" target="_blank" rel="noopener noreferrer">
+            <i className="fab fa-instagram"></i>
+            </a>
+            <a href="https://youtube.com/" className="social-icon" target="_blank" rel="noopener noreferrer">
+    <i className="fab fa-youtube"></i>
+  </a>
+  <a href="https://linkedin.com/" className="social-icon" target="_blank" rel="noopener noreferrer">
+    <i className="fab fa-linkedin"></i>
+  </a>
+</div>
           </div>
           
           <div className="footer-bottom">
