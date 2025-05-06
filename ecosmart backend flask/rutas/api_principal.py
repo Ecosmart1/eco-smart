@@ -12,6 +12,12 @@ import json
 from modelos.models import db, Usuario, LecturaSensor , Parcela
 from werkzeug.security import generate_password_hash, check_password_hash
 
+#Variables de entorno
+from dotenv import load_dotenv
+import os
+load_dotenv()
+LOCAL_DATABASE = os.getenv("LOCAL_DATABASE")
+
 
 
 
@@ -21,7 +27,7 @@ app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
+app.config['SQLALCHEMY_DATABASE_URI'] = LOCAL_DATABASE
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
