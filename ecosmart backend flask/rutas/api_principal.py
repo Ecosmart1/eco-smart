@@ -14,9 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 #Variables de entorno
 from dotenv import load_dotenv
-import os
 load_dotenv()
-LOCAL_DATABASE = os.getenv("LOCAL_DATABASE")
 
 
 
@@ -27,7 +25,8 @@ app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = LOCAL_DATABASE
+LOCAL_DATABASE = os.getenv("LOCAL_DATABASE") #Borrar en caso de que se use la base de datos del servidor
+app.config['SQLALCHEMY_DATABASE_URI'] = LOCAL_DATABASE #Cambiar a URL del servidor
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
