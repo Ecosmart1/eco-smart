@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class LecturaSensor(db.Model):
+    __tablename__ = 'lecturas_sensores'
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.String, nullable=False)
     sensor_id = db.Column(db.Integer, nullable=False)

@@ -2,109 +2,87 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './PanelParcelas.css';
 import FormularioParcela from './FormularioParcela';
+import servicioMeteo from '../services/servicioMeteo';
 
 const PanelParcelas = () => {
   const [parcelas, setParcelas] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [parcelaEditar, setParcelaEditar] = useState(null);
   const [cargando, setCargando] = useState(true);
-  
+  const [clima, setClima] = useState({});
+
   useEffect(() => {
-    // En un proyecto real, aquí cargarías las parcelas desde el backend
-    // Por ahora, usaremos datos de ejemplo
-    setTimeout(() => {
-      const parcelasEjemplo = [
-        {
-          id: 1,
-          nombre: "Viñedo Norte",
-          ubicacion: "Valle de Curicó",
-          area: 5.2,
-          tipo_suelo: "franco",
-          cultivo_actual: "uva",
-          fecha_siembra: "2025-01-15",
-          estado: "óptimo",
-          humedad: 68,
-          temperatura: 22.5,
-          latitud: -35.4252,
-          longitud: -71.6536
-        },
-        {
-          id: 2,
-          nombre: "Huerto Sur",
-          ubicacion: "Sector La Quebrada",
-          area: 3.7,
-          tipo_suelo: "arcilloso",
-          cultivo_actual: "manzana",
-          fecha_siembra: "2025-02-10",
-          estado: "alerta",
-          humedad: 42,
-          temperatura: 24.8,
-          latitud: -35.4298,
-          longitud: -71.6498
-        },
-        {
-          id: 3,
-          nombre: "Campo Este",
-          ubicacion: "Camino a Romeral",
-          area: 8.1,
-          tipo_suelo: "limoso",
-          cultivo_actual: "maiz",
-          fecha_siembra: "2025-03-05",
-          estado: "crítico",
-          humedad: 30,
-          temperatura: 26.2,
-          latitud: -35.4189,
-          longitud: -71.6401
-        }
-      ];
-      
-      setParcelas(parcelasEjemplo);
+    // Traer las parcelas desde el backend y luego obtener el clima de cada una
+    const fetchParcelasYClima = async () => {
+      setCargando(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/parcelas');
+        if (!response.ok) throw new Error('Error al cargar las parcelas');
+        const data = await response.json();
+        setParcelas(data);
+
+        // Obtener el clima de cada parcela real
+        data.forEach(async (parcela) => {
+          if (parcela.latitud && parcela.longitud) {
+            try {
+              const datosClima = await servicioMeteo.obtenerPronostico(parcela.latitud, parcela.longitud);
+              setClima(prev => ({ ...prev, [parcela.id]: datosClima.actual }));
+            } catch (e) {
+              setClima(prev => ({ ...prev, [parcela.id]: { error: true } }));
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error al cargar las parcelas:', error);
+        setParcelas([]);
+      }
       setCargando(false);
-    }, 1000);
+    };
+
+    fetchParcelasYClima();
   }, []);
-  
+
   const abrirFormulario = (parcela = null) => {
     setParcelaEditar(parcela);
     setMostrarFormulario(true);
   };
-  
+
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
     setParcelaEditar(null);
   };
-  
+
   const guardarParcela = (parcelaData) => {
-    // En un proyecto real, aquí harías una llamada API para guardar
     if (parcelaEditar) {
-      // Actualizar parcela existente
-      setParcelas(prevParcelas => 
-        prevParcelas.map(p => 
+      setParcelas(prevParcelas =>
+        prevParcelas.map(p =>
           p.id === parcelaEditar.id ? { ...p, ...parcelaData } : p
         )
       );
     } else {
-      // Crear nueva parcela
       const nuevaParcela = {
         ...parcelaData,
         id: parcelas.length ? Math.max(...parcelas.map(p => p.id)) + 1 : 1,
-        estado: "óptimo", // Estado por defecto
-        humedad: 65, // Valores de ejemplo
+        estado: "óptimo",
+        humedad: 65,
         temperatura: 22
       };
-      
       setParcelas(prevParcelas => [...prevParcelas, nuevaParcela]);
     }
-    
     cerrarFormulario();
   };
-  
+
   const eliminarParcela = (id) => {
-    // En un proyecto real, aquí harías una llamada API para eliminar
     if (window.confirm('¿Está seguro que desea eliminar esta parcela?')) {
       setParcelas(prevParcelas => prevParcelas.filter(p => p.id !== id));
+      setClima(prev => {
+        const nuevo = { ...prev };
+        delete nuevo[id];
+        return nuevo;
+      });
     }
   };
-  
+
   const getEstadoColor = (estado) => {
     switch (estado) {
       case "óptimo": return "estado-optimo";
@@ -113,7 +91,7 @@ const PanelParcelas = () => {
       default: return "";
     }
   };
-  
+
   const getTipoSueloLabel = (tipo) => {
     const tiposSuelo = {
       arenoso: "Arenoso",
@@ -124,10 +102,9 @@ const PanelParcelas = () => {
       calcareo: "Calcáreo",
       pedregoso: "Pedregoso"
     };
-    
     return tiposSuelo[tipo] || tipo;
   };
-  
+
   const getCultivoLabel = (cultivo) => {
     const cultivos = {
       maiz: "Maíz",
@@ -141,13 +118,11 @@ const PanelParcelas = () => {
       cafe: "Café",
       no_cultivado: "Sin cultivo"
     };
-    
     return cultivos[cultivo] || cultivo;
   };
-  
+
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return "No disponible";
-    
     const fecha = new Date(fechaStr);
     return fecha.toLocaleDateString('es-ES', {
       day: '2-digit',
@@ -155,7 +130,7 @@ const PanelParcelas = () => {
       year: 'numeric'
     });
   };
-  
+
   if (cargando) {
     return (
       <div className="cargando-container">
@@ -164,7 +139,7 @@ const PanelParcelas = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="panel-parcelas">
       <div className="panel-parcelas-header">
@@ -173,7 +148,7 @@ const PanelParcelas = () => {
           <i className="fas fa-plus"></i> Nueva Parcela
         </button>
       </div>
-      
+
       {parcelas.length === 0 ? (
         <div className="sin-parcelas">
           <i className="fas fa-seedling"></i>
@@ -185,36 +160,46 @@ const PanelParcelas = () => {
           {parcelas.map(parcela => (
             <div key={parcela.id} className="parcela-card">
               <div className={`parcela-estado ${getEstadoColor(parcela.estado)}`}></div>
-              
               <h3 className="parcela-nombre">{parcela.nombre}</h3>
-              
+
+              {/* Clima actual de la parcela */}
+              <div className="parcela-clima">
+                {clima[parcela.id] && !clima[parcela.id].error ? (
+                  <span>
+                    <i className={`fas fa-${clima[parcela.id].icono || 'cloud'}`}></i>
+                    {clima[parcela.id].temperatura}°C, {clima[parcela.id].condicion}
+                  </span>
+                ) : clima[parcela.id] && clima[parcela.id].error ? (
+                  <span>No se pudo obtener el clima</span>
+                ) : (
+                  <span>Obteniendo clima...</span>
+                )}
+              </div>
+
               <div className="parcela-ubicacion">
                 <i className="fas fa-map-marker-alt"></i>
                 <span>{parcela.ubicacion}</span>
               </div>
-              
+
               <div className="parcela-info">
                 <div className="parcela-info-item">
                   <span className="info-label">Área:</span>
                   <span className="info-valor">{parcela.area} ha</span>
                 </div>
-                
                 <div className="parcela-info-item">
                   <span className="info-label">Tipo de suelo:</span>
                   <span className="info-valor">{getTipoSueloLabel(parcela.tipo_suelo)}</span>
                 </div>
-                
                 <div className="parcela-info-item">
                   <span className="info-label">Cultivo actual:</span>
                   <span className="info-valor">{getCultivoLabel(parcela.cultivo_actual)}</span>
                 </div>
-                
                 <div className="parcela-info-item">
                   <span className="info-label">Fecha de siembra:</span>
                   <span className="info-valor">{formatearFecha(parcela.fecha_siembra)}</span>
                 </div>
               </div>
-              
+
               <div className="parcela-metrics">
                 <div className="metric">
                   <i className="fas fa-thermometer-half"></i>
@@ -225,7 +210,7 @@ const PanelParcelas = () => {
                   <span>{parcela.humedad}%</span>
                 </div>
               </div>
-              
+
               <div className="parcela-actions">
                 <button className="btn-editar" onClick={() => abrirFormulario(parcela)}>
                   <i className="fas fa-edit"></i> Editar
@@ -241,13 +226,12 @@ const PanelParcelas = () => {
           ))}
         </div>
       )}
-      
-      {/* Formulario modal para crear/editar parcela */}
+
       {mostrarFormulario && (
-        <FormularioParcela 
-          onClose={cerrarFormulario} 
-          onGuardar={guardarParcela} 
-          parcelaEditar={parcelaEditar} 
+        <FormularioParcela
+          onClose={cerrarFormulario}
+          onGuardar={guardarParcela}
+          parcelaEditar={parcelaEditar}
         />
       )}
     </div>

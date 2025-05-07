@@ -108,7 +108,7 @@ const servicioMeteo = {
         humedad: datosActuales.main.humidity,
         presion: datosActuales.main.pressure,
         viento: {
-          velocidad: Math.round(datosActuales.wind.speed * 3.6), // Convertir m/s a km/h
+          velocidad: Math.round(datosActuales.wind.speed * 3.6), 
           direccion: obtenerDireccionViento(datosActuales.wind.deg)
         },
         precipitacion: datosActuales.rain ? `${datosActuales.rain['1h']} mm` : '0 mm',
