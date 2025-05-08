@@ -18,15 +18,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
-CORS(app)  # Permitir solicitudes CORS para la API
+CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
-# ...existing code...
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
+#Endpoints para la API de administración de usuarios
 @app.route('/api/registro', methods=['POST'])
 def registrar_usuario():
     data = request.json
@@ -42,6 +42,7 @@ def registrar_usuario():
     db.session.commit()
     return jsonify({'mensaje': 'Usuario registrado correctamente'})
 
+#@app.route('/api/usuarios/<int:id>', methods=['GET'])
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
     data = request.json
@@ -61,7 +62,7 @@ def login_usuario():
 red_sensores = RedSensores()
 
 
-
+# Inicializar los sensores con parámetros de la estación
 parametros = obtener_parametros_estacion()
 sensores_iniciales = [
     Sensor("Temperatura", "°C", 1, parametros["temperatura"][0], parametros["temperatura"][1], 5),
@@ -123,7 +124,7 @@ def simulacion_continua():
 
         print(f"Simulación iniciada por {duracion_segundos} segundos ({parametros_configurables['simulacion']['duracion']} minutos)")
         print(f"Intervalo entre lecturas: {intervalo} segundos")
-
+        
         while simulacion_activa and time.time() < tiempo_fin:
             ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
             print(f"Datos generados en {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -153,6 +154,7 @@ def simulacion_continua():
             print("Simulación completada: se alcanzó la duración configurada")
             simulacion_activa = False
 
+# Fin de la simulación e exportación de datos
 @app.route('/api/exportar_csv', methods=['GET'])
 def exportar_csv():
     # Crear un DataFrame con todas las lecturas
@@ -211,6 +213,7 @@ def exportar_csv():
     return send_file(ruta_csv, as_attachment=True)
 
 
+# Endpoint para obtener los datos de los sensores
 @app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
     """Devuelve la lista de todos los sensores"""
@@ -329,6 +332,7 @@ def iniciar_simulacion():
         "mensaje": f"Simulación iniciada. Duración: {duracion_minutos} minutos",
         "duracion_minutos": duracion_minutos
     })
+
 
 @app.route('/api/simulacion/detener', methods=['POST'])
 def detener_simulacion():
@@ -494,7 +498,7 @@ def agregar_parcela():
         hectareas=data.get('hectareas'),
         latitud=data.get('latitud'),
         longitud=data.get('longitud'),
-        fecha_creacion=data.get('fecha_creacion'),
+        fecha_creacion=datetime.utcnow(),
         cultivo_actual=data.get('cultivo_actual'),
         fecha_siembra=data.get('fecha_siembra')
     )

@@ -1,26 +1,25 @@
 /* frontend/src/views/RecuperarContrasena.css */
 
 .recuperar-page {
-    min-height: 100vh;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-  }
-  
-  .recuperar-container {
-    width: 100%;
-    max-width: 500px; /* Más estrecho que el de registro */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+  min-height: 100vh;
+  width: 100vw;
+  background: #2e7d32;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.recuperar-container {
+  background: #fff;
+  border-radius: 16px;
+  padding: 48px 36px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  width: 100%;
+  max-width: 480px; /* Aumenta el ancho máximo */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
   
   .recuperar-header {
     display: flex;
@@ -44,12 +43,12 @@
   
   /* Contenedor del formulario */
   .recuperar-form-container {
-    background-color: white;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    width: 100%;
-  }
+  background-color: white;
+  border-radius: 12px;
+  padding: 40px 32px; /* Más espacio */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
   
   .recuperar-form-container h2 {
     color: #2e7d32;
@@ -173,11 +172,11 @@
     text-align: center;
     margin-top: 20px;
     font-size: 14px;
-    color: white;
+    color: rgb(0, 0, 0);
   }
   
   .recuperar-footer a {
-    color: #a5d6a7;
+    color: #013369;
     text-decoration: none;
     font-weight: 500;
   }

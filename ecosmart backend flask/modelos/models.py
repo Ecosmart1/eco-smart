@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 class LecturaSensor(db.Model):
-    
+    __tablename__ = 'lecturas_sensores'
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.String, nullable=False)
     sensor_id = db.Column(db.Integer, nullable=False)
@@ -32,3 +32,4 @@ class Parcela(db.Model):
     fecha_creacion = db.Column(db.DateTime, nullable=True)
     cultivo_actual = db.Column(db.String(100), nullable=True)
     fecha_siembra = db.Column(db.Date, nullable=True)
+    

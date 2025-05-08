@@ -4,12 +4,12 @@ import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
 
-const API_URL = "http://localhost:5000/api"; // Cambia si tu backend está en otra URL
+const API_URL = "http://localhost:5000/api"; 
 
 const DashboardAgricultor = () => {
   const [usuario, setUsuario] = useState(null);
   const [parcelas, setParcelas] = useState([]);
-  const [alertas, setAlertas] = useState([]); // Si tienes alertas en backend, agrega fetch
+  const [alertas, setAlertas] = useState([]); // cuando hayan alertas en backend, agrega fetch
   const [datosMeteo, setDatosMeteo] = useState(null); // Si tienes meteorología en backend, agrega fetch
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -159,7 +159,7 @@ const DashboardAgricultor = () => {
                       <span className="detail-value">{parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : '-'}</span>
                     </div>
                   </div>
-                  {/* Puedes agregar más métricas si tu backend las entrega */}
+                  {/* Agregar más secciones si es necesario */}
                   <button className="parcela-btn-detalle">Ver Detalles</button>
                 </div>
               ))}
