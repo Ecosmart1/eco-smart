@@ -13,7 +13,11 @@ from modelos.models import db, Usuario, LecturaSensor , Parcela
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from openai import OpenAI
+from dotenv import load_dotenv
+from openai import OpenAI
 
+#carga variables de entorno
+load_dotenv()
 
 #carga variables de entorno
 load_dotenv()
@@ -26,6 +30,7 @@ app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)

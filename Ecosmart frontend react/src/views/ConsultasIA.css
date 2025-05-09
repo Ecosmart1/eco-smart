@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 .consultas-ia-container {
+=======
+.asistente-ia-container {
+>>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
   max-width: 800px;
   margin: 2rem auto;
   padding: 2rem;
@@ -7,14 +11,22 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+<<<<<<< HEAD
 .consultas-ia-container h1 {
+=======
+.asistente-ia-container h1 {
+>>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
   font-size: 2rem;
   color: #2e7d32;
   margin-bottom: 1rem;
   text-align: center;
 }
 
+<<<<<<< HEAD
 .consultas-ia-container p {
+=======
+.asistente-ia-container p {
+>>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
   font-size: 1rem;
   color: #666;
   margin-bottom: 2rem;
@@ -34,6 +46,10 @@
   font-size: 1rem;
   border: 1px solid #ddd;
   border-radius: 6px;
+<<<<<<< HEAD
+=======
+  resize: vertical;
+>>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
 }
 
 .consulta-form button {
@@ -52,6 +68,14 @@
   background-color: #1b5e20;
 }
 
+<<<<<<< HEAD
+=======
+.consulta-form button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+>>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
 .respuesta-container {
   margin-top: 2rem;
   padding: 1rem;
@@ -69,4 +93,8 @@
 .respuesta-container p {
   font-size: 1rem;
   color: #555;
+<<<<<<< HEAD
+=======
+  line-height: 1.5;
+>>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
 }
