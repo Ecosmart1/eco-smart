@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
+import MapaParcelas from './MapaParcelas';
 import { Spinner } from 'react-bootstrap';
 
 const API_URL = "http://localhost:5000/api"; 
@@ -175,13 +176,7 @@ const DashboardAgricultor = () => {
               <h3>Mapa de Parcelas</h3>
             </div>
             <div className="mapa-container">
-              {/* Aquí iría un componente de mapa real */}
-              <div className="mapa-placeholder">
-                <div className="mapa-placeholder-text">
-                  <i className="fas fa-map-marker-alt"></i>
-                  <p>Mapa de parcelas</p>
-                </div>
-              </div>
+              <MapaParcelas API_URL={API_URL} />
             </div>
           </div>
         </div>

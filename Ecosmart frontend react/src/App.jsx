@@ -155,8 +155,7 @@ function App() {
             </div>
           </div>
         } />
-        
-        {/* Edición de parcela existente */}
+
         {/* Edición de parcela existente */}
       <Route path="/dashboard/agricultor/parcelas/editar/:id" element={
         <div className="app-container">
