@@ -175,8 +175,8 @@ const DashboardAgricultor = () => {
 
          <div className="dashboard-card mapa-parcelas">
               <div className="card-header">
-                <h3>Mapa de Parcelas</h3>
-                <Link to="/dashboard/agricultor/parcelas" className="ver-todo">Ver todas</Link>
+                <h3>Mapa de Parcelas global</h3>
+               
               </div>
               <div className="mapa-container">
                 <MapaParcelas 
