@@ -14,6 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from openai import OpenAI
 
+
 #carga variables de entorno
 load_dotenv()
 
@@ -32,14 +33,14 @@ db.init_app(app)
 #enpoint para la API de consultas IA
 @app.route('/api/ia/consultas', methods=['POST'])
 def consulta_ia():
-    data=request.json
+    data = request.json
     if not data or 'consulta' not in data:
         return jsonify({'error': 'Consulta no proporcionada'}), 400
     
-    mensaje_usuario=data['consulta']
+    mensaje_usuario = data['consulta']
     try:
-        #envia la consulta al modelo IA
-        respuesta= client.chat.completions.create(
+        # Enviar la consulta al modelo IA
+        respuesta = client.chat.completions.create(
             model="deepseek/deepseek-chat-v3-0324:free",
             messages=[
                 {
@@ -60,12 +61,12 @@ def consulta_ia():
             ],
             stream=False
         )
-        #extrae y retorna la respuesta de la IA
-        respuesta_ia=respuesta.choices[0].message.content
-        return jsonify({'respuesta':respuesta_ia})
+        # Extraer y retornar la respuesta de la IA
+        respuesta_ia = respuesta.choices[0].message.content
+        return jsonify({'respuesta': respuesta_ia})
     
     except Exception as e:
-        return jsonify({'error':f'Error al procesar la consulta: {str(e)}'}), 500
+        return jsonify({'error': f'Error al procesar la consulta: {str(e)}'}), 500
 
 
 

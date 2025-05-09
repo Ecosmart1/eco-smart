@@ -1,4 +1,4 @@
-.asistente-ia-container {
+.consultas-ia-container {
   max-width: 800px;
   margin: 2rem auto;
   padding: 2rem;
@@ -7,14 +7,14 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.asistente-ia-container h1 {
+.consultas-ia-container h1 {
   font-size: 2rem;
   color: #2e7d32;
   margin-bottom: 1rem;
   text-align: center;
 }
 
-.asistente-ia-container p {
+.consultas-ia-container p {
   font-size: 1rem;
   color: #666;
   margin-bottom: 2rem;
@@ -34,7 +34,6 @@
   font-size: 1rem;
   border: 1px solid #ddd;
   border-radius: 6px;
-  resize: vertical;
 }
 
 .consulta-form button {
@@ -51,11 +50,6 @@
 
 .consulta-form button:hover {
   background-color: #1b5e20;
-}
-
-.consulta-form button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
 }
 
 .respuesta-container {
@@ -75,5 +69,4 @@
 .respuesta-container p {
   font-size: 1rem;
   color: #555;
-  line-height: 1.5;
 }

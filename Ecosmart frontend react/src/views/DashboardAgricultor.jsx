@@ -111,10 +111,10 @@ const DashboardAgricultor = () => {
         </div>
         <div className="header-nav">
           <div className="nav-item active">Dashboard</div>
-          <Link to="/dashboard/agricultor/parcelas" className="nav-item">Parcelas</Link>
+        
           <Link to="/dashboard/agricultor/sensores" className="nav-item">Sensores</Link>
           <div className="nav-item">Alertas</div>
-          <div className="nav-item">Asistente IA</div>
+          <Link to="/dashboard/agricultor/consultas" className="nav-item">Consultas IA</Link>
         </div>
         <div className="user-profile">
           <div className="user-avatar">
@@ -301,18 +301,17 @@ const DashboardAgricultor = () => {
         </div>
 
         {/* Seccion 4: Consultas IA */}
-        <div className="dashboard-row">
-          <div className="dashboard-card consultas-ia-panel">
-            <div className="card-header">
-              <h3>Asistente IA</h3>
-              <Link to="/dashboard/agricultor/asistente" className="ver-todo">Ir al Asistente</Link>
-            </div>
-            <p>Realiza consultas relacionadas con la agricultura y recibe respuestas técnicas y concisas.</p>
-            <button className="btn-consultas-ia" onClick={() => navigate('/dashboard/agricultor/asistente')}>
-              Consultar Asistente IA
-            </button>
+        <div className="dashboard-card consultas-ia-panel">
+          <div className="card-header">
+            <h3>Consultas IA</h3>
+            <Link to="/dashboard/agricultor/consultas" className="ver-todo">Ir a las consultas con IA</Link>
           </div>
+          <p>Realiza consultas relacionadas con la agricultura y recibe respuestas técnicas y concisas.</p>
+          <button className="btn-consultas-ia" onClick={() => navigate('/dashboard/agricultor/consultas')}>
+            Consultar Asistente IA
+          </button>
         </div>
+
       </div>
       
       {/* Formulario modal para crear parcela */}

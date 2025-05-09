@@ -121,11 +121,11 @@ function App() {
             <DashboardAgricultor />
           </div>
         } />
-        <Route path="/dashboard/agronomo/asistente" element={
+        <Route path="/dashboard/agricultor/consultas" element={
           <div className="app-container">
-            <AsistenteIA />
+            <ConsultasIA />
           </div>
-      } />
+        } />
         {/* Lista de parcelas */}
         <Route path="/dashboard/agricultor/parcelas" element={
           <div className="app-container">
