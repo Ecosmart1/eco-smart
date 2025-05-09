@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
-import MapaParcelas from './MapaParcelas';
 import { Spinner } from 'react-bootstrap';
+import MapaParcelas from './MapaParcelas';
 
 const API_URL = "http://localhost:5000/api"; 
 
@@ -111,7 +111,7 @@ const DashboardAgricultor = () => {
         <div className="header-nav">
           <div className="nav-item active">Dashboard</div>
           <Link to="/dashboard/agricultor/parcelas" className="nav-item">Parcelas</Link>
-          <div className="nav-item">Sensores</div>
+          <Link to="/dashboard/agricultor/sensores" className="nav-item">Sensores</Link>
           <div className="nav-item">Alertas</div>
           <div className="nav-item">Asistente IA</div>
         </div>
@@ -165,20 +165,28 @@ const DashboardAgricultor = () => {
                     </div>
                   </div>
                   {/* Agregar más secciones si es necesario */}
-                  <button className="parcela-btn-detalle">Ver Detalles</button>
+                  <button 
+                  className="parcela-btn-detalle" 
+              onClick={() => navigate(`/dashboard/agricultor/parcelas/${parcela.id}`)}>Ver Detalles</button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="dashboard-card mapa-parcelas">
-            <div className="card-header">
-              <h3>Mapa de Parcelas</h3>
+         <div className="dashboard-card mapa-parcelas">
+              <div className="card-header">
+                <h3>Mapa de Parcelas</h3>
+                <Link to="/dashboard/agricultor/parcelas" className="ver-todo">Ver todas</Link>
+              </div>
+              <div className="mapa-container">
+                <MapaParcelas 
+                  API_URL={API_URL} 
+                  showAllParcelas={true}
+                  mapHeight="350px"
+                  initialZoom={30000000}  // Un zoom más alejado para ver más territorio
+                />
+              </div>
             </div>
-            <div className="mapa-container">
-              <MapaParcelas API_URL={API_URL} />
-            </div>
-          </div>
         </div>
 
         {/* Sección 2: Alertas y meteorología */}
