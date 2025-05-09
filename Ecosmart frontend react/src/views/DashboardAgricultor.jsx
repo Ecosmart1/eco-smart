@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
+import { Spinner } from 'react-bootstrap';
 
 const API_URL = "http://localhost:5000/api"; 
 
@@ -88,8 +89,11 @@ const DashboardAgricultor = () => {
 
   if (cargando) {
     return (
-      <div className="cargando-container">
-        <div className="cargando-spinner"></div>
+      <div style={{
+        textAlign: 'center',
+        padding: '20% 0',
+        width: '100%'
+      }}>
         <p>Cargando datos...</p>
       </div>
     );
@@ -105,7 +109,7 @@ const DashboardAgricultor = () => {
         </div>
         <div className="header-nav">
           <div className="nav-item active">Dashboard</div>
-          <div className="nav-item">Parcelas</div>
+          <Link to="/dashboard/agricultor/parcelas" className="nav-item">Parcelas</Link>
           <div className="nav-item">Sensores</div>
           <div className="nav-item">Alertas</div>
           <div className="nav-item">Asistente IA</div>
@@ -138,7 +142,7 @@ const DashboardAgricultor = () => {
           <div className="dashboard-card parcelas-resumen">
             <div className="card-header">
               <h3>Mis Parcelas</h3>
-              <Link to="/parcelas" className="ver-todo">Ver todas</Link>
+              <Link to="/dashboard/agricultor/parcelas" className="ver-todo">Ver todas</Link>
             </div>
             <div className="parcelas-grid">
               {parcelas.map(parcela => (

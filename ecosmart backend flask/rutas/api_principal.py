@@ -524,6 +524,16 @@ def listar_parcelas():
         })
     return jsonify(resultado)
 
+#Endpoin para eliminar una parcela
+@app.route('/api/parcelas/<int:id>', methods=['DELETE'])
+def eliminar_parcela(id):
+    parcela = Parcela.query.get(id)
+    if not parcela:
+        return jsonify({'error': 'Parcela no encontrada'}), 404
+    db.session.delete(parcela)
+    db.session.commit()
+    return jsonify({'mensaje': 'Parcela eliminada correctamente'})
+
 
 
 

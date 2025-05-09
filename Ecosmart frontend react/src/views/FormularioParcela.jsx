@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Añadimos useNavigate
 import './FormularioParcela.css';
 
-const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
+const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null, API_URL, redirectUrl = '/dashboard/agricultor/parcelas' }) => {
+  const navigate = useNavigate(); // Para redireccionar con mensaje
   const [parcela, setParcela] = useState(parcelaEditar || {
     nombre: '',
     ubicacion: '',
@@ -13,6 +15,7 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
   });
 
   const [errores, setErrores] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // Para controlar el estado de envío
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -46,9 +49,11 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
     return Object.keys(nuevosErrores).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarFormulario()) return;
+
+    setIsSubmitting(true); // Indicar que está en proceso de envío
 
     const parcelaFinal = {
       ...parcela,
@@ -57,7 +62,44 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
       longitud: parcela.longitud ? parseFloat(parcela.longitud) : null
     };
 
-    onGuardar(parcelaFinal);
+    try {
+      // Si se proporciona onGuardar (para compatibilidad con versiones anteriores)
+      if (onGuardar) {
+        onGuardar(parcelaFinal, true); // Pasar true en minúscula
+        return;
+      }
+      
+      // Si no, manejar directamente la redirección aquí
+      if (parcelaEditar && parcelaEditar.id) {
+        await fetch(`${API_URL}/parcelas/${parcelaEditar.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parcelaFinal)
+        });
+        
+        // Redirigir con mensaje de éxito
+        navigate(redirectUrl, {
+          state: { successMessage: '¡Parcela actualizada exitosamente!' }
+        });
+      } else {
+        await fetch(`${API_URL}/parcelas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parcelaFinal)
+        });
+        
+        // Redirigir con mensaje de éxito
+        navigate(redirectUrl, {
+          state: { successMessage: '¡Parcela creada exitosamente!' }
+        });
+      }
+    } catch (error) {
+      console.error('Error al guardar la parcela:', error);
+      setErrores({ 
+        general: 'Ocurrió un error al guardar la parcela. Por favor, intente nuevamente.' 
+      });
+      setIsSubmitting(false); // Restablecer estado de envío
+    }
   };
 
   return (
@@ -65,9 +107,16 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
       <div className="parcela-form-container">
         <div className="parcela-form-header">
           <h2>{parcelaEditar ? 'Editar Parcela' : 'Nueva Parcela'}</h2>
-          <button className="btn-cerrar" onClick={onClose}>×</button>
+          <button className="btn-cerrar" onClick={onClose}>×</button> {/* Restauramos el botón de cierre */}
         </div>
         <form onSubmit={handleSubmit} className="parcela-form">
+          {/* Mensaje de error general si existe */}
+          {errores.general && (
+            <div className="error-general">
+              {errores.general}
+            </div>
+          )}
+          
           <div className="form-group">
             <label htmlFor="nombre">Nombre de la parcela *</label>
             <input
@@ -184,8 +233,21 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null }) => {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-cancelar" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn-guardar">Guardar</button>
+            <button 
+              type="button" 
+              className="btn-cancelar" 
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              className="btn-guardar"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Guardando...' : 'Guardar'}
+            </button>
           </div>
         </form>
       </div>
