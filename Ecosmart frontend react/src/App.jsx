@@ -24,6 +24,9 @@ import GestionParcelas from './views/GestionParcelas';
 import DetalleParcela from './views/DetalleParcela';
 import FormularioParcela from './views/FormularioParcela';
 
+// importación consultas IA
+import ConsultasIA from './views/ConsultasIA';
+
 /**
  * Componente principal de la aplicación
  * Configura todas las rutas disponibles mediante React Router
@@ -117,7 +120,11 @@ function App() {
             <DashboardAgricultor />
           </div>
         } />
-        
+        <Route path="/dashboard/agronomo/asistente" element={
+          <div className="app-container">
+            <AsistenteIA />
+          </div>
+      } />
         {/* Lista de parcelas */}
         <Route path="/dashboard/agricultor/parcelas" element={
           <div className="app-container">

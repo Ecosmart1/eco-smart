@@ -11,19 +11,62 @@ import pandas as pd
 import json
 from modelos.models import db, Usuario, LecturaSensor , Parcela
 from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+from openai import OpenAI
 
+#carga variables de entorno
+load_dotenv()
 
-
-
+# Inicializa el cliente de OpenAI
+client = OpenAI(api_key=os.getenv("APIKEY_DEEPSEEK"), base_url="https://openrouter.ai/api/v1")
 
 
 app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+#enpoint para la API de consultas IA
+@app.route('/api/ia/consultas', methods=['POST'])
+def consulta_ia():
+    data=request.json
+    if not data or 'consulta' not in data:
+        return jsonify({'error': 'Consulta no proporcionada'}), 400
+    
+    mensaje_usuario=data['consulta']
+    try:
+        #envia la consulta al modelo IA
+        respuesta= client.chat.completions.create(
+            model="deepseek/deepseek-chat-v3-0324:free",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+                        Eres el apartado de consultas de una Plataforma de Agricultura Inteligente.
+                        Reglas:
+                        1. No debes responder dudas que no se relacionen con la agricultura.
+                        2. Sé conciso y técnico, pero amable.
+                        3. Si no sabes la respuesta, di: 'Consulta a un agrónomo especializado'.
+                        4. Si te preguntan cuanto es 2 + 2, responde: 'Consulta a un agrónomo especializado'.
+                    """
+                },
+                {
+                    "role": "user",
+                    "content": mensaje_usuario
+                }
+            ],
+            stream=False
+        )
+        #extrae y retorna la respuesta de la IA
+        respuesta_ia=respuesta.choices[0].message.content
+        return jsonify({'respuesta':respuesta_ia})
+    
+    except Exception as e:
+        return jsonify({'error':f'Error al procesar la consulta: {str(e)}'}), 500
+
 
 
 #Endpoints para la API de administración de usuarios

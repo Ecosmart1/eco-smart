@@ -5,6 +5,7 @@ import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
 import { Spinner } from 'react-bootstrap';
 
+
 const API_URL = "http://localhost:5000/api"; 
 
 const DashboardAgricultor = () => {
@@ -293,6 +294,20 @@ const DashboardAgricultor = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Seccion 4: Consultas IA */}
+        <div className="dashboard-row">
+          <div className="dashboard-card consultas-ia-panel">
+            <div className="card-header">
+              <h3>Asistente IA</h3>
+              <Link to="/dashboard/agricultor/asistente" className="ver-todo">Ir al Asistente</Link>
+            </div>
+            <p>Realiza consultas relacionadas con la agricultura y recibe respuestas técnicas y concisas.</p>
+            <button className="btn-consultas-ia" onClick={() => navigate('/dashboard/agricultor/asistente')}>
+              Consultar Asistente IA
+            </button>
           </div>
         </div>
       </div>
