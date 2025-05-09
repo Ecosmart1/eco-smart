@@ -23,6 +23,7 @@ import DashboardAgricultor from './views/DashboardAgricultor';
 import GestionParcelas from './views/GestionParcelas';
 import DetalleParcela from './views/DetalleParcela';
 import FormularioParcela from './views/FormularioParcela';
+import EditarParcelaPage from './views/EditarParcelaPage';
 
 /**
  * Componente principal de la aplicación
@@ -156,18 +157,16 @@ function App() {
         } />
         
         {/* Edición de parcela existente */}
-        <Route path="/dashboard/agricultor/parcelas/editar/:id" element={
-          <div className="app-container">
-            <HeaderAgricultor activeItem="parcelas" />
-            <div className="content-container">
-              <FormularioParcela 
-                API_URL={API_URL} 
-                mode="edit" 
-                redirectUrl="/dashboard/agricultor/parcelas" 
-              />
-            </div>
+        {/* Edición de parcela existente */}
+      <Route path="/dashboard/agricultor/parcelas/editar/:id" element={
+        <div className="app-container">
+          <HeaderAgricultor activeItem="parcelas" />
+          <div className="content-container">
+            <EditarParcelaPage API_URL={API_URL} />
           </div>
-        } />
+        </div>
+      } />
+        
       </Routes>
     </Router>
   );

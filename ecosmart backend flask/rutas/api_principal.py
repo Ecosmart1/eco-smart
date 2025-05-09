@@ -534,6 +534,69 @@ def eliminar_parcela(id):
     db.session.commit()
     return jsonify({'mensaje': 'Parcela eliminada correctamente'})
 
+# Endpoint para obtener una parcela específica por ID
+@app.route('/api/parcelas/<int:id>', methods=['GET'])
+def obtener_parcela(id):
+    parcela = Parcela.query.get(id)
+    if not parcela:
+        return jsonify({'error': 'Parcela no encontrada'}), 404
+    
+    # Devolver la información de la parcela
+    return jsonify({
+        "id": parcela.id,
+        "nombre": parcela.nombre,
+        "ubicacion": parcela.ubicacion,
+        "hectareas": parcela.hectareas,
+        "latitud": parcela.latitud,
+        "longitud": parcela.longitud,
+        "fecha_creacion": parcela.fecha_creacion.isoformat() if parcela.fecha_creacion else None,
+        "cultivo_actual": parcela.cultivo_actual,
+        "fecha_siembra": parcela.fecha_siembra.isoformat() if parcela.fecha_siembra else None
+    })
+
+# Endpoint para actualizar una parcela existente
+@app.route('/api/parcelas/<int:id>', methods=['PUT'])
+def actualizar_parcela(id):
+    parcela = Parcela.query.get(id)
+    if not parcela:
+        return jsonify({'error': 'Parcela no encontrada'}), 404
+    
+    # Obtener los datos de la solicitud
+    data = request.json
+    
+    # Actualizar los campos de la parcela
+    parcela.nombre = data.get('nombre', parcela.nombre)
+    parcela.ubicacion = data.get('ubicacion', parcela.ubicacion)
+    parcela.hectareas = data.get('hectareas', parcela.hectareas)
+    parcela.latitud = data.get('latitud', parcela.latitud)
+    parcela.longitud = data.get('longitud', parcela.longitud)
+    parcela.cultivo_actual = data.get('cultivo_actual', parcela.cultivo_actual)
+    
+    # Manejar la fecha de siembra (si viene como string, convertirla)
+    fecha_siembra = data.get('fecha_siembra')
+    if fecha_siembra:
+        try:
+            from datetime import datetime
+            if isinstance(fecha_siembra, str):
+                # Intentar diferentes formatos
+                try:
+                    parcela.fecha_siembra = datetime.fromisoformat(fecha_siembra)
+                except ValueError:
+                    # Formato alternativo que puede venir del frontend
+                    parcela.fecha_siembra = datetime.strptime(fecha_siembra, '%Y-%m-%d')
+        except Exception as e:
+            print(f"Error al procesar fecha: {str(e)}")
+    elif fecha_siembra == '' or fecha_siembra is None:
+        parcela.fecha_siembra = None
+    
+    # Guardar los cambios
+    try:
+        db.session.commit()
+        return jsonify({'mensaje': 'Parcela actualizada correctamente'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
+
 
 
 
