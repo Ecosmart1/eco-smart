@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import LandingPage from './views/LandingPage';
 import AjusteParametros from "./views/AjusteParametros";
 import Login from "./views/Login";
@@ -9,12 +10,19 @@ import SensoresPanel from './views/sensores';
 import Usuarios from './views/Usuarios';
 import HeaderTecnico from './views/headertecnico';
 import Configuracion from './views/configuracion';
-import DashboardAgricultor from './views/DashboardAgricultor'; // Agrega esta línea
+import DashboardAgricultor from './views/DashboardAgricultor'; 
+import ChatContainer from './views/conversaciones';
+import HeaderAgricultor from './views/headeragricultor';
 
-/*import HeaderAgronomo from './views/HeaderAgronomo';*/
+
 
 function App() {
   const API_URL = 'http://localhost:5000/api';
+
+   const getUserId = () => {
+    const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+    return user.id || null;
+  };
 
   return (
     <Router>
@@ -82,11 +90,21 @@ function App() {
 
         {/* Rutas para agricultor */}
         <Route path="/dashboard/agricultor" element={
-        <div className="app-container">
-        <DashboardAgricultor />
-        </div>
-        } />
+  <div className="app-container">
+    <HeaderAgricultor />
+    <DashboardAgricultor />
+  </div>
+} />
         
+        <Route path="/dashboard/tecnico/chat" element={
+  <div className="app-container">
+    <HeaderTecnico />
+    <div className="content-container">
+      <ChatContainer userId={getUserId()} />
+    </div>
+  </div>
+} />
+
 
         {/* Puedes agregar más rutas para otros roles aquí */}
 
@@ -98,6 +116,37 @@ function App() {
             </div>
           </div>
         } />
+
+      
+<Route path="/dashboard/agricultor" element={
+  <div className="app-container">
+    <HeaderAgricultor />
+    <DashboardAgricultor />
+  </div>
+} />
+
+
+<Route path="/dashboard/agricultor/chat" element={
+  <div className="app-container">
+    <HeaderAgricultor />
+    <div className="content-container">
+      <ChatContainer userId={getUserId()} />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agricultor/alertas" element={
+  <div className="app-container">
+    <HeaderAgricultor />
+    <div className="content-container">
+      {/* Contenido de alertas */}
+    </div>
+  </div>
+} />
+
+
+
+
       </Routes>
     </Router>
   );

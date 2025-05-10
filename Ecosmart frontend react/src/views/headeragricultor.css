@@ -1,0 +1,137 @@
+/* Estilos generales del header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  height: 60px;
+  z-index: 100; /* Asegura que el header esté siempre por encima del contenido */
+}
+
+/* Clases específicas para el header de agricultor */
+.agricultor-header {
+  background-color: #fdfdfd; /* Color de fondo ligeramente verdoso */
+  border-bottom: 3px solid #3e6118; /* Borde distintivo verde */
+}
+
+.agricultor-nav .nav-item {
+  color: #33691e; /* Color verde más oscuro para los links */
+  font-weight: 500;
+}
+
+.agricultor-nav .nav-item:hover {
+  color: #1b5e20; /* Color más oscuro al pasar el mouse */
+  transform: translateY(-1px); /* Pequeña animación al pasar el mouse */
+}
+
+/* Logo */
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.logo-container img {
+  height: 40px;
+  margin-right: 10px;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #22963e;
+}
+
+/* Menú de navegación */
+.nav-menu {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-item {
+  text-decoration: none;
+  color: #444;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  padding: 5px 10px; /* Añadido padding para área de clic más grande */
+  border-radius: 4px; /* Bordes redondeados sutiles */
+}
+
+.nav-item:hover {
+  color: #22963e;
+  background-color: rgba(34, 150, 62, 0.05); /* Fondo sutil al hover */
+}
+
+.nav-item.active {
+  color: #22963e;
+  font-weight: 600;
+  background-color: rgba(34, 150, 62, 0.1);
+}
+
+.nav-item i {
+  font-size: 20px;
+}
+
+/* Sección de usuario */
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0f2f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #22963e;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra sutil */
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  color: #666;
+  text-decoration: none;
+}
+
+.user-role:hover {
+  text-decoration: underline;
+  color: #22963e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-menu {
+    gap: 10px;
+  }
+  
+  .nav-item span {
+    display: none; /* Oculta el texto en móviles, deja solo los iconos */
+  }
+  
+  .logo-text {
+    font-size: 1.2rem;
+  }
+  
+  .user-name {
+    font-size: 0.9rem;
+  }
+}

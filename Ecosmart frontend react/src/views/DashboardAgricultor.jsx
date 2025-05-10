@@ -97,31 +97,8 @@ const DashboardAgricultor = () => {
 
   return (
     <div className="dashboard-agricultor">
-      {/* Header */}
-      <div className="dashboard-header">
-        <div className="logo-container">
-          <img src="/public/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
-          <h1 className="app-title">EcoSmart</h1>
-        </div>
-        <div className="header-nav">
-          <div className="nav-item active">Dashboard</div>
-          <div className="nav-item">Parcelas</div>
-          <div className="nav-item">Sensores</div>
-          <div className="nav-item">Alertas</div>
-          <div className="nav-item">Asistente IA</div>
-        </div>
-        <div className="user-profile">
-          <div className="user-avatar">
-            {usuario?.nombre.charAt(0)}
-          </div>
-          <div className="user-info">
-            <div className="user-name">{usuario?.nombre}</div>
-            <div className="user-role">Agricultor</div>
-          </div>
-          <div className="user-menu-icon">▼</div>
-        </div>
-      </div>
-
+      {/* HEADER ELIMINADO - Se usa HeaderAgricultor separado */}
+      
       {/* Contenido principal */}
       <div className="dashboard-content">
         {/* Bienvenida y fecha */}
@@ -159,7 +136,6 @@ const DashboardAgricultor = () => {
                       <span className="detail-value">{parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : '-'}</span>
                     </div>
                   </div>
-                  {/* Agregar más secciones si es necesario */}
                   <button className="parcela-btn-detalle">Ver Detalles</button>
                 </div>
               ))}

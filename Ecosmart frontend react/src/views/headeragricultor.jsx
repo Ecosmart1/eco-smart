@@ -1,11 +1,8 @@
-// Componente Header reutilizable
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import './headertecnico.css'; // Asegúrate de tener estilos para el header
+import './HeaderAgricultor.css'; // Renombrado con mayúscula inicial
 
-
-
-function HeaderTecnico() {
+function HeaderAgricultor() { // Nombre corregido del componente
     const [user, setUser] = useState(() => {
       const userStr = localStorage.getItem('ecosmart_user');
       return userStr ? JSON.parse(userStr) : null;
@@ -24,23 +21,21 @@ function HeaderTecnico() {
     }, []);
   
     return (
-      <div className="header">
+      <div className="header agricultor-header"> {/* Añadida clase especial para agricultor */}
         <div className="logo-container">
           <img src="/logo-ecosmart.png" alt="EcoSmart Logo" />
           <span className="logo-text">EcoSmart</span>
         </div>
         
-        <div className="nav-menu">
-  <Link to="/dashboard/tecnico" className="nav-item">Panel de control</Link>
-  <Link to="/sensores" className="nav-item">Sensores</Link>
-  <Link to="/dashboard/tecnico/alertas" className="nav-item">Alertas</Link>
-  <Link to="/dashboard/tecnico/chat" className="nav-item">
-    <i className="material-icons">chat</i>
-    <span>Asistente IA</span>
-  </Link>
-</div>
-
-      
+        <div className="nav-menu agricultor-nav"> {/* Clase específica para agricultor */}
+          <Link to="/dashboard/agricultor" className="nav-item">Panel de control</Link>
+          <Link to="/parcelas" className="nav-item">Parcelas</Link>
+          <Link to="/dashboard/agricultor/alertas" className="nav-item">Alertas</Link>
+          <Link to="/dashboard/agricultor/chat" className="nav-item">
+            <i className="material-icons">chat</i>
+            <span>Asistente IA</span>
+          </Link>
+        </div>
         
         <div className="user-section">
           <div className="user-avatar">
@@ -53,6 +48,6 @@ function HeaderTecnico() {
         </div>
       </div>
     );
-  }
+}
 
-  export default HeaderTecnico;
+export default HeaderAgricultor; // Nombre corregido en export

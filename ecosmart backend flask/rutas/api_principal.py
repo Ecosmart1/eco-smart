@@ -9,9 +9,9 @@ from datetime import datetime
 import threading
 import pandas as pd
 import json
-from modelos.models import db, Usuario, LecturaSensor , Parcela
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from servicios.openrouter import send_to_deepseek
 
 
 
@@ -524,8 +524,206 @@ def listar_parcelas():
         })
     return jsonify(resultado)
 
+#endoints para la API de conversaciones
+# Endpoint para listar todas las conversaciones de un usuario
+# Endpoint para obtener conversaciones de un usuario
+@app.route('/api/conversaciones/<user_id>', methods=['GET'])
+def obtener_conversaciones(user_id):
+    try:
+        # Verificar que el usuario exista
+        usuario = Usuario.query.get_or_404(user_id)
+        
+        # Obtener conversaciones
+        conversaciones = Conversacion.query.filter_by(usuario_id=user_id).order_by(Conversacion.created_at.desc()).all()
+        
+        # Construir resultado directamente sin usar get_last_message
+        resultado = []
+        for conv in conversaciones:
+            # Buscar el último mensaje manualmente
+            ultimo_mensaje = db.session.query(Mensaje).filter_by(
+                conversacion_id=conv.id
+            ).order_by(Mensaje.timestamp.desc()).first()
+            
+            resultado.append({
+                'id': conv.id,
+                'created_at': conv.created_at.isoformat(),
+                'last_message': ultimo_mensaje.content if ultimo_mensaje else ""
+            })
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
+# Endpoint para obtener mensajes de una conversación
+@app.route('/api/chat/<conv_id>', methods=['GET'])
+def obtener_mensajes(conv_id):
+    try:
+        # Obtener el ID de usuario del request
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'User ID requerido'}), 400
+            
+        # Obtener la conversación
+        conversacion = Conversacion.query.get_or_404(conv_id)
+        
+        # Verificar que el usuario es el propietario de la conversación
+        if str(conversacion.usuario_id) != str(user_id):
+            return jsonify({'error': 'No autorizado para ver esta conversación'}), 403
+            
+        # Obtener mensajes
+        mensajes = Mensaje.query.filter_by(conversacion_id=conv_id).order_by(Mensaje.created_at).all()
+        
+        return jsonify({
+            'id': conversacion.id,
+            'created_at': conversacion.created_at.isoformat(),
+            'messages': [{
+                'sender': msg.sender,
+                'content': msg.content,
+                'timestamp': msg.created_at.isoformat()
+            } for msg in mensajes]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
+# Endpoint para crear nueva conversación
+@app.route('/api/conversaciones', methods=['POST'])
+def crear_conversacion():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        
+        # Validación explícita
+        if not user_id:
+            print(f"Error: user_id faltante o inválido: {user_id}")
+            return jsonify({'error': 'Se requiere user_id válido'}), 400
+            
+        # Verificar si el usuario existe
+        usuario = Usuario.query.get(user_id)
+        if not usuario:
+            print(f"Error: Usuario con id {user_id} no encontrado")
+            return jsonify({'error': f'Usuario con id {user_id} no encontrado'}), 404
+        
+        print(f"Creando conversación para usuario {user_id}")
+        conversacion = Conversacion(usuario_id=user_id)
+        db.session.add(conversacion)
+        db.session.commit()
+        
+        return jsonify({
+            'id': conversacion.id,
+            'created_at': conversacion.created_at.isoformat()
+        })
+    except Exception as e:
+        print(f"Error al crear conversación: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': f'Error al crear conversación: {str(e)}'}), 500
+
+# Endpoint para eliminar conversación
+# En el backend:
+@app.route('/api/conversaciones/<conv_id>', methods=['DELETE'])
+def eliminar_conversacion(conv_id):
+    try:
+        # Verificar el usuario desde los headers
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'User ID requerido'}), 400
+            
+        conversacion = Conversacion.query.get_or_404(conv_id)
+        
+        # Verificar propiedad
+        if str(conversacion.usuario_id) != str(user_id):
+            return jsonify({'error': 'No autorizado para eliminar esta conversación'}), 403
+            
+        # Eliminar mensajes relacionados
+        Mensaje.query.filter_by(conversacion_id=conv_id).delete()
+        
+        # Eliminar la conversación
+        db.session.delete(conversacion)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# Endpoint para obtener mensajes de una conversación
+@app.route('/api/chat/<int:conv_id>', methods=['GET'])
+def obtener_conversacion(conv_id):
+    conversacion = Conversacion.query.get_or_404(conv_id)
+    mensajes = Mensaje.query.filter_by(conversacion_id=conv_id).order_by(Mensaje.timestamp).all()
+    
+    return jsonify({
+        'conversation_id': conv_id,
+        'messages': [{
+            'sender': msg.sender,
+            'content': msg.content,
+            'timestamp': msg.timestamp.isoformat()
+        } for msg in mensajes]
+    })
+
+# Endpoint para enviar mensaje y obtener respuesta
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    print("Endpoint /api/chat recibió:", request.json)
+    data = request.json
+    user_id = data.get('user_id')
+    message_text = data.get('message')
+    conversation_id = data.get('conversation_id')
+    
+    if not user_id or not message_text:
+        return jsonify({'error': 'Faltan parámetros'}), 400
+    
+    try:
+        # Si no se proporciona ID de conversación, crear una nueva
+        if not conversation_id:
+            conversacion = Conversacion(usuario_id=user_id)
+            db.session.add(conversacion)
+            db.session.commit()
+            conversation_id = conversacion.id
+        else:
+            conversacion = Conversacion.query.get_or_404(conversation_id)
+        
+        # Guardar mensaje del usuario
+        mensaje_usuario = Mensaje(
+            conversacion_id=conversation_id,
+            sender='user',
+            content=message_text
+        )
+        db.session.add(mensaje_usuario)
+        db.session.commit()
+        
+        # Llamar a OpenRouter (primero con un mensaje simple para probar)
+        try:
+            # Mensaje de sistema simple para probar
+            history = [
+                {"role": "system", "content": "Eres un asistente útil."},
+                {"role": "user", "content": message_text}
+            ]
+            
+            print("Enviando a OpenRouter:", history)
+            reply = send_to_deepseek(history)
+            print("Respuesta de OpenRouter:", reply)
+            
+            # Guardar respuesta
+            mensaje_asistente = Mensaje(
+                conversacion_id=conversation_id,
+                sender='assistant',
+                content=reply
+            )
+            db.session.add(mensaje_asistente)
+            db.session.commit()
+            
+            return jsonify({
+                'conversation_id': conversation_id,
+                'reply': reply
+            })
+        except Exception as e:
+            print("Error llamando a OpenRouter:", str(e))
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        print("Error general en /api/chat:", str(e))
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/')
 def home():
