@@ -2,7 +2,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv()#smtblib
 
 client = OpenAI(api_key=os.getenv("APIKEY_DEEPSEEK"), base_url="https://openrouter.ai/api/v1")
 
