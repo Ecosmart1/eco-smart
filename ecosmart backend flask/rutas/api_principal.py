@@ -19,8 +19,6 @@ from openai import OpenAI
 #carga variables de entorno
 load_dotenv()
 
-#carga variables de entorno
-load_dotenv()
 
 # Inicializa el cliente de OpenAI
 client = OpenAI(api_key=os.getenv("APIKEY_DEEPSEEK"), base_url="https://openrouter.ai/api/v1")
@@ -30,7 +28,6 @@ app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
