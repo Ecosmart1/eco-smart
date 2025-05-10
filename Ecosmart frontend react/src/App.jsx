@@ -126,9 +126,9 @@ function App() {
             <ConsultasIA />
           </div>
         } />
-        <Route path="/dashboard/agronomo/asistente" element={
+        <Route path="/dashboard/agricultor/consultas" element={
           <div className="app-container">
-            <AsistenteIA />
+            <ConsultasIA />
           </div>
       } />
 
