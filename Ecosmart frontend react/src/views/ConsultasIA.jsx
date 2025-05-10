@@ -61,7 +61,14 @@ function ConsultasIA() {
       {respuesta && (
         <div className="respuesta-container">
           <h3>Respuesta:</h3>
-          <p>{respuesta}</p>
+          <p>
+  {respuesta.split('\n').map((linea, index) => (
+    <React.Fragment key={index}>
+      {linea}
+      <br />
+    </React.Fragment>
+  ))}
+</p>
         </div>
       )}
     </div>
