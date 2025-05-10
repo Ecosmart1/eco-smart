@@ -69,7 +69,7 @@ const HeaderAgricultor = ({ activeItem }) => {
     { to: "/dashboard/agricultor/parcelas", label: "Parcelas", id: "parcelas" },
     { to: "/dashboard/agricultor/sensores", label: "Sensores", id: "sensores" },
     { to: "/dashboard/agricultor/alertas", label: "Alertas", id: "alertas" },
-    { to: "/dashboard/agricultor/asistente", label: "Asistente IA", id: "asistente" }
+    { to: "/dashboard/agricultor/consultas", label: "Consultas IA", id: "consultas" }
   ];
 
   // Opciones del menú desplegable de usuario
