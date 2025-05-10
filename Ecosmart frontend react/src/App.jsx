@@ -28,9 +28,6 @@ import EditarParcelaPage from './views/EditarParcelaPage';
 // importación consultas IA
 import ConsultasIA from './views/ConsultasIA';
 
-// importación consultas IA
-import ConsultasIA from './views/ConsultasIA';
-
 /**
  * Componente principal de la aplicación
  * Configura todas las rutas disponibles mediante React Router
