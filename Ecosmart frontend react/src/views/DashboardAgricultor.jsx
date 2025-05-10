@@ -302,7 +302,6 @@ const DashboardAgricultor = () => {
         </div>
 
         {/* Seccion 4: Consultas IA */}
-<<<<<<< HEAD
         <div className="dashboard-card consultas-ia-panel">
           <div className="card-header">
             <h3>Consultas IA</h3>
@@ -314,7 +313,6 @@ const DashboardAgricultor = () => {
           </button>
         </div>
 
-=======
         <div className="dashboard-row">
           <div className="dashboard-card consultas-ia-panel">
             <div className="card-header">
@@ -327,7 +325,6 @@ const DashboardAgricultor = () => {
             </button>
           </div>
         </div>
->>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
       </div>
       
       {/* Formulario modal para crear parcela */}

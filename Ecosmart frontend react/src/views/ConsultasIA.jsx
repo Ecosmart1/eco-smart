@@ -1,14 +1,11 @@
-<<<<<<< HEAD
-// filepath: c:\Users\Vicente\Documents\eco-smart\Ecosmart frontend react\src\views\ConsultasIA.jsx
-=======
->>>>>>> d62ae536edfbd7e1d6162de0ebad9ab004a40931
+// ConsultasIA.jsx
 import React, { useState } from 'react';
 import './ConsultasIA.css';
 
 const API_URL = 'http://localhost:5000/api/ia/consultas';
 
 function ConsultasIA() {
-<<<<<<< HEAD
+
   const [consulta, setConsulta] = useState('');
   const [respuesta, setRespuesta] = useState('');
   const [cargando, setCargando] = useState(false);
