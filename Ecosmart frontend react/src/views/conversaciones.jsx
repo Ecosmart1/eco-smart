@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   getConversaciones, 
   getConversacion, 
@@ -8,12 +9,24 @@ import {
 } from '../services/servicioOpenrouter.js';
 import './conversaciones.css'; // Asegúrate de tener estilos para el chat
 
+const API_URL = "http://localhost:5000/api";
+
 const ChatContainer = ({ userId }) => {
   const [conversaciones, setConversaciones] = useState([]);
   const [mensajes, setMensajes] = useState([]);
   const [mensaje, setMensaje] = useState('');
   const [conversacionActual, setConversacionActual] = useState(null);
   const [cargando, setCargando] = useState(false);
+  
+  // Nuevos estados para integración con sensores
+  const [parcelaSeleccionada, setParcelaSeleccionada] = useState(null);
+  const [parcelas, setParcelas] = useState([]);
+  const mensajesFinRef = useRef(null);
+
+  // Obtener datos de navegación (si viene de dashboard con contexto)
+  const location = useLocation();
+  const initialMessage = location.state?.initialMessage || '';
+  const initialParcelaId = location.state?.parcelaId || null;
 
   // Cargar conversaciones al iniciar
   useEffect(() => {
@@ -28,6 +41,42 @@ const ChatContainer = ({ userId }) => {
       cargarMensajes(conversacionActual);
     }
   }, [conversacionActual]);
+
+  // Cargar parcelas al montar el componente
+  useEffect(() => {
+    const fetchParcelas = async () => {
+      try {
+        const response = await fetch(`${API_URL}/parcelas`);
+        if (response.ok) {
+          const data = await response.json();
+          setParcelas(data);
+        }
+      } catch (error) {
+        console.error('Error cargando parcelas:', error);
+      }
+    };
+    
+    fetchParcelas();
+  }, []);
+
+  // Establecer mensaje inicial y parcela si vienen en la navegación
+  useEffect(() => {
+    if (initialMessage) {
+      setMensaje(initialMessage);
+      
+      // Si hay parcela seleccionada
+      if (initialParcelaId) {
+        setParcelaSeleccionada(initialParcelaId);
+      }
+    }
+  }, [initialMessage, initialParcelaId]);
+
+  // Hacer scroll automático a los mensajes más recientes
+  useEffect(() => {
+    if (mensajesFinRef.current) {
+      mensajesFinRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [mensajes]);
 
   const cargarConversaciones = async () => {
     try {
@@ -127,7 +176,16 @@ const ChatContainer = ({ userId }) => {
       const mensajeEnviado = mensaje;
       setMensaje(''); // Limpiar campo de entrada
       
-      const respuesta = await enviarMensaje(userId, mensajeEnviado, convId);
+      // Crear objeto de contexto con parcela seleccionada
+      const contextData = {
+        parcela_id: parcelaSeleccionada,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log("Enviando con contexto:", contextData);
+      
+      // Enviar mensaje con el contexto de los sensores
+      const respuesta = await enviarMensaje(userId, mensajeEnviado, convId, contextData);
       console.log('Respuesta recibida:', respuesta);
       
       // Añadir respuesta del asistente
@@ -171,10 +229,38 @@ const ChatContainer = ({ userId }) => {
     }
   };
 
+  const getParcelaNombre = (id) => {
+    const parcela = parcelas.find(p => p.id === id);
+    return parcela ? parcela.nombre : 'Parcela seleccionada';
+  };
+
   return (
     <div className="chat-container">
       <div className="sidebar">
         <button onClick={handleNuevaConversacion}>Nueva conversación</button>
+        
+        {/* Selector de parcela para contextualizar */}
+        <div className="chat-context-selector">
+          <label htmlFor="selector-parcela">Contexto de datos:</label>
+          <select 
+            id="selector-parcela"
+            value={parcelaSeleccionada || ''}
+            onChange={(e) => setParcelaSeleccionada(e.target.value || null)}
+            className="select-parcela"
+          >
+            <option value="">Todas las parcelas</option>
+            {parcelas.map(p => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
+          
+          {parcelaSeleccionada && (
+            <div className="parcela-seleccionada-info">
+              <span>Analizando datos de: <strong>{getParcelaNombre(parcelaSeleccionada)}</strong></span>
+            </div>
+          )}
+        </div>
+        
         <div className="conversaciones-lista">
           {conversaciones.length > 0 ? (
             conversaciones.map(conv => (
@@ -206,6 +292,16 @@ const ChatContainer = ({ userId }) => {
               <img src="/logo-ecosmart.png" alt="EcoSmart Assistant" className="chat-logo" />
               <h2>Asistente IA de EcoSmart</h2>
               <p>Bienvenido al asistente inteligente de EcoSmart. ¿En qué puedo ayudarte hoy?</p>
+              
+              {parcelaSeleccionada ? (
+                <div className="contexto-activo">
+                  <p className="contexto-titulo">
+                    <i className="fas fa-info-circle"></i> 
+                    Consultando datos de parcela: <strong>{getParcelaNombre(parcelaSeleccionada)}</strong>
+                  </p>
+                </div>
+              ) : null}
+              
               <p className="ejemplos-titulo">Puedes preguntarme sobre:</p>
               <div className="ejemplos-preguntas">
                 <button onClick={() => setMensaje("¿Cómo puedo mejorar el riego de mis cultivos?")}>
@@ -214,7 +310,7 @@ const ChatContainer = ({ userId }) => {
                 <button onClick={() => setMensaje("¿Qué datos muestran los sensores de humedad?")}>
                   ¿Qué datos muestran los sensores de humedad?
                 </button>
-                <button onClick={() => setMensaje("Recomienda acciones para mi parcela")}>
+                <button onClick={() => setMensaje(`Recomienda acciones para mi parcela ${parcelaSeleccionada ? getParcelaNombre(parcelaSeleccionada) : ''}`)}>
                   Recomienda acciones para mi parcela
                 </button>
               </div>
@@ -226,6 +322,13 @@ const ChatContainer = ({ userId }) => {
         ) : (
           <>
             <div className="mensajes">
+              {parcelaSeleccionada && (
+                <div className="contexto-mensaje">
+                  <i className="fas fa-info-circle"></i> 
+                  Estás consultando con datos de la parcela: <strong>{getParcelaNombre(parcelaSeleccionada)}</strong>
+                </div>
+              )}
+              
               {mensajes.map((msg, idx) => (
                 <div key={idx} className={`mensaje ${msg.sender}`}>
                   <div className="contenido">{msg.content}</div>
@@ -242,6 +345,7 @@ const ChatContainer = ({ userId }) => {
                   </div>
                 </div>
               )}
+              <div ref={mensajesFinRef}></div> {/* Referencia para scroll */}
             </div>
             
             <div className="entrada-mensaje">
@@ -250,7 +354,7 @@ const ChatContainer = ({ userId }) => {
                 value={mensaje}
                 onChange={(e) => setMensaje(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleEnviarMensaje()}
-                placeholder="Escribe un mensaje..."
+                placeholder={`Escribe un mensaje${parcelaSeleccionada ? ` sobre ${getParcelaNombre(parcelaSeleccionada)}` : ''}...`}
                 disabled={cargando}
               />
               <button onClick={handleEnviarMensaje} disabled={cargando || !mensaje.trim()}>

@@ -43,30 +43,38 @@ export const getConversacion = async (convId, userId) => {
 };
 
 // Enviar nuevo mensaje y obtener respuesta
-export const enviarMensaje = async (userId, mensaje, convId = null) => {
-  console.log('Enviando mensaje:', { userId, mensaje, convId });
+// Enviar nuevo mensaje y obtener respuesta
+// Modificar la función enviarMensaje para aceptar datos de contexto
+
+export const enviarMensaje = async (userId, mensaje, convId = null, contextData = {}) => {
+  console.log('Enviando mensaje con contexto:', { userId, mensaje, convId, contextData });
   
-  const response = await fetch(`${API_URL}/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      message: mensaje,
-      conversation_id: convId
-    })
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Error en la respuesta:', response.status, errorText);
-    throw new Error(`Error ${response.status}: ${errorText}`);
+  try {
+    const response = await fetch(`${API_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        message: mensaje,
+        conversation_id: convId,
+        context: contextData  // Datos de contexto (parcela seleccionada, etc.)
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`Error en la respuesta: ${response.status}`, errorData);
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+    
+    const data = await response.json();
+    return { data };
+  } catch (error) {
+    console.error('Error en enviarMensaje:', error);
+    throw error;
   }
-  
-  const data = await response.json();
-  console.log('Respuesta recibida:', data);
-  return { data };
 };
 
 // Crear una nueva conversación

@@ -118,10 +118,12 @@ function App() {
         } />
 
       
-<Route path="/dashboard/agricultor" element={
+<Route path="/dashboard/agricultor/sensores" element={
   <div className="app-container">
     <HeaderAgricultor />
-    <DashboardAgricultor />
+    <div className="content-container">
+      <SensoresPanel API_URL={API_URL} />
+    </div>
   </div>
 } />
 

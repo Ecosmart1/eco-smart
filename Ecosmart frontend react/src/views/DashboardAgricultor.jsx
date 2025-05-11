@@ -3,6 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
+// Importaciones de Recharts para gráficos
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
 
 const API_URL = "http://localhost:5000/api"; 
 
@@ -13,6 +24,15 @@ const DashboardAgricultor = () => {
   const [datosMeteo, setDatosMeteo] = useState(null); // Si tienes meteorología en backend, agrega fetch
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  
+  // Nuevos estados para sensores
+  const [datosSensores, setDatosSensores] = useState({
+    humedad: [],
+    temperatura: []
+  });
+  const [parcelaSeleccionada, setParcelaSeleccionada] = useState(null);
+  const [rangoTiempo, setRangoTiempo] = useState('24h'); // Opciones: '24h', '7d', '30d'
+  
   const navigate = useNavigate();
 
   // Abrir/cerrar formulario de nueva parcela
@@ -51,6 +71,101 @@ const DashboardAgricultor = () => {
     setCargando(false);
   };
 
+  // NUEVA FUNCIÓN: Consultar al asistente IA sobre datos de sensores
+  const consultarAsistente = (tipo, parcelaId, parcelaNombre) => {
+    let mensaje = "";
+    
+    // Construir mensaje según el tipo de sensor
+    switch(tipo) {
+      case 'humedad':
+        mensaje = `¿Cómo están los niveles de humedad en mi parcela "${parcelaNombre}"? ¿Debo programar riego?`;
+        break;
+      case 'temperatura':
+        mensaje = `¿Es adecuada la temperatura actual para los cultivos en mi parcela "${parcelaNombre}"?`;
+        break;
+      case 'general':
+        mensaje = `¿Puedes analizar los datos de sensores de mi parcela "${parcelaNombre}" y darme recomendaciones?`;
+        break;
+      default:
+        mensaje = `¿Qué puedes decirme sobre mi parcela "${parcelaNombre}" según los datos de sensores?`;
+    }
+    
+    // Navegar a la página de chat con el contexto adecuado
+    navigate('/dashboard/agricultor/chat', { 
+      state: { 
+        initialMessage: mensaje,
+        parcelaId: parcelaId
+      }
+    });
+  };
+
+  // Función para obtener datos de sensores
+  // En la función fetchDatosSensores, cambiar el nombre del parámetro
+// En la función fetchDatosSensores, asegurarte de usar 'parcela' como parámetro:
+const fetchDatosSensores = async () => {
+  try {
+    // Definir periodo de tiempo para la consulta
+    let periodo;
+    switch(rangoTiempo) {
+      case '7d': periodo = '7d'; break;
+      case '30d': periodo = '30d'; break;
+      default: periodo = '24h'; break;
+    }
+    
+    // Definir parcela para la consulta
+    const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
+                     (parcelas.length > 0 ? parcelas[0].id : null);
+    
+    if (!parcelaId) return; // No hay parcelas para consultar
+    
+    // CORREGIDO: Usar 'parcela' en lugar de 'parcela_id'
+    const response = await fetch(`${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      setDatosSensores(data);
+    } else {
+      console.error('Error al obtener datos de sensores:', await response.text());
+      // Si falla, usar datos de prueba
+      generarDatosPrueba();
+    }
+  } catch (error) {
+    console.error('Error al obtener datos de sensores:', error);
+    // Si hay error, usar datos de prueba
+    generarDatosPrueba();
+  }
+};
+  // Función para generar datos de prueba
+  const generarDatosPrueba = () => {
+    // Generar fechas para las últimas 24 horas con intervalos de 1 hora
+    const ahora = new Date();
+    const datos = {
+      humedad: [],
+      temperatura: []
+    };
+    
+    for (let i = 24; i >= 0; i--) {
+      const tiempo = new Date(ahora.getTime() - i * 60 * 60 * 1000);
+      const timestamp = tiempo.toISOString();
+      
+      // Generar valores aleatorios con tendencias realistas
+      const baseHumedad = 45 + Math.sin(i/4) * 10; // Oscila entre 35-55%
+      const baseTemp = 22 + Math.sin(i/6) * 5; // Oscila entre 17-27°C
+      
+      datos.humedad.push({
+        timestamp,
+        valor: Math.round((baseHumedad + Math.random() * 5) * 10) / 10
+      });
+      
+      datos.temperatura.push({
+        timestamp,
+        valor: Math.round((baseTemp + Math.random() * 2) * 10) / 10
+      });
+    }
+    
+    setDatosSensores(datos);
+  };
+
   // Verificar usuario y cargar parcelas al montar
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -66,6 +181,13 @@ const DashboardAgricultor = () => {
     setUsuario(usuarioObj);
     fetchParcelas();
   }, [navigate]);
+
+  // Cargar datos de sensores
+  useEffect(() => {
+    if (usuario && (parcelas.length > 0)) {
+      fetchDatosSensores();
+    }
+  }, [usuario, parcelas.length, parcelaSeleccionada, rangoTiempo]);
 
   // Helpers para estilos
   const getEstadoColor = (estado) => {
@@ -86,6 +208,32 @@ const DashboardAgricultor = () => {
     }
   };
 
+  // Obtener nombre de la parcela por ID
+  const getParcelaNombre = (id) => {
+    const parcela = parcelas.find(p => p.id === id);
+    return parcela ? parcela.nombre : 'seleccionada';
+  };
+
+  // Formato de fecha/hora para los gráficos
+  const formatXAxis = (timestamp) => {
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Tooltip personalizado para gráficos
+  const CustomTooltip = ({ active, payload, label, unidad }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="sensor-chart-tooltip">
+          <p className="tooltip-time">{new Date(label).toLocaleString()}</p>
+          <p className="tooltip-value">
+            {`${payload[0].name}: ${payload[0].value} ${unidad}`}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (cargando) {
     return (
       <div className="cargando-container">
@@ -97,8 +245,6 @@ const DashboardAgricultor = () => {
 
   return (
     <div className="dashboard-agricultor">
-      {/* HEADER ELIMINADO - Se usa HeaderAgricultor separado */}
-      
       {/* Contenido principal */}
       <div className="dashboard-content">
         {/* Bienvenida y fecha */}
@@ -203,29 +349,164 @@ const DashboardAgricultor = () => {
           <div className="dashboard-card sensores-panel">
             <div className="card-header">
               <h3>Lecturas de Sensores</h3>
-              <Link to="/sensores" className="ver-todo">Ver todos</Link>
+              <div className="sensores-controles">
+                {/* Selector de parcela */}
+                <select 
+                  value={parcelaSeleccionada || ''}
+                  onChange={(e) => setParcelaSeleccionada(e.target.value || null)}
+                  className="selector-parcela"
+                >
+                  <option value="">Todas las parcelas</option>
+                  {parcelas.map(p => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
+                </select>
+                
+                {/* Selector de rango de tiempo */}
+                <div className="selector-tiempo">
+                  <button 
+                    className={rangoTiempo === '24h' ? 'activo' : ''} 
+                    onClick={() => setRangoTiempo('24h')}
+                  >
+                    24h
+                  </button>
+                  <button 
+                    className={rangoTiempo === '7d' ? 'activo' : ''} 
+                    onClick={() => setRangoTiempo('7d')}
+                  >
+                    7d
+                  </button>
+                  <button 
+                    className={rangoTiempo === '30d' ? 'activo' : ''} 
+                    onClick={() => setRangoTiempo('30d')}
+                  >
+                    30d
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="sensores-graficos">
+              {/* Gráfico de Humedad */}
               <div className="sensor-grafico">
                 <h4>Humedad de Suelo</h4>
                 <div className="grafico-container">
-                  {/* Aquí iría un componente de gráfico real */}
-                  <div className="grafico-placeholder">
-                    <div className="grafico-linea"></div>
-                    <div className="grafico-label">Últimas 24 horas</div>
-                  </div>
+                  {datosSensores.humedad && datosSensores.humedad.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={datosSensores.humedad}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaeaea" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={formatXAxis} 
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          domain={[0, 100]}
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <Tooltip 
+                          content={<CustomTooltip unidad="%" />} 
+                        />
+                        <Legend />
+                        <Line 
+                          name="Humedad"
+                          type="monotone" 
+                          dataKey="valor" 
+                          stroke="#3498db" 
+                          strokeWidth={2}
+                          dot={{ r: 3, strokeWidth: 1 }}
+                          activeDot={{ r: 5, strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="grafico-placeholder">
+                      <div className="grafico-linea"></div>
+                      <div className="grafico-label">No hay datos disponibles</div>
+                    </div>
+                  )}
                 </div>
+                {/* NUEVO: Botón para consultar asistente sobre humedad */}
+                {parcelaSeleccionada && (
+                  <div className="sensor-actions">
+                    <button 
+                      onClick={() => consultarAsistente('humedad', parcelaSeleccionada, getParcelaNombre(parcelaSeleccionada))}
+                      className="btn-consultar-ia"
+                    >
+                      <i className="fas fa-robot"></i> Consultar al asistente
+                    </button>
+                  </div>
+                )}
               </div>
+              
+              {/* Gráfico de Temperatura */}
               <div className="sensor-grafico">
                 <h4>Temperatura Ambiente</h4>
                 <div className="grafico-container">
-                  {/* Aquí iría un componente de gráfico real */}
-                  <div className="grafico-placeholder">
-                    <div className="grafico-linea temperatura"></div>
-                    <div className="grafico-label">Últimas 24 horas</div>
-                  </div>
+                  {datosSensores.temperatura && datosSensores.temperatura.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={datosSensores.temperatura}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaeaea" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={formatXAxis} 
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          domain={[0, 40]}
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}°C`}
+                        />
+                        <Tooltip 
+                          content={<CustomTooltip unidad="°C" />} 
+                        />
+                        <Legend />
+                        <Line 
+                          name="Temperatura"
+                          type="monotone" 
+                          dataKey="valor" 
+                          stroke="#e74c3c" 
+                          strokeWidth={2}
+                          dot={{ r: 3, strokeWidth: 1 }}
+                          activeDot={{ r: 5, strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="grafico-placeholder">
+                      <div className="grafico-linea temperatura"></div>
+                      <div className="grafico-label">No hay datos disponibles</div>
+                    </div>
+                  )}
                 </div>
+                {/* NUEVO: Botón para consultar asistente sobre temperatura */}
+                {parcelaSeleccionada && (
+                  <div className="sensor-actions">
+                    <button 
+                      onClick={() => consultarAsistente('temperatura', parcelaSeleccionada, getParcelaNombre(parcelaSeleccionada))}
+                      className="btn-consultar-ia"
+                    >
+                      <i className="fas fa-robot"></i> Consultar al asistente
+                    </button>
+                  </div>
+                )}
               </div>
+            </div>
+            <div className="sensores-footer">
+              <Link to="/dashboard/agricultor/sensores" className="ver-detalle">Ver análisis detallado</Link>
+              {/* NUEVO: Botón para consultar sobre todos los sensores */}
+              {parcelaSeleccionada && (
+                <button 
+                  onClick={() => consultarAsistente('general', parcelaSeleccionada, getParcelaNombre(parcelaSeleccionada))}
+                  className="btn-consultar-ia-general"
+                >
+                  <i className="fas fa-robot"></i> Analizar todos los sensores con IA
+                </button>
+              )}
             </div>
           </div>
 
