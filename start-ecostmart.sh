@@ -40,8 +40,8 @@ fi
 echo "=== EcoSmart: Instalando y ejecutando Frontend (React) ==="
 cd "Ecosmart frontend react"
 
-//cambiar LOL
-npm run dev
+
+npm install
 
 
 # Open a new terminal for the frontend server in the background
