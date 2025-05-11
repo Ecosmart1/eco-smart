@@ -8,21 +8,18 @@ const HeaderAgricultor = ({ activeItem }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const usuarioGuardado = localStorage.getItem('ecosmart_user');
-      if (usuarioGuardado) {
-        const usuarioObj = JSON.parse(usuarioGuardado);
-        setUsuario(usuarioObj);
-        
-        // Opcional: verificar el rol pero sin redirección automática
-        // if (usuarioObj.rol !== 'agricultor') {
-        //   console.warn('Usuario con rol incorrecto');
-        // }
-      }
-    } catch (error) {
-      console.error("Error al cargar datos del usuario:", error);
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (!usuarioGuardado) {
+      navigate('/login');
+      return;
     }
-  }, []);
+    const usuarioObj = JSON.parse(usuarioGuardado);
+    if (usuarioObj.rol !== 'agricultor') {
+      navigate('/login');
+      return;
+    }
+    setUsuario(usuarioObj);
+  }, [navigate]);
 
   const cerrarSesion = () => {
     localStorage.removeItem('ecosmart_user');
@@ -36,7 +33,7 @@ const HeaderAgricultor = ({ activeItem }) => {
   return (
     <div className="dashboard-header">
       <div className="logo-container">
-        <img src="/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
+        <img src="/public/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
         <h1 className="app-title">EcoSmart</h1>
       </div>
       <div className="header-nav">
@@ -65,20 +62,30 @@ const HeaderAgricultor = ({ activeItem }) => {
           Alertas
         </Link>
         <Link 
-          to="/dashboard/agricultor/chat" 
+          to="/dashboard/agricultor/asistente" 
           className={`nav-item ${activeItem === 'asistente' ? 'active' : ''}`}
         >
           Asistente IA
         </Link>
       </div>
-      <div className="user-section">
+      <div className="user-profile" onClick={toggleMenu}>
         <div className="user-avatar">
-          {usuario ? usuario.nombre.charAt(0).toUpperCase() : 'U'}
+          {usuario?.nombre.charAt(0)}
         </div>
         <div className="user-info">
-          <span className="user-name">{usuario ? usuario.nombre : 'Invitado'}</span>
-          <Link to="/configuracion" className="user-role">Configuración</Link>
+          <div className="user-name">{usuario?.nombre}</div>
+          <div className="user-role">Agricultor</div>
         </div>
+        <div className="user-menu-icon">▼</div>
+        
+        {menuAbierto && (
+          <div className="user-dropdown-menu">
+            <Link to="/dashboard/agricultor/perfil" className="dropdown-item">Mi Perfil</Link>
+            <Link to="/dashboard/agricultor/configuracion" className="dropdown-item">Configuración</Link>
+            <div className="dropdown-divider"></div>
+            <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>
+          </div>
+        )}
       </div>
     </div>
   );

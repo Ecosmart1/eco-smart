@@ -14,6 +14,9 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
+import MapaParcelas from './MapaParcelas';
+import { Spinner } from 'react-bootstrap';
+
 
 const API_URL = "http://localhost:5000/api"; 
 
@@ -236,8 +239,11 @@ const fetchDatosSensores = async () => {
 
   if (cargando) {
     return (
-      <div className="cargando-container">
-        <div className="cargando-spinner"></div>
+      <div style={{
+        textAlign: 'center',
+        padding: '20% 0',
+        width: '100%'
+      }}>
         <p>Cargando datos...</p>
       </div>
     );
@@ -245,6 +251,7 @@ const fetchDatosSensores = async () => {
 
   return (
     <div className="dashboard-agricultor">
+
       {/* Contenido principal */}
       <div className="dashboard-content">
         {/* Bienvenida y fecha */}
@@ -261,7 +268,7 @@ const fetchDatosSensores = async () => {
           <div className="dashboard-card parcelas-resumen">
             <div className="card-header">
               <h3>Mis Parcelas</h3>
-              <Link to="/parcelas" className="ver-todo">Ver todas</Link>
+              <Link to="/dashboard/agricultor/parcelas" className="ver-todo">Ver todas</Link>
             </div>
             <div className="parcelas-grid">
               {parcelas.map(parcela => (
@@ -293,13 +300,7 @@ const fetchDatosSensores = async () => {
               <h3>Mapa de Parcelas</h3>
             </div>
             <div className="mapa-container">
-              {/* Aquí iría un componente de mapa real */}
-              <div className="mapa-placeholder">
-                <div className="mapa-placeholder-text">
-                  <i className="fas fa-map-marker-alt"></i>
-                  <p>Mapa de parcelas</p>
-                </div>
-              </div>
+              <MapaParcelas API_URL={API_URL} />
             </div>
           </div>
         </div>

@@ -1,0 +1,357 @@
+/* Reset para asegurar que la página ocupa todo el espacio disponible */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Contenedor principal de gestión de parcelas */
+.gestion-parcelas-container {
+  padding: 20px;
+  width: 100%; 
+  height: auto;
+  min-height: calc(100vh - 80px);
+  background-color: #f8f9fa;
+  margin: 0;
+  box-sizing: border-box;
+  position: relative;
+  overflow: visible !important; /* Asegura que el contenido sea visible */
+}
+
+/* Asegurar que los contenedores padres permitan el overflow */
+.app-container, .content-container {
+  overflow: visible !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 100vh;
+}
+
+/* Header de la sección de parcelas */
+.parcelas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e9ecef;
+  width: 100%;
+}
+
+.parcelas-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #343a40;
+}
+
+/* Botón Nueva Parcela */
+.btn-nueva-parcela {
+  display: flex !important;
+  align-items: center !important;
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+  padding: 8px 16px !important;
+  font-size: 16px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-nueva-parcela:hover {
+  background-color: #218838 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Grid de parcelas */
+.parcelas-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+  gap: 20px !important;
+  width: 100% !important;
+  margin-bottom: 40px !important;
+}
+
+/* Ajuste para cuando hay una sola parcela o pocas */
+.parcelas-grid.single-row {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 400px)) !important;
+  justify-content: center !important;
+}
+
+.parcelas-grid.single-item {
+  grid-template-columns: minmax(320px, 500px) !important;
+  justify-content: center !important;
+}
+
+/* MEJORAS PARA TARJETAS DE PARCELA */
+.parcela-card {
+  border: none !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background-color: #fff !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: transform 0.3s, box-shadow 0.3s !important;
+  position: relative !important;
+}
+
+.parcela-card:hover {
+  transform: translateY(-8px) !important;
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Cabecera de la tarjeta */
+.parcela-header {
+  background: linear-gradient(135deg, #28a745, #20c997) !important;
+  color: white !important;
+  padding: 20px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  border-bottom: none !important; /* Anular otros estilos */
+  margin-bottom: 0 !important; /* Anular otros estilos */
+}
+
+.parcela-header h4 {
+  margin: 0 !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  flex-grow: 1 !important;
+}
+
+/* Badge de tipo de cultivo */
+.parcela-tipo-badge {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  padding: 5px 10px !important;
+  border-radius: 20px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  backdrop-filter: blur(2px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Contenido de la tarjeta */
+.parcela-content {
+  padding: 20px !important;
+  flex-grow: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: linear-gradient(to bottom, #ffffff, #f7f9f8) !important;
+}
+
+.parcela-info {
+  flex-grow: 1 !important;
+  margin-bottom: 15px !important;
+}
+
+.parcela-info p {
+  margin-bottom: 12px !important;
+  font-size: 15px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding-bottom: 12px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.parcela-info p:last-child {
+  border-bottom: none !important;
+}
+
+/* Iconos en la información */
+.parcela-info p svg {
+  margin-right: 12px !important;
+  color: #28a745 !important;
+  font-size: 18px !important;
+  min-width: 18px !important;
+}
+
+/* Botones de acción */
+.parcela-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-top: auto !important;
+  border-top: 1px solid #f1f1f1 !important;
+  padding-top: 15px !important;
+}
+
+.btn-ver-detalles {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 10px 16px !important;
+  background-color: #2c93dd !important;
+  border-color: #2c93dd !important;
+  transition: all 0.2s !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.btn-ver-detalles:hover {
+  background-color: #1a82c5 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-ver-detalles svg {
+  margin-right: 6px !important;
+}
+
+.action-buttons {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.btn-editar, .btn-eliminar {
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  transition: all 0.2s !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.btn-editar:hover, .btn-eliminar:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-editar {
+  background-color: #ffc107 !important;
+  border-color: #ffc107 !important;
+  color: #343a40 !important;
+}
+
+.btn-eliminar {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+}
+
+/* Estilos para cuando no hay parcelas */
+.no-parcelas-message {
+  text-align: center !important;
+  padding: 60px 30px !important;
+  background-color: #fff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05) !important;
+  margin: 50px auto !important;
+  max-width: 500px !important;
+  transition: transform 0.3s !important;
+}
+
+.no-parcelas-message:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
+}
+
+.no-parcelas-message svg {
+  color: #28a745 !important;
+  margin-bottom: 20px !important;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.1)) !important;
+}
+
+.no-parcelas-message h4 {
+  font-size: 22px !important;
+  color: #343a40 !important;
+  margin-bottom: 15px !important;
+}
+
+.no-parcelas-message .text-muted {
+  color: #6c757d !important;
+  margin-bottom: 25px !important;
+  font-size: 16px !important;
+}
+
+.no-parcelas-message button {
+  background-color: #28a745 !important;
+  border-color: #28a745 !important;
+  padding: 10px 20px !important;
+  font-size: 16px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+}
+
+.no-parcelas-message button:hover {
+  background-color: #218838 !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Estilo para Spinner */
+.spinner-border.text-success {
+  color: #28a745 !important;
+  width: 3rem !important;
+  height: 3rem !important;
+}
+
+/* Modal: aumentar significativamente el z-index */
+.parcela-form-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  z-index: 9999 !important; /* Valor extremadamente alto */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow-y: auto !important;
+  padding: 20px !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+.parcela-form-container {
+  background-color: white !important;
+  width: 90% !important;
+  max-width: 700px !important;
+  max-height: 90vh !important;
+  border-radius: 12px !important;
+  overflow-y: auto !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  z-index: 10000 !important; /* Mayor que el overlay */
+  position: relative !important;
+}
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+  .parcelas-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  
+  .btn-nueva-parcela {
+    margin-top: 15px !important;
+    align-self: flex-start !important;
+  }
+  
+  .parcelas-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .parcela-actions {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  
+  .btn-ver-detalles {
+    width: 100% !important;
+  }
+  
+  .action-buttons {
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+}

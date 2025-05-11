@@ -5,7 +5,7 @@
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.7);
-    z-index: 1000;
+    z-index: 100;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -170,4 +170,99 @@
       max-height: 95vh;
     }
   }
-  
+/* Estilos para el dropdown de cultivos */
+select#cultivo_actual {
+  background-color: #4CAF50;
+  color: white;
+  border: 1px solid #4CAF50;
+  appearance: none; /* Quita la apariencia nativa */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 30px; /* Espacio para la flecha */
+}
+
+/* Estilos para el dropdown cuando está enfocado */
+select#cultivo_actual:focus {
+  border-color: #357a38;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+}
+
+/* Tratando de aplicar estilos a las opciones (funcionamiento limitado) */
+select#cultivo_actual option {
+  background-color: #4CAF50;
+  color: white;
+}
+
+/* Estilo para la opción seleccionada */
+select#cultivo_actual option:checked {
+  background-color: #357a38;
+}
+
+/* Contenedor para el input de "Otro" cultivo */
+.otro-cultivo-container {
+  margin-top: 10px;
+}
+
+/* Estilo para el input de "Otro" cultivo */
+.input-otro-cultivo {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input-otro-cultivo:focus {
+  border-color: #22963e;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(34, 150, 62, 0.2);
+}
+
+/* Estilos para el input de fecha */
+input[type="date"] {
+  background-color: #4CAF50;
+  color: white;
+  border: 1px solid #4CAF50;
+  padding: 0.7rem;
+  border-radius: 4px;
+}
+
+/* Cambiar color del icono de calendario y texto en Chrome y Edge */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* Invierte el color para hacerlo blanco */
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Estilo para Firefox */
+input[type="date"]::-moz-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+/* Estilo para el campo fecha cuando está enfocado */
+input[type="date"]:focus {
+  border-color: #357a38;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+  outline: none;
+}
+
+/* Estilos para placeholder y texto interno */
+input[type="date"]::placeholder,
+input[type="date"]::-webkit-datetime-edit {
+  color: white;
+}
+
+/* Para navegadores basados en Webkit (Chrome, Safari, Edge) */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper { color: white; }
+input[type="date"]::-webkit-datetime-edit-text { color: white; }
+input[type="date"]::-webkit-datetime-edit-month-field { color: white; }
+input[type="date"]::-webkit-datetime-edit-day-field { color: white; }
+input[type="date"]::-webkit-datetime-edit-year-field { color: white; }

@@ -1,16 +1,15 @@
-
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-        secure: false
-      }
+  resolve: {
+    alias: {
+      // Definir alias para manejar importaciones problemáticas
+      'bootstrap': resolve(__dirname, 'node_modules/bootstrap'),
+      'react-bootstrap': resolve(__dirname, 'node_modules/react-bootstrap'),
+      'react-leaflet': resolve(__dirname, 'node_modules/react-leaflet'),
     }
   }
-})
+});

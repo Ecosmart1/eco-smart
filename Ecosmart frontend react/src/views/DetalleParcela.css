@@ -1,0 +1,313 @@
+/* DetalleParcela.css */
+
+/* Estilos generales */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Cabecera y botones de acción */
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+.d-flex {
+  display: flex;
+}
+
+.justify-content-between {
+  justify-content: space-between;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+/* Botones con mejor espaciado y apariencia */
+.btn-outline-primary {
+  color: #007bff;
+  border-color: #007bff;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-outline-primary:hover {
+  background-color: #007bff;
+  color: white;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.me-2 {
+  margin-right: 0.75rem !important;
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  margin-right: 12px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-warning:hover {
+  background-color: #e0a800;
+  border-color: #d39e00;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: white;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-danger:hover {
+  background-color: #bd2130;
+  border-color: #bd2130;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+/* Título de parcela */
+h2 {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+/* Tarjetas */
+.card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12) !important;
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: none;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-primary {
+  background-color: #007bff !important;
+}
+
+.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.text-white {
+  color: white !important;
+}
+
+.card-header h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+.p-0 {
+  padding: 0 !important;
+}
+
+/* Tabla de información */
+.table {
+  margin-bottom: 0;
+}
+
+.table td {
+  padding: 12px 8px;
+  border-top: 1px solid #f2f2f2;
+}
+
+.table tr:first-child td {
+  border-top: none;
+}
+
+.table strong {
+  color: #495057;
+  font-weight: 600;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+/* Mapa */
+.parcela-mapa {
+  height: 350px;
+  width: 100%;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Sensores */
+.sensores-contenedor {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.sensor-item {
+  background-color: #f8f9fa;
+  border-radius: 8px !important;
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef !important;
+  padding: 15px !important;
+}
+
+.sensor-item:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+.sensor-item h5 {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.sensor-valor {
+  display: flex;
+  align-items: baseline;
+}
+
+.sensor-valor .h3 {
+  font-size: 1.75rem;
+  font-weight: 500;
+  margin-right: 5px;
+  color: #2c3e50;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+.sensor-timestamp {
+  font-size: 0.85rem;
+}
+
+.sensor-estado {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.estado-indicador {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Alertas */
+.alert {
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+  color: #856404;
+}
+
+/* Spinner de carga */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+  color: #28a745;
+}
+
+/* Estilos responsive */
+@media (max-width: 992px) {
+  .container {
+    max-width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .d-flex.justify-content-between > div {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+  }
+  
+  .d-flex.justify-content-between > div button {
+    flex: 1;
+  }
+  
+  .parcela-mapa {
+    height: 300px;
+  }
+  
+  .sensor-item .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .sensor-timestamp {
+    margin-top: 8px;
+  }
+}
+
+/* Popup del mapa */
+.leaflet-popup-content {
+  margin: 10px;
+  line-height: 1.5;
+}
+
+.leaflet-popup-content strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #2c3e50;
+}

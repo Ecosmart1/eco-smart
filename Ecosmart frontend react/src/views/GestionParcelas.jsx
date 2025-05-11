@@ -1,0 +1,206 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { Button, Alert, Spinner } from 'react-bootstrap';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaSeedling, FaRuler, FaCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+import './GestionParcelas.css';
+
+const GestionParcelas = ({ API_URL }) => {
+  const [parcelas, setParcelas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState(''); // Estado para mensaje de éxito
+  const navigate = useNavigate();
+  const location = useLocation(); 
+  
+  // Verificar si hay un mensaje de éxito en la navegación
+  useEffect(() => {
+    // Si hay un mensaje en el estado de navegación
+    if (location.state && location.state.successMessage) {
+      setSuccessMessage(location.state.successMessage);
+      
+      // Quitar el mensaje después de 5 segundos
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
+  
+  // Cargar parcelas al iniciar el componente
+  useEffect(() => {
+    fetchParcelas();
+  }, []);
+
+  // Función para obtener todas las parcelas
+  const fetchParcelas = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/parcelas`);
+      setParcelas(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error al cargar parcelas:', err);
+      setError('Error al cargar las parcelas. Intente nuevamente más tarde.');
+      setLoading(false);
+    }
+  };
+
+  // Función para eliminar parcela
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
+      try {
+        await axios.delete(`${API_URL}/parcelas/${id}`);
+        // Actualizar la lista de parcelas localmente (sin recargar)
+        setParcelas(parcelas.filter(parcela => parcela.id !== id));
+        // Mostrar mensaje de éxito
+        setSuccessMessage('Parcela eliminada exitosamente');
+        
+        // Ocultar el mensaje después de 5 segundos
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 5000);
+      } catch (err) {
+        console.error('Error al eliminar parcela:', err);
+        setError('Error al eliminar la parcela. Intente nuevamente.');
+      }
+    }
+  };
+
+  // Función para ir a crear una nueva parcela
+  const handleNewParcela = () => {
+    navigate('/dashboard/agricultor/parcelas/nueva');
+  };
+
+  // Función para ver detalles de una parcela
+  const verDetalleParcela = (id) => {
+    navigate(`/dashboard/agricultor/parcelas/${id}`);
+  };
+
+  // Función para editar una parcela
+  const editarParcela = (id) => {
+    navigate(`/dashboard/agricultor/parcelas/editar/${id}`);
+  };
+
+  // Mostrar spinner mientras carga
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: "60vh" }}>
+        <Spinner animation="border" role="status" className="text-success">
+          <span className="visually-hidden">Cargando...</span>
+        </Spinner>
+      </div>
+    );
+  }
+
+  // Determinar la clase CSS para el grid según el número de parcelas
+  const gridClass = parcelas.length === 1 
+    ? 'parcelas-grid single-item' 
+    : parcelas.length <= 3 
+      ? 'parcelas-grid single-row' 
+      : 'parcelas-grid';
+
+  return (
+    <div className="gestion-parcelas-container">
+      <div className="parcelas-header">
+        <h2>Gestión de Parcelas</h2>
+        <Button 
+          variant="success" 
+          onClick={handleNewParcela}
+          className="btn-nueva-parcela"
+        >
+          <FaPlus className="me-2" /> Nueva Parcela
+        </Button>
+      </div>
+
+      {/* Mensaje de éxito */}
+      {successMessage && (
+        <Alert variant="success" onClose={() => setSuccessMessage('')} dismissible className="mensaje-exito">
+          <FaCheckCircle className="me-2" /> {successMessage}
+        </Alert>
+      )}
+
+      {/* Mostrar errores si existen */}
+      {error && (
+        <Alert variant="danger" onClose={() => setError('')} dismissible>
+          {error}
+        </Alert>
+      )}
+
+      {/* Lista de parcelas */}
+      {parcelas.length === 0 ? (
+        <div className="no-parcelas-message">
+          <FaSeedling size={48} />
+          <h4>No hay parcelas registradas</h4>
+          <p className="text-muted">Comience creando una nueva parcela usando el botón "Nueva Parcela".</p>
+          <Button 
+            variant="success" 
+            onClick={handleNewParcela}
+            className="mt-3"
+          >
+            <FaPlus className="me-2" /> Crear Primera Parcela
+          </Button>
+        </div>
+      ) : (
+        <div className={gridClass}>
+          {parcelas.map(parcela => (
+            <div key={parcela.id} className="parcela-card">
+              <div className="parcela-header">
+                <h4>{parcela.nombre}</h4>
+                 {parcela.cultivo_actual && (
+                  <span className="parcela-tipo-badge">
+                    {parcela.cultivo_actual}
+                  </span>
+                )}
+              </div>
+              <div className="parcela-content">
+                <div className="parcela-info">
+                  <p>
+                    <FaSeedling /> 
+                    <strong>Cultivo:</strong> {parcela.cultivo_actual || 'Sin cultivo actual'}
+                  </p>
+                  <p>
+                    <FaRuler /> 
+                    <strong>Área : </strong> {parcela.hectareas || 0} ha
+                  </p>
+                  <p>
+                    <FaCalendarAlt /> 
+                    <strong>Fecha siembra : </strong> {parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}
+                  </p>
+                </div>
+                <div className="parcela-actions">
+                  <Button 
+                    variant="primary" 
+                    className="btn-ver-detalles"
+                    onClick={() => verDetalleParcela(parcela.id)}
+                  >
+                    <FaSearch className="me-1" /> Ver Detalles
+                  </Button>
+                  <div className="action-buttons">
+                    <Button 
+                      variant="warning" 
+                      className="btn-editar"
+                      onClick={() => editarParcela(parcela.id)}
+                    >
+                      <FaEdit /> 
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      className="btn-eliminar"
+                      onClick={() => handleDelete(parcela.id)}
+                    >
+                      <FaTrash />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GestionParcelas;
