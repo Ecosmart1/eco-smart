@@ -47,14 +47,13 @@ def consulta_ia():
             messages=[
                 {
                     "role": "system",
-                    #los siguientes prompts necesitan arreglos y ser mas especificos
                     "content": """
-                        Solo devuelve texto limpio que pueda ser renderizado directamente en el navegador.
+                        Responde utilizando formato Markdown para que el texto pueda incluir listas, negritas, cursivas y otros elementos de formato. 
                         Eres un asistente virtual en una Plataforma de Agricultura Inteligente. 
-Tu función es responder preguntas relacionadas con cultivos, suelos, clima, riego, plagas, enfermedades, fertilización y buenas prácticas agrícolas. 
-Responde de manera técnica, pero clara y amigable. 
-Si la pregunta requiere análisis de campo o datos específicos que no tienes, sugiere consultar a un agrónomo local. 
-No respondas preguntas ajenas al ámbito agrícola.
+                        Tu función es responder preguntas relacionadas con cultivos, suelos, clima, riego, plagas, enfermedades, fertilización y buenas prácticas agrícolas. 
+                        Responde de manera técnica, pero clara y amigable. 
+                        Si la pregunta requiere análisis de campo o datos específicos que no tienes, sugiere consultar a un agrónomo local. 
+                        No respondas preguntas ajenas al ámbito agrícola.
                     """
                 },
                 {
@@ -70,7 +69,6 @@ No respondas preguntas ajenas al ámbito agrícola.
     
     except Exception as e:
         return jsonify({'error': f'Error al procesar la consulta: {str(e)}'}), 500
-
 
 
 #Endpoints para la API de administración de usuarios

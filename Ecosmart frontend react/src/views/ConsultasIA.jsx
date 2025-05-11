@@ -1,78 +1,92 @@
-// ConsultasIA.jsx
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown'; // Import react-markdown
 import './ConsultasIA.css';
+import HeaderAgricultor from './HeaderAgricultor';
 
-const API_URL = 'http://localhost:5000/api/ia/consultas';
+const ConsultasIA = () => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
-function ConsultasIA() {
-  const [consulta, setConsulta] = useState('');
-  const [respuesta, setRespuesta] = useState('');
-  const [cargando, setCargando] = useState(false);
+  const handleSendMessage = async () => {
+    if (input.trim()) {
+      const userMessage = { sender: 'user', text: input };
+      setMessages([...messages, userMessage]);
+      setInput('');
+      setLoading(true);
 
-  const handleConsultaChange = (event) => {
-    setConsulta(event.target.value);
-  };
+      try {
+        const response = await fetch('http://localhost:5000/api/ia/consultas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ consulta: input }),
+        });
 
-  const enviarConsulta = async () => {
-    if (!consulta.trim()) {
-      alert('Por favor, ingresa una consulta.');
-      return;
-    }
+        if (!response.ok) {
+          throw new Error('Error al comunicarse con la API');
+        }
 
-    setCargando(true);
-    setRespuesta('');
-
-    try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ consulta }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        setRespuesta(data.respuesta);
-      } else {
-        setRespuesta(data.error || 'Error al obtener la consulta.');
+        const data = await response.json();
+        const aiMessage = { sender: 'ai', text: data.respuesta };
+        setMessages((prevMessages) => [...prevMessages, aiMessage]);
+      } catch (error) {
+        console.error('Error:', error);
+        const errorMessage = { sender: 'ai', text: 'Hubo un problema al procesar tu consulta. Inténtalo de nuevo más tarde.' };
+        setMessages((prevMessages) => [...prevMessages, errorMessage]);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setRespuesta('Error al conectar con el servidor.');
-    } finally {
-      setCargando(false);
     }
   };
 
   return (
-    <div className="consultas-ia-container">
-      <h1>Consultas IA</h1>
-      <p>Realiza consultas relacionadas con la agricultura y recibe respuestas técnicas y concisas.</p>
-      <div className="consulta-form">
-        <textarea
-          placeholder="Escribe tu consulta aquí..."
-          value={consulta}
-          onChange={handleConsultaChange}
-        ></textarea>
-        <button onClick={enviarConsulta} disabled={cargando}>
-          {cargando ? 'Cargando...' : 'Enviar Consulta'}
-        </button>
-      </div>
-      {respuesta && (
-        <div className="respuesta-container">
-          <h3>Respuesta:</h3>
-          <p>
-  {respuesta.split('\n').map((linea, index) => (
-    <React.Fragment key={index}>
-      {linea}
-      <br />
-    </React.Fragment>
-  ))}
-</p>
+    <div className="consultas-ia-page">
+      {/* HeaderAgricultor at the top */}
+      <HeaderAgricultor activeItem="consultas" />
+
+      {/* Main Content */}
+      <div className="consultas-ia-container">
+        <h2 className="consultas-ia-title">Consultas IA</h2>
+
+        {/* Description */}
+        <p className="description">
+          Bienvenido a Consultas IA. Aquí puedes interactuar con nuestra inteligencia artificial para resolver tus dudas relacionadas con la gestión agrícola. Escribe tu consulta en el cuadro de texto y obtén una respuesta inmediata.
+        </p>
+
+        {/* Chat Interface */}
+        <div className="chat-container">
+          <div className="chat-messages">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`chat-message ${message.sender === 'user' ? 'user' : 'ai'}`}
+              >
+                {message.sender === 'ai' ? (
+                  <ReactMarkdown>{message.text}</ReactMarkdown> // Render AI messages with Markdown
+                ) : (
+                  message.text
+                )}
+              </div>
+            ))}
+            {loading && <div className="chat-message ai">Escribiendo...</div>}
+          </div>
+          <div className="chat-input-container">
+            <input
+              type="text"
+              placeholder="Escribe tu mensaje..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+            />
+            <button onClick={handleSendMessage} disabled={loading}>
+              {loading ? 'Enviando...' : 'Enviar'}
+            </button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
-}
+};
 
 export default ConsultasIA;
