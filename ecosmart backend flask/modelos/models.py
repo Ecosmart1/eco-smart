@@ -1,16 +1,20 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from datetime import datetime, timezone, UTC  # Añade UTC aquí
+
+UTC = timezone.utc  # Define UTC como la zona horaria
 
 db = SQLAlchemy()
 
 class LecturaSensor(db.Model):
-    __tablename__ = 'lectura_sensor'
+    __tablename__ = 'lectura_sensor'  # Verificar nombre de tabla
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.String, nullable=False)
-    sensor_id = db.Column(db.Integer, nullable=False)
-    tipo = db.Column(db.String, nullable=False)
-    valor = db.Column(db.String, nullable=False)  
-    unidad = db.Column(db.String, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.now(UTC))
+    parcela = db.Column(db.Integer, db.ForeignKey('parcelas.id'))
+    sensor_id = db.Column(db.Integer)
+    tipo = db.Column(db.String(50))
+    valor = db.Column(db.Text)  # Cambiar de Float a Text para soportar JSON
+    unidad = db.Column(db.String(20))
 
 
 
@@ -38,13 +42,13 @@ class Conversacion(db.Model):
     __tablename__ = 'conversaciones'
     id = db.Column(db.Integer, primary_key=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Cambiar de utcnow a now(UTC) para consistencia
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
     mensajes = db.relationship('Mensaje', backref='conversacion', lazy=True)
 
     def get_last_message(self):
-        
-            
-        ultimo_mensaje = Mensaje.query.filter_by(conversacion_id=self.id).order_by(Mensaje.created_at.desc()).first()
+        # Actualizar para usar timestamp en lugar de created_at
+        ultimo_mensaje = Mensaje.query.filter_by(conversacion_id=self.id).order_by(Mensaje.timestamp.desc()).first()
         if ultimo_mensaje:
             return ultimo_mensaje.content
         return ""
@@ -53,8 +57,9 @@ class Conversacion(db.Model):
 class Mensaje(db.Model):
     __tablename__ = 'mensajes'
     id = db.Column(db.Integer, primary_key=True)
-    conversacion_id = db.Column(db.Integer, db.ForeignKey('conversaciones.id'), nullable=False)
-    sender = db.Column(db.String(50), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    conversacion_id = db.Column(db.Integer, db.ForeignKey('conversaciones.id'))
+    sender = db.Column(db.String(20))
+    content = db.Column(db.Text)
+    # Cambiar created_at a timestamp
+    timestamp = db.Column(db.DateTime, default=datetime.now(UTC))
 

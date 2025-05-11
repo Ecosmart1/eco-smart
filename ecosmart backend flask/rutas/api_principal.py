@@ -5,7 +5,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Sensores.Sensor import obtener_parametros_estacion, Sensor, RedSensores, SensorNutrientes
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, UTC
 import threading
 import pandas as pd
 import json
@@ -111,45 +111,58 @@ ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
 simulacion_activa = False
 hilo_simulacion = None
 
+# Modifica la función simulacion_continua para asignar parcelas
 def simulacion_continua():
     global ultimos_datos, simulacion_activa
 
     # Abre el contexto de aplicación para este hilo
     with app.app_context():
+        # Obtener parcelas disponibles al inicio de la simulación
+        parcelas_disponibles = Parcela.query.all()
+        if not parcelas_disponibles:
+            print("⚠️ No hay parcelas disponibles. Los datos se generarán sin asignar a parcelas.")
+            parcela_id = None
+        else:
+            # Usar la primera parcela por defecto (puedes modificar esto para elegir otra)
+            parcela_id = parcelas_disponibles[0].id
+            print(f"✅ Los datos se asignarán a la parcela: {parcelas_disponibles[0].nombre} (ID: {parcela_id})")
+        
         # Calcular tiempo de finalización
-        duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60  # convertir minutos a segundos
-        intervalo = parametros_configurables["simulacion"]["intervalo"]  # intervalo en segundos
+        duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60
+        intervalo = parametros_configurables["simulacion"]["intervalo"]
         tiempo_inicio = time.time()
         tiempo_fin = tiempo_inicio + duracion_segundos
 
-        print(f"Simulación iniciada por {duracion_segundos} segundos ({parametros_configurables['simulacion']['duracion']} minutos)")
-        print(f"Intervalo entre lecturas: {intervalo} segundos")
+        print(f"Simulación iniciada por {duracion_segundos} segundos")
         
         while simulacion_activa and time.time() < tiempo_fin:
             ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
             print(f"Datos generados en {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            # Guardar en la base de datos
+            
+            # Guardar en la base de datos CON la asignación de parcela
             for id_sensor, dato in ultimos_datos.items():
                 sensor = red_sensores.sensores[id_sensor]
                 lectura = LecturaSensor(
                     timestamp=dato["timestamp"],
+                    parcela=parcela_id,  # CAMBIO CLAVE: Asignar la parcela
                     sensor_id=id_sensor,
                     tipo=sensor.tipo,
-                    valor=json.dumps(dato["valor"]),  # Si es dict, como nutrientes
+                    valor=json.dumps(dato["valor"]) if isinstance(dato["valor"], dict) else str(dato["valor"]),
                     unidad=sensor.unidad
                 )
                 db.session.add(lectura)
+            
             db.session.commit()
+            
             # Calcular tiempo restante
             tiempo_restante = tiempo_fin - time.time()
             if tiempo_restante <= 0:
                 break
 
-            # Dormir hasta la próxima iteración o hasta que termine el tiempo
+            # Dormir hasta la próxima iteración
             tiempo_espera = min(intervalo, tiempo_restante)
             time.sleep(tiempo_espera)
 
-        # Si terminamos por tiempo y no por cancelación manual
         if time.time() >= tiempo_fin and simulacion_activa:
             print("Simulación completada: se alcanzó la duración configurada")
             simulacion_activa = False
@@ -282,6 +295,97 @@ def actualizar_parametros():
         "mensaje": "Parámetros actualizados correctamente", 
         "parametros": parametros_configurables
     })
+
+# endpoint para seleccionar parcela específica
+@app.route('/api/simulacion/iniciar/<int:parcela_id>', methods=['POST'])
+def iniciar_simulacion_parcela(parcela_id):
+    """Inicia la simulación continua asignando datos a una parcela específica"""
+    global simulacion_activa, hilo_simulacion, parametros_configurables
+    
+    if simulacion_activa:
+        return jsonify({"mensaje": "La simulación ya está en ejecución"})
+    
+    # Verificar que la parcela exista
+    parcela = Parcela.query.get(parcela_id)
+    if not parcela:
+        return jsonify({"error": f"No existe parcela con ID {parcela_id}"}), 404
+    
+    # Recibir parámetros personalizados si existen (igual que en iniciar_simulacion)
+    if request.json:
+        parametros_configurables = request.json
+        # Actualizar sensores con los nuevos parámetros...
+    
+    # Guardar el ID de parcela para que la simulación lo use
+    app.config['PARCELA_SIMULACION'] = parcela_id
+    
+    simulacion_activa = True
+    hilo_simulacion = threading.Thread(target=simulacion_continua_parcela)
+    hilo_simulacion.daemon = True
+    hilo_simulacion.start()
+    
+    duracion_minutos = parametros_configurables["simulacion"]["duracion"]
+    return jsonify({
+        "mensaje": f"Simulación iniciada para parcela '{parcela.nombre}'. Duración: {duracion_minutos} minutos",
+        "duracion_minutos": duracion_minutos,
+        "parcela": parcela.nombre
+    })
+
+# Función de simulación específica para parcela seleccionada
+def simulacion_continua_parcela():
+    global ultimos_datos, simulacion_activa
+
+    # Abre el contexto de aplicación para este hilo
+    with app.app_context():
+        # Obtener la parcela seleccionada
+        parcela_id = app.config.get('PARCELA_SIMULACION')
+        parcela = Parcela.query.get(parcela_id)
+        print(f"✅ Simulando datos para la parcela: {parcela.nombre} (ID: {parcela_id})")
+        
+        # Calcular tiempo de finalización
+        duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60
+        intervalo = parametros_configurables["simulacion"]["intervalo"]
+        tiempo_inicio = time.time()
+        tiempo_fin = tiempo_inicio + duracion_segundos
+
+        print(f"Simulación iniciada por {duracion_segundos} segundos para parcela {parcela.nombre}")
+        
+        while simulacion_activa and time.time() < tiempo_fin:
+            ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
+            print(f"Datos generados en {time.strftime('%Y-%m-%d %H:%M:%S')} para parcela {parcela.nombre}")
+            
+            # Guardar en la base de datos con la parcela específica
+            for id_sensor, dato in ultimos_datos.items():
+                sensor = red_sensores.sensores[id_sensor]
+                lectura = LecturaSensor(
+                    timestamp=dato["timestamp"],
+                    parcela=parcela_id,  # Asignar la parcela específica
+                    sensor_id=id_sensor,
+                    tipo=sensor.tipo,
+                    valor=json.dumps(dato["valor"]) if isinstance(dato["valor"], dict) else str(dato["valor"]),
+                    unidad=sensor.unidad
+                )
+                db.session.add(lectura)
+            
+            try:
+                db.session.commit()
+                print(f"✅ Datos guardados para parcela {parcela.nombre}")
+            except Exception as e:
+                db.session.rollback()
+                print(f"❌ Error al guardar datos: {e}")
+            
+            # Calcular tiempo restante
+            tiempo_restante = tiempo_fin - time.time()
+            if tiempo_restante <= 0:
+                break
+
+            # Dormir hasta la próxima iteración
+            tiempo_espera = min(intervalo, tiempo_restante)
+            time.sleep(tiempo_espera)
+
+        if time.time() >= tiempo_fin and simulacion_activa:
+            print(f"Simulación completada para parcela {parcela.nombre}: se alcanzó la duración configurada")
+            simulacion_activa = False
+
 
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
@@ -665,65 +769,272 @@ def obtener_conversacion(conv_id):
 # Endpoint para enviar mensaje y obtener respuesta
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    print("Endpoint /api/chat recibió:", request.json)
-    data = request.json
-    user_id = data.get('user_id')
-    message_text = data.get('message')
-    conversation_id = data.get('conversation_id')
-    
-    if not user_id or not message_text:
-        return jsonify({'error': 'Faltan parámetros'}), 400
-    
     try:
-        # Si no se proporciona ID de conversación, crear una nueva
-        if not conversation_id:
+        data = request.json
+        user_id = data.get('user_id')
+        message_text = data.get('message')
+        conversation_id = data.get('conversation_id')
+
+        # Verificar usuario
+        usuario = Usuario.query.get_or_404(user_id)
+
+        # Obtener parcelas del usuario para enriquecer contexto
+        parcelas = Parcela.query.all()  # Filtra por usuario en producción si es necesario
+
+        # NUEVO: Obtener datos de sensores recientes
+        datos_sensores = {}
+
+        # Si se especificó parcela en 'context.parcela_id'
+        parcela_id = data.get('context', {}).get('parcela_id')
+        if parcela_id:
+            parcela_obj = Parcela.query.get(parcela_id)
+            if parcela_obj:
+                datos_recientes = obtener_datos_sensores_recientes(parcela_id)
+                # Envolver el resultado en 'nombre' y 'datos'
+                datos_sensores = {
+                    'nombre': parcela_obj.nombre,
+                    'datos': datos_recientes
+                }
+        else:
+            # Obtener datos de todas las parcelas
+            for p in parcelas:
+                datos_recientes = obtener_datos_sensores_recientes(p.id)
+                if datos_recientes:
+                    datos_sensores[p.id] = {
+                        'nombre': p.nombre,
+                        'datos': datos_recientes
+                    }
+        # Crear o recuperar conversación
+        if conversation_id:
+            conversacion = Conversacion.query.get_or_404(conversation_id)
+        else:
             conversacion = Conversacion(usuario_id=user_id)
             db.session.add(conversacion)
             db.session.commit()
             conversation_id = conversacion.id
-        else:
-            conversacion = Conversacion.query.get_or_404(conversation_id)
         
         # Guardar mensaje del usuario
         mensaje_usuario = Mensaje(
             conversacion_id=conversation_id,
-            sender='user',
+            sender="user",
             content=message_text
         )
         db.session.add(mensaje_usuario)
         db.session.commit()
         
-        # Llamar a OpenRouter (primero con un mensaje simple para probar)
-        try:
-            # Mensaje de sistema simple para probar
-            history = [
-                {"role": "system", "content": "Eres un asistente útil."},
-                {"role": "user", "content": message_text}
-            ]
-            
-            print("Enviando a OpenRouter:", history)
-            reply = send_to_deepseek(history)
-            print("Respuesta de OpenRouter:", reply)
-            
-            # Guardar respuesta
-            mensaje_asistente = Mensaje(
-                conversacion_id=conversation_id,
-                sender='assistant',
-                content=reply
-            )
-            db.session.add(mensaje_asistente)
-            db.session.commit()
-            
-            return jsonify({
-                'conversation_id': conversation_id,
-                'reply': reply
-            })
-        except Exception as e:
-            print("Error llamando a OpenRouter:", str(e))
-            return jsonify({'error': str(e)}), 500
+        # Construir mensaje de sistema con contexto enriquecido
+        sistema_mensaje = construir_mensaje_sistema_avanzado(usuario, parcelas, datos_sensores)
+        
+        # Obtener historial anterior (opcional, para mantener contexto)
+        mensajes_previos = Mensaje.query.filter_by(
+            conversacion_id=conversation_id
+        ).order_by(Mensaje.timestamp.desc()).limit(5).all()  # Cambiado de created_at a timestamp
+        
+        # Construir historial para enviar a la API
+        history = [{"role": "system", "content": sistema_mensaje}]
+        
+        # Añadir mensajes previos si existen
+        for msg in mensajes_previos:
+            role = "user" if msg.sender == "user" else "assistant"
+            history.append({"role": role, "content": msg.content})
+        
+        # Añadir mensaje actual
+        history.append({"role": "user", "content": message_text})
+        
+        # Enviar a OpenRouter/Deepseek
+        print(f"Enviando a OpenRouter: {history}")
+        reply = send_to_deepseek(history)
+        
+        # Guardar respuesta
+        mensaje_respuesta = Mensaje(
+            conversacion_id=conversation_id,
+            sender="assistant",
+            content=reply
+        )
+        db.session.add(mensaje_respuesta)
+        db.session.commit()
+        
+        return jsonify({
+            'conversation_id': conversation_id,
+            'reply': reply
+        })
+        
     except Exception as e:
         print("Error general en /api/chat:", str(e))
         return jsonify({'error': str(e)}), 500
+    
+# Añadir esta función para obtener datos recientes de sensores
+
+def obtener_datos_sensores_recientes(parcela_id):
+    try:
+        # Usar datetime.now(UTC) en lugar de utcnow()
+        desde = datetime.now(UTC) - timedelta(hours=24)
+        
+        # CORREGIDO: Usar el nombre correcto de los tipos (primera letra mayúscula)
+        humedad = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'Humedad',  # Cambiado de 'humedad' a 'Humedad'
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp.desc()).first()
+        
+        temperatura = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'Temperatura',  # Cambiado de 'temperatura' a 'Temperatura'
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp.desc()).first()
+        
+        # Construir resultado con datos disponibles
+        resultado = {}
+        if humedad:
+            resultado['humedad'] = {
+                'valor': humedad.valor,
+                'timestamp': humedad.timestamp.isoformat(),
+                'unidad': '%'
+            }
+        
+        if temperatura:
+            resultado['temperatura'] = {
+                'valor': temperatura.valor,
+                'timestamp': temperatura.timestamp.isoformat(),
+                'unidad': '°C'
+            }
+        
+        return resultado
+    
+    except Exception as e:
+        print(f"Error obteniendo datos de sensores para parcela {parcela_id}: {str(e)}")
+        return {}
+
+# Añadir esta función para construir el mensaje enriquecido
+# Modifica la función construir_mensaje_sistema_avanzado para manejar correctamente los datos de sensores
+def construir_mensaje_sistema_avanzado(usuario, parcelas, datos_sensores):
+    mensaje = f"""Eres un asistente agrícola especializado de EcoSmart, la plataforma de gestión agrícola inteligente.
+
+DATOS DEL USUARIO:
+- Nombre: {usuario.nombre}
+- Rol: {usuario.rol}
+
+PARCELAS DISPONIBLES:
+"""
+    # Añadir información de parcelas
+    for p in parcelas[:5]:  # Limitar a 5 parcelas para no sobrecargar
+        mensaje += f"""
+* {p.nombre} ({p.id})
+  - Cultivo actual: {p.cultivo_actual or 'Sin cultivo'}
+  - Área: {p.hectareas} hectáreas
+  - Fecha de siembra: {p.fecha_siembra.strftime('%d/%m/%Y') if p.fecha_siembra else 'No registrada'}
+"""
+    
+    # Añadir datos de sensores
+    mensaje += "\nDATOS RECIENTES DE SENSORES:\n"
+    
+    if isinstance(datos_sensores, dict) and datos_sensores:
+        # CORREGIDO: Verificar estructura para evitar errores de 'nombre'
+        if isinstance(datos_sensores, dict):
+            # Para una sola parcela
+            if 'datos' in datos_sensores:
+                parcela_nombre = "Parcela seleccionada"
+                # Buscar nombre de parcela si está disponible
+                if 'nombre' in datos_sensores:
+                    parcela_nombre = datos_sensores['nombre']
+                # Si no hay nombre, intentar buscar por ID
+                elif parcela_id := request.args.get('parcela_id'):
+                    parcela = Parcela.query.get(parcela_id)
+                    if parcela:
+                        parcela_nombre = parcela.nombre
+                
+                mensaje += f"Parcela: {parcela_nombre}\n"
+                for tipo, dato in datos_sensores.get('datos', {}).items():
+                    mensaje += f"- {tipo.capitalize()}: {dato['valor']}{dato['unidad']} ({dato['timestamp']})\n"
+            else:
+                # Para múltiples parcelas
+                for parcela_id, info in datos_sensores.items():
+                    # Obtener nombre de parcela de forma segura
+                    parcela_nombre = "Parcela ID " + str(parcela_id)
+                    if isinstance(info, dict) and 'nombre' in info:
+                        parcela_nombre = info['nombre']
+                    elif not isinstance(info, dict):
+                        # Si info no es dict, saltamos esta iteración
+                        continue
+                        
+                    mensaje += f"Parcela: {parcela_nombre}\n"
+                    # Asegurarse que 'datos' existe y es un diccionario
+                    if isinstance(info.get('datos'), dict):
+                        for tipo, dato in info['datos'].items():
+                            if isinstance(dato, dict) and 'valor' in dato and 'unidad' in dato:
+                                mensaje += f"- {tipo.capitalize()}: {dato['valor']}{dato['unidad']} ({dato.get('timestamp', 'N/A')})\n"
+    else:
+        mensaje += "No hay datos recientes disponibles de sensores.\n"
+    
+    mensaje += """
+INSTRUCCIONES:
+1. Usa los datos de sensores para dar recomendaciones precisas y específicas.
+2. Si los niveles de humedad están por debajo del 30%, sugiere programar riego.
+3. Si la temperatura está por encima de 30°C o por debajo de 5°C, advierte sobre riesgos para los cultivos.
+4. Cuando menciones datos específicos, indica de qué parcela y sensor provienen.
+5. Si no tienes datos suficientes, solicita información adicional o sugiere instalar más sensores.
+6. Adapta tus recomendaciones al cultivo actual de cada parcela.
+
+Eres un experto en agricultura de precisión y tu objetivo es ayudar al agricultor a tomar las mejores decisiones basadas en datos.
+"""
+    
+    return mensaje
+
+    # sensores en dashboard agricola
+# CAMBIO 1: Corregir la función obtener_datos_sensores para usar el nombre correcto de campo
+@app.route('/api/sensores/datos', methods=['GET'])
+def obtener_datos_sensores():
+    try:
+        parcela_id = request.args.get('parcela')  # Usar 'parcela' como parámetro
+        periodo = request.args.get('periodo', '24h')
+        
+        # Calcular fecha desde usando UTC
+        desde = datetime.now(UTC)
+        if periodo == '7d':
+            desde = desde - timedelta(days=7)
+        elif periodo == '30d':
+            desde = desde - timedelta(days=30)
+        else:  # '24h' por defecto
+            desde = desde - timedelta(hours=24)
+        
+        # Consultar usando el nombre correcto del campo parcela
+        datos_humedad = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'Humedad',
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp).all()
+        
+        datos_temperatura = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'Temperatura',
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp).all()
+        
+        # Formatear resultado, convirtiendo de string a float para datos numéricos
+        resultado = {
+            "humedad": [{"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)} for d in datos_humedad],
+            "temperatura": [{"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)} for d in datos_temperatura]
+        }
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        print(f"Error al obtener datos de sensores: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route('/api/diagnose/models', methods=['GET'])
+def diagnose_models():
+        try:
+            model_info = {
+                "LecturaSensor": [c.name for c in LecturaSensor.__table__.columns],
+                "Mensaje": [c.name for c in Mensaje.__table__.columns],
+                "Conversacion": [c.name for c in Conversacion.__table__.columns],
+                "Parcela": [c.name for c in Parcela.__table__.columns]
+            }
+            return jsonify(model_info)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 @app.route('/')
 def home():
