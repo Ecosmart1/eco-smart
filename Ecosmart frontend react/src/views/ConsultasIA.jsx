@@ -34,7 +34,7 @@ const ConsultasIA = () => {
         }
       }
 
-      const data = await response.json();ta
+      const data = await response.json();
 
       if (!data || !data.respuesta) {
         throw new Error('La respuesta de la API es inválida o está incompleta.');
