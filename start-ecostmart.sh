@@ -40,7 +40,6 @@ fi
 echo "=== EcoSmart: Instalando y ejecutando Frontend (React) ==="
 cd "Ecosmart frontend react"
 
-
 npm install
 
 
