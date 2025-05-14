@@ -289,7 +289,11 @@ const fetchDatosSensores = async () => {
                       <span className="detail-value">{parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : '-'}</span>
                     </div>
                   </div>
-                  <button className="parcela-btn-detalle">Ver Detalles</button>
+                  {/*Cada parcela al pulsar ver detalles debe redirigir a su informacion*/}
+                  <button className="parcela-btn-detalle"
+                  onClick={() => navigate(`/dashboard/agricultor/parcelas/${parcela.id}`)}>
+                  Ver Detalles</button>
+
                 </div>
               ))}
             </div>

@@ -1,5 +1,43 @@
 /* Estilos para la vista de sensores */
+/* Estilos específicos para el selector de parcelas */
+.selector-container select {
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: #f8f9fa; /* Fondo más claro */
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #2e7d32; /* Color de texto verde */
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
+/* Estilo cuando el select está enfocado */
+.selector-container select:focus {
+  border-color: #4caf50;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+  background-color: white;
+}
+
+/* Estilo para las opciones del select */
+.selector-container select option {
+  padding: 10px;
+  background-color: white;
+  color: #333;
+}
+
+/* Estilo cuando se pasa el mouse sobre las opciones */
+.selector-container select option:hover {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32;
+}
+
+/* Estilo para la opción seleccionada */
+.selector-container select option:checked {
+  background-color: #4caf50;
+  color: white;
+}
 .app-container {
     display: flex;
     flex-direction: column;

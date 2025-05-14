@@ -1347,3 +1347,18 @@
   margin-top: 15px;
   gap: 10px;
 }
+/* Fix específico para el selector de parcelas */
+.selector-parcela {
+  background-color: white !important;
+  color: #333 !important;
+}
+
+.selector-parcela option {
+  background-color: white;
+  color: #333;
+}
+
+.selector-parcela option:checked {
+  background-color: #e8f5e9 !important;
+  color: #22963e !important;
+}

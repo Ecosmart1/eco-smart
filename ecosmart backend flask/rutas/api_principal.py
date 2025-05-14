@@ -5,7 +5,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Sensores.Sensor import obtener_parametros_estacion, Sensor, RedSensores, SensorNutrientes
 import time
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 import threading
 import pandas as pd
 import json
@@ -21,7 +21,7 @@ app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -981,7 +981,11 @@ def obtener_datos_sensores_recientes(parcela_id):
 # Añadir esta función para construir el mensaje enriquecido
 # Modifica la función construir_mensaje_sistema_avanzado para manejar correctamente los datos de sensores
 def construir_mensaje_sistema_avanzado(usuario, parcelas, datos_sensores):
-    mensaje = f"""Eres un asistente agrícola especializado de EcoSmart, la plataforma de gestión agrícola inteligente.
+    mensaje = f"""Eres un asistente virtual en una Plataforma de Agricultura Inteligente. 
+                        Tu función es responder preguntas relacionadas con cultivos, suelos, clima, riego, plagas, enfermedades, fertilización y buenas prácticas agrícolas. 
+                        Responde de manera técnica, pero clara y amigable. 
+                        Si la pregunta requiere análisis de campo o datos específicos que no tienes, sugiere consultar a un agrónomo local. 
+                        No respondas preguntas ajenas al ámbito agrícola.
 
 DATOS DEL USUARIO:
 - Nombre: {usuario.nombre}

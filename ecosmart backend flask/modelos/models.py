@@ -7,7 +7,7 @@ UTC = timezone.utc  # Define UTC como la zona horaria
 db = SQLAlchemy()
 
 class LecturaSensor(db.Model):
-    __tablename__ = 'lectura_sensor'  # Verificar nombre de tabla
+    __tablename__ = 'lecturas_sensores'  # Verificar nombre de tabla
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.now(UTC))
     parcela = db.Column(db.Integer, db.ForeignKey('parcelas.id'))
