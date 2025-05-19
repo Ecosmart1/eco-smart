@@ -51,7 +51,7 @@ function HeaderTecnico() {
         )}
         
         {/* Asistente IA para todos los usuarios registrados */}
-        {(userRole === 'agricultor' || userRole === 'tecnico') && (
+        {(userRole === 'agricultor' || userRole === 'agronomo') && (
           <Link to={userRole === 'agricultor' ? '/dashboard/agricultor/chat' : '/dashboard/tecnico/chat'} 
                 className="nav-item">
             <span>Consultas IA</span>

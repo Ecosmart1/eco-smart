@@ -9,7 +9,7 @@ db = SQLAlchemy()
 class LecturaSensor(db.Model):
     __tablename__ = 'lecturas_sensores'  # Verificar nombre de tabla
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(UTC))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     parcela = db.Column(db.Integer, db.ForeignKey('parcelas.id'))
     sensor_id = db.Column(db.Integer)
     tipo = db.Column(db.String(50))

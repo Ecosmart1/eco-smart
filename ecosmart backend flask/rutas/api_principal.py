@@ -16,7 +16,6 @@ from servicios.openrouter import send_to_deepseek
 
 
 
-
 app = Flask(__name__)
 CORS(app)  # Permite solicitudes CORS para la API
 
@@ -24,7 +23,6 @@ CORS(app)  # Permite solicitudes CORS para la API
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
-
 
 #Endpoints para la API de administración de usuarios
 @app.route('/api/registro', methods=['POST'])
@@ -1112,6 +1110,9 @@ def diagnose_models():
             return jsonify(model_info)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+        
+        
 
 @app.route('/')
 def home():

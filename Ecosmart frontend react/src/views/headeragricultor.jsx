@@ -81,7 +81,8 @@ const HeaderAgricultor = ({ activeItem }) => {
         {menuAbierto && (
           <div className="user-dropdown-menu">
             <Link to="/dashboard/agricultor/perfil" className="dropdown-item">Mi Perfil</Link>
-            <Link to="/dashboard/agricultor/configuracion" className="dropdown-item">Configuración</Link>
+            {/*  Al pulsar en configuracion en el header agricultor debera llevarte a configuracion de contraseña */ }
+            <Link to="/configuracion" className="dropdown-item">Configuración</Link>
             <div className="dropdown-divider"></div>
             <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>
           </div>
