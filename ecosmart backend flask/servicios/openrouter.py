@@ -2,7 +2,7 @@ import os
 import requests
 
 # Definir la clave API y la URL base - CORREGIR LA URL
-OPENROUTER_KEY = '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'
+OPENROUTER_KEY = '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'
 API_URL = 'https://openrouter.ai/api/v1/chat/completions'  # URL CORREGIDA
 
 def send_to_deepseek(history_messages):

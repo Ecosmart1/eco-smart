@@ -9,16 +9,25 @@ from datetime import datetime, timedelta, UTC
 import threading
 import pandas as pd
 import json
+from json import JSONDecodeError
 from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
+from servicios.logs import registrar_log, registrar_accion
+from sqlalchemy import func
 
 
 
 
 
 app = Flask(__name__)
-CORS(app)  # Permite solicitudes CORS para la API
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "X-User-Id", "X-User-Rol", "Authorization"]
+    }
+})  # Permite solicitudes CORS para la API
 
 #base de datos
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
@@ -40,6 +49,8 @@ def registrar_usuario():
     )
     db.session.add(usuario)
     db.session.commit()
+    registrar_log(usuario.id, 'registro', 'usuario', usuario.id, detalles=str(data))
+
     return jsonify({'mensaje': 'Usuario registrado correctamente'})
 
 #@app.route('/api/usuarios/<int:id>', methods=['GET'])
@@ -47,6 +58,7 @@ def registrar_usuario():
 def login_usuario():
     data = request.json
     usuario = Usuario.query.filter_by(email=data['email']).first()
+    registrar_log(usuario.id, 'login', 'usuario', usuario.id)
     if usuario and check_password_hash(usuario.password, data['password']):
         return jsonify({
             'id': usuario.id,
@@ -56,6 +68,10 @@ def login_usuario():
         })
     else:
         return jsonify({'error': 'Credenciales incorrectas'}), 401
+    
+    
+
+
 
 
 # Crear la red de sensores
@@ -248,143 +264,234 @@ def obtener_parametros_config():
 
 # Reemplaza la función para actualizar parámetros con esta versión centralizada
 @app.route('/api/parametros', methods=['POST'])
+@registrar_accion('actualizar_parametros', 'parametros')
 def actualizar_parametros():
     """Actualiza todos los parámetros configurables de forma centralizada"""
     global parametros_configurables
-    nuevos_parametros = request.json
-    
-    if not nuevos_parametros:
-        return jsonify({"error": "No se recibieron parámetros"}), 400
-    
-    # Actualizar parámetros
-    parametros_configurables = nuevos_parametros
-    
-    # Aplicar los parámetros a todos los sensores
     try:
-        # Temperatura (ID 1)
-        if 1 in red_sensores.sensores:
-            red_sensores.sensores[1].valor_minimo = parametros_configurables["temperatura"]["min"]
-            red_sensores.sensores[1].valor_maximo = parametros_configurables["temperatura"]["max"]
-            # Actualizar frecuencia
-            red_sensores.sensores[1].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+        nuevos_parametros = request.json
         
-        # Humedad (ID 2)
-        if 2 in red_sensores.sensores:
-            red_sensores.sensores[2].valor_minimo = parametros_configurables["humedadSuelo"]["min"]
-            red_sensores.sensores[2].valor_maximo = parametros_configurables["humedadSuelo"]["max"]
-            # Actualizar frecuencia
-            red_sensores.sensores[2].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+        if not nuevos_parametros:
+            return jsonify({"error": "No se recibieron parámetros"}), 400
         
-        # pH (ID 3)
-        if 3 in red_sensores.sensores:
-            red_sensores.sensores[3].valor_minimo = parametros_configurables["phSuelo"]["min"]
-            red_sensores.sensores[3].valor_maximo = parametros_configurables["phSuelo"]["max"]
-            # Actualizar frecuencia
-            red_sensores.sensores[3].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+        # Actualizar parámetros
+        parametros_configurables = nuevos_parametros
+        
+        # Aplicar los parámetros a todos los sensores
+        try:
+            # Temperatura (ID 1)
+            if 1 in red_sensores.sensores:
+                red_sensores.sensores[1].valor_minimo = parametros_configurables["temperatura"]["min"]
+                red_sensores.sensores[1].valor_maximo = parametros_configurables["temperatura"]["max"]
+                # Actualizar frecuencia
+                red_sensores.sensores[1].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
             
-        # Nutrientes (ID 4)
-        if 4 in red_sensores.sensores:
-            # Solo actualizar frecuencia, ya que los rangos están en el objeto parametros_configurables
-            red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+            # Humedad (ID 2)
+            if 2 in red_sensores.sensores:
+                red_sensores.sensores[2].valor_minimo = parametros_configurables["humedadSuelo"]["min"]
+                red_sensores.sensores[2].valor_maximo = parametros_configurables["humedadSuelo"]["max"]
+                # Actualizar frecuencia
+                red_sensores.sensores[2].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
             
+            # pH (ID 3)
+            if 3 in red_sensores.sensores:
+                red_sensores.sensores[3].valor_minimo = parametros_configurables["phSuelo"]["min"]
+                red_sensores.sensores[3].valor_maximo = parametros_configurables["phSuelo"]["max"]
+                # Actualizar frecuencia
+                red_sensores.sensores[3].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+                
+            # Nutrientes (ID 4)
+            if 4 in red_sensores.sensores:
+                # Solo actualizar frecuencia, ya que los rangos están en el objeto parametros_configurables
+                red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+                
+        except Exception as e:
+            app.logger.error(f"Error al actualizar sensores: {e}")
+            return jsonify({"error": f"Error al actualizar sensores: {str(e)}"}), 500
+            
+        # Registrar log solo si existe el ID de usuario
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'actualizar_parametros', 'parametros', None,
+                            detalles=str(nuevos_parametros))
+            except Exception as e:
+                app.logger.error(f"Error al registrar log: {e}")
+                # No detener la ejecución por errores de log
+                
+        return jsonify({
+            "mensaje": "Parámetros actualizados correctamente", 
+            "parametros": parametros_configurables
+        })
     except Exception as e:
-        print(f"Error al actualizar sensores: {e}")
-        return jsonify({"error": f"Error al actualizar sensores: {str(e)}"}), 500
-    
-    return jsonify({
-        "mensaje": "Parámetros actualizados correctamente", 
-        "parametros": parametros_configurables
-    })
+        app.logger.error(f"Error general en actualizar_parametros: {str(e)}")
+        return jsonify({"error": f"Error al actualizar parámetros: {str(e)}"}), 500
 
 # endpoint para seleccionar parcela específica
 @app.route('/api/simulacion/iniciar/<int:parcela_id>', methods=['POST'])
+@registrar_accion('iniciar_simulacion', 'parcela')  # Detecta 'parcela_id' automáticamente
 def iniciar_simulacion_parcela(parcela_id):
     """Inicia la simulación continua asignando datos a una parcela específica"""
     global simulacion_activa, hilo_simulacion, parametros_configurables
     
-    if simulacion_activa:
-        return jsonify({"mensaje": "La simulación ya está en ejecución"})
-    
-    # Verificar que la parcela exista
-    parcela = Parcela.query.get(parcela_id)
-    if not parcela:
-        return jsonify({"error": f"No existe parcela con ID {parcela_id}"}), 404
-    
-    # Recibir parámetros personalizados si existen (igual que en iniciar_simulacion)
-    if request.json:
-        parametros_configurables = request.json
-        # Actualizar sensores con los nuevos parámetros...
-    
-    # Guardar el ID de parcela para que la simulación lo use
-    app.config['PARCELA_SIMULACION'] = parcela_id
-    
-    simulacion_activa = True
-    hilo_simulacion = threading.Thread(target=simulacion_continua_parcela)
-    hilo_simulacion.daemon = True
-    hilo_simulacion.start()
-    
-    duracion_minutos = parametros_configurables["simulacion"]["duracion"]
-    return jsonify({
-        "mensaje": f"Simulación iniciada para parcela '{parcela.nombre}'. Duración: {duracion_minutos} minutos",
-        "duracion_minutos": duracion_minutos,
-        "parcela": parcela.nombre
-    })
+    try:
+        # Verificar si ya hay una simulación activa
+        if simulacion_activa:
+            return jsonify({"mensaje": "La simulación ya está en ejecución"})
+        
+        # Verificar que la parcela exista
+        parcela = Parcela.query.get(parcela_id)
+        if not parcela:
+            return jsonify({"error": f"No existe parcela con ID {parcela_id}"}), 404
+        
+        # Recibir parámetros personalizados si existen
+        if request.json:
+            try:
+                parametros_configurables = request.json
+                # Actualizar sensores con los nuevos parámetros
+                if 1 in red_sensores.sensores:
+                    red_sensores.sensores[1].valor_minimo = parametros_configurables.get("temperatura", {}).get("min", 10)
+                    red_sensores.sensores[1].valor_maximo = parametros_configurables.get("temperatura", {}).get("max", 30)
+                    red_sensores.sensores[1].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+                
+                if 2 in red_sensores.sensores:
+                    red_sensores.sensores[2].valor_minimo = parametros_configurables.get("humedadSuelo", {}).get("min", 30)
+                    red_sensores.sensores[2].valor_maximo = parametros_configurables.get("humedadSuelo", {}).get("max", 70)
+                    red_sensores.sensores[2].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+                
+                if 3 in red_sensores.sensores:
+                    red_sensores.sensores[3].valor_minimo = parametros_configurables.get("phSuelo", {}).get("min", 5.5)
+                    red_sensores.sensores[3].valor_maximo = parametros_configurables.get("phSuelo", {}).get("max", 7.5)
+                    red_sensores.sensores[3].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+                    
+                if 4 in red_sensores.sensores:
+                    red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+            except Exception as e:
+                app.logger.error(f"Error al actualizar parámetros: {e}")
+                # Continuar con los parámetros por defecto
+        
+        # Guardar el ID de parcela para que la simulación lo use
+        app.config['PARCELA_SIMULACION'] = parcela_id
+        
+        # Iniciar la simulación
+        simulacion_activa = True
+        hilo_simulacion = threading.Thread(target=simulacion_continua_parcela)
+        hilo_simulacion.daemon = True
+        hilo_simulacion.start()
+        
+        # Registrar log solo si hay usuario identificado
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'iniciar_simulacion', 'parcela', parcela_id)
+            except Exception as e:
+                app.logger.error(f"Error al registrar log: {e}")
+        
+        # Retornar información sobre la simulación iniciada
+        duracion_minutos = parametros_configurables.get("simulacion", {}).get("duracion", 60)
+        return jsonify({
+            "mensaje": f"Simulación iniciada para parcela '{parcela.nombre}'. Duración: {duracion_minutos} minutos",
+            "duracion_minutos": duracion_minutos,
+            "parcela": {
+                "id": parcela.id,
+                "nombre": parcela.nombre
+            }
+        })
+        
+    except Exception as e:
+        # Si hay cualquier error, asegurarse de que no quede una simulación activa
+        simulacion_activa = False
+        app.logger.error(f"Error al iniciar simulación: {str(e)}")
+        return jsonify({"error": f"Error al iniciar simulación: {str(e)}"}), 500
 
 # Función de simulación específica para parcela seleccionada
 def simulacion_continua_parcela():
     global ultimos_datos, simulacion_activa
 
-    # Abre el contexto de aplicación para este hilo
-    with app.app_context():
-        # Obtener la parcela seleccionada
-        parcela_id = app.config.get('PARCELA_SIMULACION')
-        parcela = Parcela.query.get(parcela_id)
-        print(f"✅ Simulando datos para la parcela: {parcela.nombre} (ID: {parcela_id})")
-        
-        # Calcular tiempo de finalización
-        duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60
-        intervalo = parametros_configurables["simulacion"]["intervalo"]
-        tiempo_inicio = time.time()
-        tiempo_fin = tiempo_inicio + duracion_segundos
-
-        print(f"Simulación iniciada por {duracion_segundos} segundos para parcela {parcela.nombre}")
-        
-        while simulacion_activa and time.time() < tiempo_fin:
-            ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
-            print(f"Datos generados en {time.strftime('%Y-%m-%d %H:%M:%S')} para parcela {parcela.nombre}")
+    try:
+        # Abre el contexto de aplicación para este hilo
+        with app.app_context():
+            # Obtener la parcela seleccionada con manejo de errores
+            parcela_id = app.config.get('PARCELA_SIMULACION')
+            if not parcela_id:
+                print("❌ Error: No se especificó parcela para la simulación")
+                simulacion_activa = False
+                return
+                
+            parcela = Parcela.query.get(parcela_id)
+            if not parcela:
+                print(f"❌ Error: No se encontró parcela con ID {parcela_id}")
+                simulacion_activa = False
+                return
+                
+            print(f"✅ Simulando datos para la parcela: {parcela.nombre} (ID: {parcela_id})")
             
-            # Guardar en la base de datos con la parcela específica
-            for id_sensor, dato in ultimos_datos.items():
-                sensor = red_sensores.sensores[id_sensor]
-                lectura = LecturaSensor(
-                    timestamp=dato["timestamp"],
-                    parcela=parcela_id,  # Asignar la parcela específica
-                    sensor_id=id_sensor,
-                    tipo=sensor.tipo,
-                    valor=json.dumps(dato["valor"]) if isinstance(dato["valor"], dict) else str(dato["valor"]),
-                    unidad=sensor.unidad
-                )
-                db.session.add(lectura)
-            
-            try:
-                db.session.commit()
-                print(f"✅ Datos guardados para parcela {parcela.nombre}")
-            except Exception as e:
-                db.session.rollback()
-                print(f"❌ Error al guardar datos: {e}")
-            
-            # Calcular tiempo restante
-            tiempo_restante = tiempo_fin - time.time()
-            if tiempo_restante <= 0:
-                break
+            # Calcular tiempo de finalización
+            duracion_segundos = parametros_configurables.get("simulacion", {}).get("duracion", 60) * 60
+            intervalo = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
+            tiempo_inicio = time.time()
+            tiempo_fin = tiempo_inicio + duracion_segundos
 
-            # Dormir hasta la próxima iteración
-            tiempo_espera = min(intervalo, tiempo_restante)
-            time.sleep(tiempo_espera)
+            print(f"Simulación iniciada por {duracion_segundos} segundos para parcela {parcela.nombre}")
+            
+            while simulacion_activa and time.time() < tiempo_fin:
+                try:
+                    # Imprimir valores antes de generar
+                    print(f"Sensores antes de generar datos:")
+                    for id_sensor, sensor in red_sensores.sensores.items():
+                        print(f"  Sensor {id_sensor} ({sensor.tipo}): min={sensor.valor_minimo}, max={sensor.valor_maximo}")
+                    
+                    # Generar datos
+                    ultimos_datos = red_sensores.generar_todos_datos(parametros_configurables)
+                    
+                    # Imprimir valores generados
+                    print(f"Nuevos datos generados:")
+                    for id_sensor, dato in ultimos_datos.items():
+                        if isinstance(dato["valor"], dict):
+                            print(f"  Sensor {id_sensor}: valor={json.dumps(dato['valor'])}")
+                        else:
+                            print(f"  Sensor {id_sensor}: valor={dato['valor']}")
+                        if not sensor:
+                            continue
+                            
+                        lectura = LecturaSensor(
+                            timestamp=dato["timestamp"],
+                            parcela=parcela_id,
+                            sensor_id=id_sensor,
+                            tipo=sensor.tipo,
+                            valor=json.dumps(dato["valor"]) if isinstance(dato["valor"], dict) else str(dato["valor"]),
+                            unidad=sensor.unidad
+                        )
+                        db.session.add(lectura)
+                    
+                    try:
+                        db.session.commit()
+                        print(f"✅ Datos guardados para parcela {parcela.nombre}")
+                    except Exception as e:
+                        db.session.rollback()
+                        print(f"❌ Error al guardar datos: {e}")
+                    
+                    # Calcular tiempo restante
+                    tiempo_restante = tiempo_fin - time.time()
+                    if tiempo_restante <= 0:
+                        break
 
-        if time.time() >= tiempo_fin and simulacion_activa:
-            print(f"Simulación completada para parcela {parcela.nombre}: se alcanzó la duración configurada")
-            simulacion_activa = False
+                    # Dormir hasta la próxima iteración
+                    tiempo_espera = min(intervalo, tiempo_restante)
+                    time.sleep(tiempo_espera)
+                    
+                except Exception as ciclo_e:
+                    print(f"Error en ciclo de simulación: {ciclo_e}")
+                    time.sleep(intervalo)  # Esperar antes de intentar de nuevo
+
+            if time.time() >= tiempo_fin and simulacion_activa:
+                print(f"Simulación completada para parcela {parcela.nombre}: se alcanzó la duración configurada")
+                simulacion_activa = False
+                
+    except Exception as e:
+        print(f"❌ Error general en simulación_continua_parcela: {e}")
+        # Asegurar que se desactive la simulación en caso de error
+        simulacion_activa = False
 
 
 @app.route('/api/simulacion/iniciar', methods=['POST'])
@@ -445,6 +552,15 @@ def detener_simulacion():
     
     if not simulacion_activa:
         return jsonify({"mensaje": "La simulación no está en ejecución"})
+    
+    # Registrar log solo si existe el ID de usuario
+    user_id = request.headers.get('X-User-Id')
+    if user_id:
+        try:
+            registrar_log(user_id, 'detener_simulacion', 'simulacion', None)
+        except Exception as e:
+            app.logger.error(f"Error al registrar log al detener simulación: {e}")
+            # No detener la ejecución por errores de log
     
     simulacion_activa = False
     if hilo_simulacion and hilo_simulacion.is_alive():
@@ -594,25 +710,50 @@ def eliminar_usuario(id):
     return jsonify({'mensaje': 'Usuario eliminado correctamente'})
 
 @app.route('/api/parcelas', methods=['POST'])
+@registrar_accion('crear_parcela', 'parcela', lambda resultado, *args, **kwargs: resultado.get('id'))
 def agregar_parcela():
-    data = request.json
-    parcela = Parcela(
-        nombre=data['nombre'],
-        ubicacion=data.get('ubicacion'),
-        hectareas=data.get('hectareas'),
-        latitud=data.get('latitud'),
-        longitud=data.get('longitud'),
-        fecha_creacion=datetime.utcnow(),
-        cultivo_actual=data.get('cultivo_actual'),
-        fecha_siembra=data.get('fecha_siembra')
-    )
-    db.session.add(parcela)
-    db.session.commit()
-    return jsonify({'mensaje': 'Parcela agregada correctamente'})
+    try:
+        data = request.json
+        parcela = Parcela(
+            nombre=data['nombre'],
+            ubicacion=data.get('ubicacion'),
+            hectareas=data.get('hectareas'),
+            latitud=data.get('latitud'),
+            longitud=data.get('longitud'),
+            fecha_creacion=datetime.utcnow(),
+            cultivo_actual=data.get('cultivo_actual'),
+            fecha_siembra=data.get('fecha_siembra')
+        )
+        db.session.add(parcela)
+        db.session.commit()
+        
+        # Registrar log solo si existe el ID de usuario
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'crear_parcela', 'parcela', parcela.id,
+                          detalles=str(data))
+            except Exception as e:
+                app.logger.error(f"Error al registrar log: {e}")
+                # No detener la ejecución por errores de log
+       
+        return jsonify({'mensaje': 'Parcela agregada correctamente', 'id': parcela.id})
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error al agregar parcela: {str(e)}")
+        return jsonify({'error': f"Error al crear parcela: {str(e)}"}), 500
 
 @app.route('/api/parcelas', methods=['GET'])
 def listar_parcelas():
     parcelas = Parcela.query.all()
+    user_id = request.headers.get('X-User-Id')
+    if user_id:  # <-- CAMBIO CLAVE: verificar que existe
+        try:
+            registrar_log(user_id, 'listar_parcelas', 'parcela', None)
+        except Exception as e:
+            app.logger.error(f"Error al registrar log: {e}")
+
     resultado = []
     for p in parcelas:
         resultado.append({
@@ -662,12 +803,33 @@ def obtener_conversaciones(user_id):
 #Endpoin para eliminar una parcela
 @app.route('/api/parcelas/<int:id>', methods=['DELETE'])
 def eliminar_parcela(id):
-    parcela = Parcela.query.get(id)
-    if not parcela:
-        return jsonify({'error': 'Parcela no encontrada'}), 404
-    db.session.delete(parcela)
-    db.session.commit()
-    return jsonify({'mensaje': 'Parcela eliminada correctamente'})
+    try:
+        parcela = Parcela.query.get(id)
+        if not parcela:
+            return jsonify({'error': 'Parcela no encontrada'}), 404
+        
+        # Primero eliminar todas las lecturas de sensores asociadas
+        LecturaSensor.query.filter_by(parcela=id).delete()
+        
+        # Luego eliminar la parcela
+        db.session.delete(parcela)
+        db.session.commit()
+        
+        # Registrar log solo si existe el ID de usuario
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'eliminar_parcela', 'parcela', id)
+            except Exception as e:
+                app.logger.error(f"Error al registrar log: {e}")
+                # No detenemos la ejecución por errores de log
+        
+        return jsonify({'mensaje': 'Parcela eliminada correctamente'})
+    
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error al eliminar parcela: {str(e)}")
+        return jsonify({'error': f"Error al eliminar parcela: {str(e)}"}), 500
 
 # Endpoint para obtener una parcela específica por ID
 @app.route('/api/parcelas/<int:id>', methods=['GET'])
@@ -727,6 +889,9 @@ def actualizar_parcela(id):
     # Guardar los cambios
     try:
         db.session.commit()
+        user_id = request.headers.get('X-User-Id')
+        registrar_log(user_id, 'actualizar_parcela', 'parcela', id, detalles=str(data))
+    
         return jsonify({'mensaje': 'Parcela actualizada correctamente'})
     except Exception as e:
         db.session.rollback()
@@ -926,7 +1091,8 @@ def chat():
         )
         db.session.add(mensaje_respuesta)
         db.session.commit()
-        
+        registrar_log(user_id, 'consulta_ia', 'conversacion', conversation_id,
+                      detalles=message_text)
         return jsonify({
             'conversation_id': conversation_id,
             'reply': reply
@@ -1082,17 +1248,64 @@ def obtener_datos_sensores():
             LecturaSensor.tipo == 'Temperatura',
             LecturaSensor.timestamp >= desde
         ).order_by(LecturaSensor.timestamp).all()
+
+        datos_ph = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'pH del suelo',
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp).all()
+        
+        datos_nutrientes = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'Nutrientes',
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp).all()
         
         # Formatear resultado, convirtiendo de string a float para datos numéricos
         resultado = {
-            "humedad": [{"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)} for d in datos_humedad],
-            "temperatura": [{"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)} for d in datos_temperatura]
+            "humedad": [],
+            "temperatura": [],
+            "ph": [],
+            "nutrientes": []
         }
-        
+
+        resultado["humedad"] = [
+            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
+            for d in datos_humedad
+        ]
+        resultado["temperatura"] = [
+            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
+            for d in datos_temperatura
+        ]
+        resultado["ph"] = [
+            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
+            for d in datos_ph
+        ]
+
+        # En lugar de float(d.valor), parseamos JSON:
+        for d in datos_nutrientes:
+            try:
+                valor_obj = json.loads(d.valor)
+            except (JSONDecodeError, TypeError, ValueError):
+                # Si no es JSON, caemos a un número simple
+                valor_obj = float(d.valor)
+            resultado["nutrientes"].append({
+                "timestamp": d.timestamp.isoformat(),
+                "valor": valor_obj
+            })
+
+        user_id = request.headers.get('X-User-Id')
+        if user_id:  # Verificar que existe antes de usar
+            try:
+                registrar_log(user_id, 'consulta_datos_sensores', 'parcela', 
+                             parcela_id, detalles=f"periodo={periodo}")
+            except Exception as e:
+                app.logger.error(f"Error al registrar log: {e}")
+
         return jsonify(resultado)
-        
+
     except Exception as e:
-        print(f"Error al obtener datos de sensores: {str(e)}")
+        app.logger.error(f"Error al obtener datos de sensores: {e}")
         return jsonify({"error": str(e)}), 500
     
 
@@ -1108,6 +1321,155 @@ def diagnose_models():
             return jsonify(model_info)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+
+from sqlalchemy import func
+
+# Endpoint para obtener logs de acciones de usuarios (para administradores)
+@app.route('/api/logs', methods=['GET'])
+def obtener_logs():
+    # Solo permitir a administradores ver los logs
+    user_id = request.headers.get('X-User-Id')
+    user_rol = request.headers.get('X-User-Rol', '')
+    
+    if not user_id or user_rol != 'tecnico':
+        return jsonify({'error': 'No autorizado para ver logs del sistema'}), 403
+        
+    # Parámetros de filtrado
+    usuario_id = request.args.get('usuario_id')
+    accion = request.args.get('accion')
+    entidad = request.args.get('entidad')
+    fecha_desde = request.args.get('fecha_desde')
+    fecha_hasta = request.args.get('fecha_hasta')
+    
+    # Parámetros de paginación
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Construir consulta base
+    from modelos.models import LogAccionUsuario
+    query = db.session.query(LogAccionUsuario)
+    
+    # Aplicar filtros si existen
+    if usuario_id:
+        query = query.filter(LogAccionUsuario.usuario_id == usuario_id)
+    if accion:
+        query = query.filter(LogAccionUsuario.accion == accion)
+    if entidad:
+        query = query.filter(LogAccionUsuario.entidad == entidad)
+    if fecha_desde:
+        try:
+            fecha_desde = datetime.fromisoformat(fecha_desde)
+            query = query.filter(LogAccionUsuario.fecha >= fecha_desde)
+        except ValueError:
+            pass
+    if fecha_hasta:
+        try:
+            fecha_hasta = datetime.fromisoformat(fecha_hasta)
+            query = query.filter(LogAccionUsuario.fecha <= fecha_hasta)
+        except ValueError:
+            pass
+    
+    # Ordenar del más reciente al más antiguo
+    query = query.order_by(LogAccionUsuario.fecha.desc())
+    
+    # Paginar resultados
+    total = query.count()
+    logs = query.offset((page - 1) * per_page).limit(per_page).all()
+    
+    # Formatear resultado
+    resultado = {
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (total + per_page - 1) // per_page,
+        'logs': [{
+            'id': log.id,
+            'usuario_id': log.usuario_id,
+            'accion': log.accion,
+            'entidad': log.entidad,
+            'entidad_id': log.entidad_id,
+            'detalles': log.detalles,
+            'fecha': log.fecha.isoformat()
+        } for log in logs]
+    }
+    
+    # Registrar esta consulta como una acción
+    registrar_log(user_id, 'consulta_logs', 'logs', None, 
+                 detalles=f"filtros: {request.args}")
+    
+    return jsonify(resultado)
+
+# Endpoint para obtener resumen estadístico de logs
+@app.route('/api/logs/resumen', methods=['GET'])
+def resumen_logs():
+    # Solo administradores pueden ver resúmenes
+    user_id = request.headers.get('X-User-Id')
+    user_rol = request.headers.get('X-User-Rol', '')
+    
+    if not user_id or user_rol != 'administrador':
+        return jsonify({'error': 'No autorizado'}), 403
+    
+    # Parámetros
+    dias = request.args.get('dias', 7, type=int)
+    limite = request.args.get('limite', 10, type=int)
+    
+    # Fecha límite
+    fecha_limite = datetime.now(UTC) - timedelta(days=dias)
+    
+    from modelos.models import LogAccionUsuario, Usuario
+    
+    # Consulta de conteo por usuario
+    usuarios_activos = db.session.query(
+        LogAccionUsuario.usuario_id,
+        Usuario.nombre,
+        func.count(LogAccionUsuario.id).label('total_acciones')
+    ).join(
+        Usuario, Usuario.id == LogAccionUsuario.usuario_id
+    ).filter(
+        LogAccionUsuario.fecha >= fecha_limite
+    ).group_by(
+        LogAccionUsuario.usuario_id, Usuario.nombre
+    ).order_by(
+        func.count(LogAccionUsuario.id).desc()
+    ).limit(limite).all()
+    
+    # Consulta de acciones más comunes
+    acciones_comunes = db.session.query(
+        LogAccionUsuario.accion,
+        func.count(LogAccionUsuario.id).label('total')
+    ).filter(
+        LogAccionUsuario.fecha >= fecha_limite
+    ).group_by(
+        LogAccionUsuario.accion
+    ).order_by(
+        func.count(LogAccionUsuario.id).desc()
+    ).limit(limite).all()
+    
+    # Registrar esta consulta
+    registrar_log(user_id, 'consulta_resumen_logs', 'logs', None, detalles=f"dias: {dias}")
+    
+    # Construir resultado
+    resultado = {
+        'periodo_dias': dias,
+        'usuarios_activos': [{
+            'usuario_id': u[0],
+            'nombre': u[1],
+            'acciones': u[2]
+        } for u in usuarios_activos],
+        'acciones_frecuentes': [{
+            'accion': a[0],
+            'total': a[1]
+        } for a in acciones_comunes]
+    }
+    
+    return jsonify(resultado)
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    app.logger.error(f"Error no manejado: {str(e)}")
+    return jsonify({"error": "Error interno del servidor", "details": str(e)}), 500
 
 @app.route('/')
 def home():

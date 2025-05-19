@@ -3,9 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
+import { getAuthHeaders } from '../services/serviciorutas'; // Asegúrate de que esta función esté exportada correctamente
 // Importaciones de Recharts para gráficos
 import {
   LineChart,
+  BarChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -27,16 +30,24 @@ const DashboardAgricultor = () => {
   const [datosMeteo, setDatosMeteo] = useState(null); // Si tienes meteorología en backend, agrega fetch
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarGraficosPopup, setMostrarGraficosPopup] = useState(false);
   
   // Nuevos estados para sensores
   const [datosSensores, setDatosSensores] = useState({
     humedad: [],
-    temperatura: []
+    temperatura: [],
+    ph: [],
+    nutrientes: []
   });
   const [parcelaSeleccionada, setParcelaSeleccionada] = useState(null);
   const [rangoTiempo, setRangoTiempo] = useState('24h'); // Opciones: '24h', '7d', '30d'
   
   const navigate = useNavigate();
+
+  // Función para mostrar/ocultar el popup de gráficos
+  const toggleGraficosPopup = () => {
+    setMostrarGraficosPopup(!mostrarGraficosPopup);
+  };
 
   // Abrir/cerrar formulario de nueva parcela
   const abrirFormulario = () => setMostrarFormulario(true);
@@ -44,35 +55,49 @@ const DashboardAgricultor = () => {
 
   // Guardar parcela en backend
   const guardarParcela = async (parcelaData) => {
-    try {
-      const res = await fetch(`${API_URL}/parcelas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parcelaData)
-      });
-      if (res.ok) {
-        fetchParcelas();
-        cerrarFormulario();
-      } else {
-        alert("Error al guardar la parcela");
-      }
-    } catch (error) {
-      alert("Error de conexión");
+  try {
+    const res = await fetch(`${API_URL}/parcelas`, {
+      method: "POST",
+      headers: getAuthHeaders(), // Usar la función importada
+      body: JSON.stringify(parcelaData)
+    });
+    if (res.ok) {
+      fetchParcelas();
+      cerrarFormulario();
+    } else {
+      const errorData = await res.json().catch(() => ({}));
+      alert(`Error al guardar la parcela: ${errorData.error || 'Error desconocido'}`);
     }
-  };
+  } catch (error) {
+    console.error("Error al guardar parcela:", error);
+    alert("Error de conexión");
+  }
+};
 
   // Obtener parcelas desde backend
   const fetchParcelas = async () => {
-    setCargando(true);
-    try {
-      const res = await fetch(`${API_URL}/parcelas`);
-      const data = await res.json();
-      setParcelas(data);
-    } catch (error) {
+  setCargando(true);
+  try {
+    const res = await fetch(`${API_URL}/parcelas`, {
+      headers: getAuthHeaders() // Usar la función importada
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error("Error al obtener parcelas:", errorData);
       setParcelas([]);
+      return;
     }
+    
+    const data = await res.json();
+    setParcelas(data);
+  } catch (error) {
+    console.error("Error al obtener parcelas:", error);
+    setParcelas([]);
+  } finally {
     setCargando(false);
-  };
+  }
+};
 
   // NUEVA FUNCIÓN: Consultar al asistente IA sobre datos de sensores
   const consultarAsistente = (tipo, parcelaId, parcelaNombre) => {
@@ -103,71 +128,51 @@ const DashboardAgricultor = () => {
   };
 
   // Función para obtener datos de sensores
-  // En la función fetchDatosSensores, cambiar el nombre del parámetro
-// En la función fetchDatosSensores, asegurarte de usar 'parcela' como parámetro:
-const fetchDatosSensores = async () => {
-  try {
-    // Definir periodo de tiempo para la consulta
-    let periodo;
-    switch(rangoTiempo) {
-      case '7d': periodo = '7d'; break;
-      case '30d': periodo = '30d'; break;
-      default: periodo = '24h'; break;
-    }
-    
-    // Definir parcela para la consulta
-    const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
-                     (parcelas.length > 0 ? parcelas[0].id : null);
-    
-    if (!parcelaId) return; // No hay parcelas para consultar
-    
-    // CORREGIDO: Usar 'parcela' en lugar de 'parcela_id'
-    const response = await fetch(`${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      setDatosSensores(data);
-    } else {
-      console.error('Error al obtener datos de sensores:', await response.text());
-      // Si falla, usar datos de prueba
+  const fetchDatosSensores = async () => {
+    try {
+      // Definir periodo de tiempo para la consulta
+      let periodo;
+      switch(rangoTiempo) {
+        case '7d': periodo = '7d'; break;
+        case '30d': periodo = '30d'; break;
+        default: periodo = '24h'; break;
+      }
+      
+      // Definir parcela para la consulta
+      const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
+                       (parcelas.length > 0 ? parcelas[0].id : null);
+      
+      if (!parcelaId) return; // No hay parcelas para consultar
+      
+      // CORREGIDO: Usar 'parcela' en lugar de 'parcela_id'
+      const response = await fetch(
+      `${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`,
+      { headers: getAuthHeaders() } // Usar la función importada
+    );
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Asegurarse de que todos los tipos de datos estén presentes
+        const datosCompletos = {
+          humedad: data.humedad || [],
+          temperatura: data.temperatura || [],
+          ph: data.ph || [],
+          nutrientes: data.nutrientes || []
+        };
+        setDatosSensores(datosCompletos);
+        console.log("Datos cargados:", datosCompletos);
+      }
+
+      
+    } catch (error) {
+      console.error('Error al obtener datos de sensores:', error);
+      // Si hay error, usar datos de prueba
       generarDatosPrueba();
     }
-  } catch (error) {
-    console.error('Error al obtener datos de sensores:', error);
-    // Si hay error, usar datos de prueba
-    generarDatosPrueba();
-  }
-};
-  // Función para generar datos de prueba
-  const generarDatosPrueba = () => {
-    // Generar fechas para las últimas 24 horas con intervalos de 1 hora
-    const ahora = new Date();
-    const datos = {
-      humedad: [],
-      temperatura: []
-    };
-    
-    for (let i = 24; i >= 0; i--) {
-      const tiempo = new Date(ahora.getTime() - i * 60 * 60 * 1000);
-      const timestamp = tiempo.toISOString();
-      
-      // Generar valores aleatorios con tendencias realistas
-      const baseHumedad = 45 + Math.sin(i/4) * 10; // Oscila entre 35-55%
-      const baseTemp = 22 + Math.sin(i/6) * 5; // Oscila entre 17-27°C
-      
-      datos.humedad.push({
-        timestamp,
-        valor: Math.round((baseHumedad + Math.random() * 5) * 10) / 10
-      });
-      
-      datos.temperatura.push({
-        timestamp,
-        valor: Math.round((baseTemp + Math.random() * 2) * 10) / 10
-      });
-    }
-    
-    setDatosSensores(datos);
   };
+
+
+  
 
   // Verificar usuario y cargar parcelas al montar
   useEffect(() => {
@@ -383,6 +388,12 @@ const fetchDatosSensores = async () => {
                   >
                     30d
                   </button>
+                  <button 
+                    className="btn-graficos"
+                    onClick={toggleGraficosPopup}
+                  >
+                    <i className="fas fa-chart-line"></i> Ver más sensores
+                  </button>
                 </div>
               </div>
             </div>
@@ -557,6 +568,210 @@ const fetchDatosSensores = async () => {
           onClose={cerrarFormulario}
           onGuardar={guardarParcela}
         />
+      )}
+
+      {/* Popup de gráficos adicionales */}
+      {mostrarGraficosPopup && (
+        <div className="graficos-popup-overlay">
+          <div className="graficos-popup-container">
+            <div className="graficos-popup-header">
+              <h2>Análisis detallado de sensores</h2>
+              <button className="btn-cerrar" onClick={toggleGraficosPopup}>×</button>
+            </div>
+            
+            <div className="graficos-popup-content">
+              {/* Temperatura */}
+              <div className="grafico-item">
+                <h4>Temperatura Ambiente</h4>
+                <div className="grafico-container">
+                  {datosSensores.temperatura && datosSensores.temperatura.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={datosSensores.temperatura}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaeaea" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={formatXAxis} 
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          domain={[0, 40]}
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}°C`}
+                        />
+                        <Tooltip 
+                          content={<CustomTooltip unidad="°C" />} 
+                        />
+                        <Legend />
+                        <Line 
+                          name="Temperatura"
+                          type="monotone" 
+                          dataKey="valor" 
+                          stroke="#e74c3c" 
+                          strokeWidth={2}
+                          dot={{ r: 3, strokeWidth: 1 }}
+                          activeDot={{ r: 5, strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="grafico-placeholder">
+                      <div className="grafico-linea temperatura"></div>
+                      <div className="grafico-label">No hay datos disponibles</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Humedad */}
+              <div className="grafico-item">
+                <h4>Humedad del Suelo</h4>
+                <div className="grafico-container">
+                  {datosSensores.humedad && datosSensores.humedad.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={datosSensores.humedad}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaeaea" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={formatXAxis} 
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          domain={[0, 100]}
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <Tooltip 
+                          content={<CustomTooltip unidad="%" />} 
+                        />
+                        <Legend />
+                        <Line 
+                          name="Humedad"
+                          type="monotone" 
+                          dataKey="valor" 
+                          stroke="#3498db" 
+                          strokeWidth={2}
+                          dot={{ r: 3, strokeWidth: 1 }}
+                          activeDot={{ r: 5, strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="grafico-placeholder">
+                      <div className="grafico-linea humedad"></div>
+                      <div className="grafico-label">No hay datos disponibles</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* pH del suelo */}
+              <div className="grafico-item">
+                <h4>pH del Suelo</h4>
+                <div className="grafico-container">
+                  {datosSensores.ph && datosSensores.ph.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={datosSensores.ph}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaeaea" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={formatXAxis} 
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          domain={[0, 14]}
+                          stroke="#888"
+                          tick={{ fontSize: 12 }}
+                        />
+                        <Tooltip content={<CustomTooltip unidad="" />} />
+                        <Legend />
+                        <Line 
+                          name="pH"
+                          type="monotone" 
+                          dataKey="valor" 
+                          stroke="#8884d8" 
+                          strokeWidth={2}
+                          dot={{ r: 3, strokeWidth: 1 }}
+                          activeDot={{ r: 5, strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="grafico-placeholder">
+                      <div className="grafico-linea ph"></div>
+                      <div className="grafico-label">No hay datos disponibles</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Nutrientes - Gráfico de barras mixto */}
+              <div className="grafico-item">
+                <h4>Nutrientes del Suelo</h4>
+                <div className="grafico-container">
+                  {datosSensores.nutrientes && datosSensores.nutrientes.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart 
+                        data={datosSensores.nutrientes.map(dato => ({
+                          timestamp: dato.timestamp,
+                          nitrogeno: dato.valor?.nitrogeno || 0,
+                          fosforo: dato.valor?.fosforo || 0,
+                          potasio: dato.valor?.potasio || 0
+                        }))}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="timestamp" 
+                          tickFormatter={formatXAxis}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'mg/L', angle: -90, position: 'insideLeft' }}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <Tooltip 
+                          formatter={(value, name) => [
+                            `${value} mg/L`, 
+                            name === "nitrogeno" ? "Nitrógeno" : 
+                            name === "fosforo" ? "Fósforo" : "Potasio"
+                          ]}
+                          labelFormatter={(label) => new Date(label).toLocaleString()}
+                        />
+                        <Legend 
+                          formatter={(value) => 
+                            value === "nitrogeno" ? "Nitrógeno" : 
+                            value === "fosforo" ? "Fósforo" : "Potasio"
+                          }
+                        />
+                        <Bar dataKey="nitrogeno" fill="#8bc34a" name="Nitrógeno" />
+                        <Bar dataKey="fosforo" fill="#ff9800" name="Fósforo" />
+                        <Bar dataKey="potasio" fill="#9c27b0" name="Potasio" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="grafico-placeholder">
+                      <div className="grafico-barras"></div>
+                      <div className="grafico-label">No hay datos disponibles</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="graficos-popup-footer">
+              <div className="rango-info">
+                <span>Período: {rangoTiempo === '24h' ? 'últimas 24 horas' : rangoTiempo === '7d' ? 'últimos 7 días' : 'últimos 30 días'}</span>
+                <span>Parcela: {parcelaSeleccionada ? getParcelaNombre(parcelaSeleccionada) : 'Todas'}</span>
+              </div>
+              <button className="btn-cerrar-secundario" onClick={toggleGraficosPopup}>Cerrar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

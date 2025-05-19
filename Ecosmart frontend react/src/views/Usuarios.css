@@ -85,3 +85,176 @@ body, .user-page {
   margin: 0 auto;
   padding: 32px 16px 0 16px;
 }
+
+/* Estilos existentes... */
+
+/* Estilos para el botón de historial */
+.btn-historial {
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  margin: 0 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-historial:hover {
+  background-color: #1b5e20;
+}
+
+/* Modal de Historial */
+.historial-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.historial-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 85%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.historial-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: #4caf50;
+  color: white;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.historial-modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.historial-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.historial-modal-footer {
+  padding: 12px 24px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f5f5f5;
+}
+
+.btn-cerrar {
+  background-color: #757575;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-cerrar:hover {
+  background-color: #616161;
+}
+
+/* Tabla de historial */
+.historial-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.historial-table th,
+.historial-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.historial-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.historial-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.no-data-message {
+  text-align: center;
+  color: #757575;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Badges para tipos de acción */
+.action-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background-color: #e0e0e0;
+}
+
+.action-badge.login {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.action-badge.consulta_ia {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.action-badge.crear_parcela,
+.action-badge.iniciar_simulacion {
+  background-color: #e0f7fa;
+  color: #00838f;
+}
+
+.action-badge.actualizar_parcela,
+.action-badge.actualizar_usuario {
+  background-color: #fff8e1;
+  color: #ff8f00;
+}
+
+.action-badge.eliminar_parcela,
+.action-badge.eliminar_usuario,
+.action-badge.detener_simulacion {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.details-cell {
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
