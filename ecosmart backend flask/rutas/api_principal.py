@@ -1526,8 +1526,8 @@ def resumen_logs():
 
 #envia un correo de recuperacion de contraseña
 def enviar_correo_recuperacion(destinatario, codigo):
-    remitente = "ecosmartutalca.noreply@gmail.com" 
-    password = "fstn dafh rtve hhvm"  # Usa una contraseña de aplicación de Gmail
+    remitente = "ecosmartutalca@gmail.com" 
+    password = "fstn dafh rtve hhvm"  # contraseña de aplicación de Gmail
     asunto = "Solicitud de recuperación de contraseña - EcoSmart"
     cuerpo = f"""
 Estimado usuario,
