@@ -33,7 +33,7 @@ const HeaderAgricultor = ({ activeItem }) => {
   return (
     <div className="dashboard-header">
       <div className="logo-container">
-        <img src="/public/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
+        <img src="/logo-ecosmart.png" alt="EcoSmart Logo" className="logo" />
         <h1 className="app-title">EcoSmart</h1>
       </div>
       <div className="header-nav">
@@ -62,8 +62,8 @@ const HeaderAgricultor = ({ activeItem }) => {
           Alertas
         </Link>
         <Link 
-          to="/dashboard/agricultor/asistente" 
-          className={`nav-item ${activeItem === 'asistente' ? 'active' : ''}`}
+          to="/dashboard/agricultor/chat" 
+          className={`nav-item ${activeItem === 'chat' ? 'active' : ''}`}
         >
           Asistente IA
         </Link>
@@ -80,8 +80,8 @@ const HeaderAgricultor = ({ activeItem }) => {
         
         {menuAbierto && (
           <div className="user-dropdown-menu">
-            <Link to="/dashboard/agricultor/perfil" className="dropdown-item">Mi Perfil</Link>
-            <Link to="/dashboard/agricultor/configuracion" className="dropdown-item">Configuración</Link>
+            {/*  Al pulsar en configuracion en el header agricultor debera llevarte a configuracion de contraseña */ }
+            <Link to="/configuracion" className="dropdown-item">Configuración</Link>
             <div className="dropdown-divider"></div>
             <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>
           </div>
