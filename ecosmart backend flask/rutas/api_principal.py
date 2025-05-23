@@ -15,8 +15,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
 from sqlalchemy import func
-
-
+from random import randint
+import smtplib
+from email.mime.text import MIMEText
 
 
 
@@ -30,7 +31,7 @@ CORS(app, resources={
 })  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -1523,6 +1524,82 @@ def resumen_logs():
     
     return jsonify(resultado)
 
+#envia un correo de recuperacion de contraseña
+def enviar_correo_recuperacion(destinatario, codigo):
+    remitente = "ecosmartutalca.noreply@gmail.com" 
+    password = "fstn dafh rtve hhvm"  # Usa una contraseña de aplicación de Gmail
+    asunto = "Solicitud de recuperación de contraseña - EcoSmart"
+    cuerpo = f"""
+Estimado usuario,
+
+Hemos recibido una solicitud para restablecer la contraseña de su cuenta en EcoSmart.
+
+Su código de recuperación es: {codigo}
+
+Si usted no solicitó este cambio, ignore este mensaje. El código expirará en 15 minutos por motivos de seguridad.
+
+Saludos cordiales,
+Equipo EcoSmart
+
+Este es un correo generado automáticamente, por favor no responda.
+Si necesita asistencia, contáctenos a través de nuestro sitio web.
+"""
+
+    msg = MIMEText(cuerpo)
+    msg['Subject'] = asunto
+    msg['From'] = remitente
+    msg['To'] = destinatario
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(remitente, password)
+            server.sendmail(remitente, destinatario, msg.as_string())
+        print(f"Correo de recuperación enviado a {destinatario}")
+    except Exception as e:
+        print(f"Error al enviar correo: {e}")
+
+
+# Endpoint para recuperar contraseña
+@app.route('/api/recuperar', methods=['POST'])
+def recuperar_contrasena():
+    data = request.json
+    email = data.get('email')
+    usuario = Usuario.query.filter_by(email=email).first()
+    if not usuario:
+        return jsonify({'error': 'No existe una cuenta con ese correo'}), 404
+
+    # Generar código de 6 dígitos
+    codigo = f"{randint(100000, 999999)}"
+    usuario.codigo_recuperacion = codigo
+    usuario.codigo_expira = datetime.utcnow() + timedelta(minutes=15)
+    db.session.commit()
+
+    #envia un correo real con el codigo
+    enviar_correo_recuperacion(usuario.email, codigo)
+
+    return jsonify({'mensaje': 'Se ha enviado un código a tu correo'})
+
+
+@app.route('/api/resetear', methods=['POST'])
+def resetear_contrasena_codigo():
+    data = request.json
+    email = data.get('email')
+    codigo = data.get('codigo')
+    nueva_password = data.get('password')
+
+    usuario = Usuario.query.filter_by(email=email, codigo_recuperacion=codigo).first()
+    if not usuario or usuario.codigo_expira < datetime.utcnow():
+        return jsonify({'error': 'Código inválido o expirado'}), 400
+
+    # Verificar que la nueva contraseña no sea igual a la anterior
+    if check_password_hash(usuario.password, nueva_password):
+        return jsonify({'error': 'La nueva contraseña no puede ser igual a la anterior.'}), 400
+
+    usuario.password = generate_password_hash(nueva_password)
+    usuario.codigo_recuperacion = None
+    usuario.codigo_expira = None
+    db.session.commit()
+    return jsonify({'mensaje': 'Contraseña actualizada correctamente'})
 
 @app.errorhandler(Exception)
 def handle_exception(e):

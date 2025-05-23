@@ -25,6 +25,8 @@ class Usuario(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     rol = db.Column(db.String(50), nullable=False)
+    codigo_recuperacion = db.Column(db.Integer, nullable=True)
+    codigo_expira = db.Column(db.DateTime, nullable=True)
     
 class Parcela(db.Model):
     __tablename__ = 'parcelas'

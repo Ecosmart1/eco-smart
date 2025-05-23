@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import LandingPage from './views/LandingPage';
 import Login from "./views/Login";
 import Registro from "./views/Registro";
-import RecuperarContrasena from './views/recuperar';
+import RecuperarContrasena from './views/RecuperarContrasena';
 
 // ===== COMPONENTES DE NAVEGACIÓN =====
 import HeaderTecnico from './views/headertecnico';
