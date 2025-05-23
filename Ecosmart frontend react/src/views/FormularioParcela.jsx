@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './FormularioParcela.css';
+import { getAuthHeaders } from '../services/serviciorutas'; // Asegúrate de importar la función getAuthHeaders
 
 /**
  * Componente FormularioParcela
@@ -163,24 +164,21 @@ useEffect(() => {
       
       // Determinar si es creación o actualización
       if (parcelaEditar && parcelaEditar.id) {
-        // Actualizar parcela existente
-        await fetch(`${API_URL}/parcelas/${parcelaEditar.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(parcelaFinal)
-        });
-        
-        // Redirigir con mensaje de éxito
-        navigate(redirectUrl, {
-          state: { successMessage: '¡Parcela actualizada exitosamente!' }
-        });
-      } else {
-        // Crear nueva parcela
-        await fetch(`${API_URL}/parcelas`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(parcelaFinal)
-        });
+  // Actualizar parcela existente
+  await fetch(`${API_URL}/parcelas/${parcelaEditar.id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(), // Usar la función de autenticación
+    body: JSON.stringify(parcelaFinal)
+  });
+  
+  // ...
+} else {
+  // Crear nueva parcela
+  await fetch(`${API_URL}/parcelas`, {
+    method: 'POST',
+    headers: getAuthHeaders(), // Usar la función de autenticación
+    body: JSON.stringify(parcelaFinal)
+  });
         
         // Redirigir con mensaje de éxito
         navigate(redirectUrl, {

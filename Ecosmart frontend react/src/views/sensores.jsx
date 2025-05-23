@@ -11,12 +11,37 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [error, setError] = useState(null);
   const [simulacionActiva, setSimulacionActiva] = useState(false);
   const [parametros, setParametros] = useState(null);
+  // NUEVO: Estados para parcelas
+  const [parcelas, setParcelas] = useState([]);
+  const [parcelaSeleccionada, setParcelaSeleccionada] = useState(null);
+  const [cargandoParcelas, setCargandoParcelas] = useState(true);
 
   // Obtener información del usuario almacenada al iniciar sesión
   const [user, setUser] = useState(() => {
     const userStr = localStorage.getItem('ecosmart_user');
     return userStr ? JSON.parse(userStr) : null;
   });
+
+  // NUEVO: Función para cargar parcelas
+  const fetchParcelas = async () => {
+    try {
+      setCargandoParcelas(true);
+      const response = await fetch(`${API_URL}/parcelas`);
+      if (!response.ok) {
+        throw new Error('Error al cargar las parcelas');
+      }
+      const data = await response.json();
+      setParcelas(data);
+      // Seleccionar primera parcela por defecto si existe
+      if (data.length > 0 && !parcelaSeleccionada) {
+        setParcelaSeleccionada(data[0].id);
+      }
+    } catch (err) {
+      console.error("Error cargando parcelas:", err);
+    } finally {
+      setCargandoParcelas(false);
+    }
+  };
 
   // Obtener lista de sensores y parámetros
   const fetchSensores = async () => {
@@ -38,7 +63,7 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
     fetchSensores();
   };
   
-  // Asegúrate de que esta función se llame después de guardar parámetros
+  // Cargar sensores, parámetros y parcelas al inicio
   useEffect(() => {
     const cargarParametros = async () => {
       try {
@@ -52,6 +77,7 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
     
     fetchSensores();
     cargarParametros();
+    fetchParcelas(); // NUEVO: Cargar parcelas
     
     // Suscribirse a cambios en los parámetros
     const unsuscribir = SensorService.suscribirse((nuevosParams) => {
@@ -101,18 +127,27 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
     }
   };
 
-  // Iniciar simulación con parámetros
+  // MODIFICADO: Iniciar simulación con parámetros y parcela seleccionada
   const iniciarSimulacionConParametros = async (params = null) => {
     try {
       const paramsToUse = params || parametros;
       console.log("Iniciando simulación con parámetros:", paramsToUse);
-      const response = await fetch(`${API_URL}/simulacion/iniciar`, {
+      
+      // Determinar si usar la simulación específica por parcela o la general
+      let url = `${API_URL}/simulacion/iniciar`;
+      if (parcelaSeleccionada) {
+        url = `${API_URL}/simulacion/iniciar/${parcelaSeleccionada}`;
+        console.log(`Simulando datos para parcela ID: ${parcelaSeleccionada}`);
+      }
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(paramsToUse)
       });
+      
       const data = await response.json();
       alert(data.mensaje);
       setSimulacionActiva(true);
@@ -185,10 +220,46 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
       
       <div className="control-panel">
         <h2>Panel de Control</h2>
+        
+        {/* NUEVO: Selector de parcelas */}
+        <div className="parcela-selector">
+          <h3>Asignar Datos a Parcela:</h3>
+          <div className="selector-container">
+            <select 
+              value={parcelaSeleccionada || ''}
+              onChange={(e) => setParcelaSeleccionada(e.target.value ? Number(e.target.value) : null)}
+              disabled={simulacionActiva || cargandoParcelas}
+            >
+              <option value="">Seleccione una parcela</option>
+              {parcelas.map(parcela => (
+                <option key={parcela.id} value={parcela.id}>
+                  {parcela.nombre} ({parcela.cultivo_actual || 'Sin cultivo'})
+                </option>
+              ))}
+            </select>
+            {parcelaSeleccionada && (
+              <div className="parcela-seleccionada">
+                <p>Los datos se asignarán a: <strong>{
+                  parcelas.find(p => p.id === Number(parcelaSeleccionada))?.nombre || 'Parcela seleccionada'
+                }</strong></p>
+              </div>
+            )}
+          </div>
+        </div>
+        
         <div className="buttons">
-          <button onClick={iniciarSimulacion}>Iniciar Simulación</button>
+          <button 
+            onClick={iniciarSimulacion} 
+            disabled={simulacionActiva}
+          >
+            {parcelaSeleccionada 
+              ? `Iniciar Simulación en Parcela` 
+              : 'Iniciar Simulación General'}
+          </button>
           <div className="buttons-terminar">
-            <button onClick={detenerSimulacion}>Detener Simulación</button>
+            <button onClick={detenerSimulacion} disabled={!simulacionActiva}>
+              Detener Simulación
+            </button>
           </div>
           <div className="buttons-exportar">
             <button onClick={exportar_csv}>Exportar Datos</button>

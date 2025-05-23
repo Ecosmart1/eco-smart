@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './AjusteParametros.css';
 import SensorService from '../services/serviciossensores';
+import { getAuthHeaders } from '../services/serviciorutas'; // Importar la función
+import { apiRequest } from '../services/serviciorutas';
+
 
 function AjusteParametros() {
   const [parametros, setParametros] = useState(null);
@@ -53,7 +56,10 @@ function AjusteParametros() {
     setMensaje('');
     
     try {
-      const resultado = await SensorService.guardarParametros(parametros);
+      const resultado = await apiRequest('http://localhost:5000/api/parametros', {
+      method: 'POST',
+      body: JSON.stringify(parametros)
+    });
       if (resultado) {
         setMensaje('Parámetros guardados correctamente');
       } else {

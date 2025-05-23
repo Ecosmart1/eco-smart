@@ -15,29 +15,48 @@ const RecuperarContrasena = () => {
     setMessage(null);
     setError(null);
   };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  // Validar email
+  if (!email.trim()) {
+    setError('Por favor ingresa tu correo electrónico');
+    return;
+  } else if (!/\S+@\S+\.\S+/.test(email)) {
+    setError('Por favor ingresa un correo electrónico válido');
+    return;
+  }
+  
+  setIsSubmitting(true);
+  setError(null);
+  setMessage(null);
+  
+  try {
+    // Llamada real a la API
+    const response = await fetch('http://localhost:5000/api/recuperar-contrasena', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
     
-    // Validar email
-    if (!email.trim()) {
-      setError('Por favor ingresa tu correo electrónico');
-      return;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Por favor ingresa un correo electrónico válido');
-      return;
-    }
+    const data = await response.json();
     
-    setIsSubmitting(true);
-    
-    // Simular envío de correo (en un entorno real, esto se conectaría al backend)
-    setTimeout(() => {
-      setIsSubmitting(false);
+    if (response.ok) {
       setMessage('Se ha enviado un correo con instrucciones para recuperar tu contraseña');
       // Limpiar el campo de email después de enviar
       setEmail('');
-    }, 1500);
-  };
+    } else {
+      setError(data.error || 'Ocurrió un error al procesar tu solicitud');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    setError('Error de conexión. Por favor intenta más tarde.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="recuperar-page">
