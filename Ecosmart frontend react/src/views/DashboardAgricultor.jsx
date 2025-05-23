@@ -777,15 +777,15 @@ const fetchDatosSensores = async () => {
                           ]}
                           labelFormatter={(label) => new Date(label).toLocaleString()}
                         />
-                       <Legend 
-  formatter={(value) => {
-    console.log("Valor en legend:", value);  // Para debug
-    if (value === "Nitrógeno") return "Nitrógeno";
-    if (value === "Fósforo") return "Fósforo"; 
-    if (value === "Potasio") return "Potasio";
-    return value;
-  }}
-/>
+                      <Legend 
+                      formatter={(value) => {
+                        console.log("Valor en legend:", value);  // Para debug
+                        if (value === "Nitrógeno") return "Nitrógeno";
+                        if (value === "Fósforo") return "Fósforo"; 
+                        if (value === "Potasio") return "Potasio";
+                        return value;
+                      }}
+                    />
                         <Bar dataKey="nitrogeno" fill="#8bc34a" name="Nitrógeno" />
                         <Bar dataKey="fosforo" fill="#ff9800" name="Fósforo" />
                         <Bar dataKey="potasio" fill="#9c27b0" name="Potasio" />
