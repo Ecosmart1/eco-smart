@@ -63,3 +63,12 @@ class Mensaje(db.Model):
     # Cambiar created_at a timestamp
     timestamp = db.Column(db.DateTime, default=datetime.now(UTC))
 
+
+class LogAccionUsuario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, nullable=False)
+    accion = db.Column(db.String(100), nullable=False)  # Ej: "crear_parcela", "consulta_ia", "modificar_usuario"
+    entidad = db.Column(db.String(100), nullable=True)  # Ej: "parcela", "usuario"
+    entidad_id = db.Column(db.Integer, nullable=True)   # ID de la parcela/usuario/etc.
+    detalles = db.Column(db.Text, nullable=True)        # JSON/string con detalles extra de la acción
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
