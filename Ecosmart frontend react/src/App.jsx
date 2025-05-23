@@ -9,7 +9,7 @@ import RecuperarContrasena from './views/recuperar';
 
 // ===== COMPONENTES DE NAVEGACIÓN =====
 import HeaderTecnico from './views/headertecnico';
-import HeaderAgricultor from './views/HeaderAgricultor';
+import HeaderAgricultor from './views/headeragricultor';
 // import HeaderAgronomo from './views/HeaderAgronomo'; // Comentado temporalmente
 
 // ===== VISTAS PARA TÉCNICO =====
