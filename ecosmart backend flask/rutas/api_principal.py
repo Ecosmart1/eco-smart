@@ -10,7 +10,7 @@ import threading
 import pandas as pd
 import json
 from json import JSONDecodeError
-from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
