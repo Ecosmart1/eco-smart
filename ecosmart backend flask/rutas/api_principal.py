@@ -451,7 +451,8 @@ def simulacion_continua_parcela():
                             print(f"  Sensor {id_sensor}: valor={json.dumps(dato['valor'])}")
                         else:
                             print(f"  Sensor {id_sensor}: valor={dato['valor']}")
-                      
+                        if not sensor:
+                            continue
                             
                         sensor_actual = red_sensores.sensores.get(id_sensor)
                         if not sensor_actual:
