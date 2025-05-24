@@ -10,7 +10,7 @@ import RecuperarContrasena from './views/RecuperarContrasena';
 // ===== COMPONENTES DE NAVEGACIÓN =====
 import HeaderTecnico from './views/headertecnico';
 import HeaderAgricultor from './views/headeragricultor';
-// import HeaderAgronomo from './views/HeaderAgronomo'; // Comentado temporalmente
+import HeaderAgronomo from './views/HeaderAgronomo'; // Comentado temporalmente
 
 // ===== VISTAS PARA TÉCNICO =====
 import DashboardTecnico from './views/DashboardTecnico';
@@ -26,6 +26,13 @@ import GestionParcelas from './views/GestionParcelas';
 import DetalleParcela from './views/DetalleParcela';
 import FormularioParcela from './views/FormularioParcela';
 import EditarParcelaPage from './views/EditarParcelaPage';
+
+// ===== VISTAS PARA AGRICULTOR =====
+import DashboardAgronomo from './views/DashboardAgronomo';
+
+
+
+
 
 /**
  * Componente principal de la aplicación
@@ -178,15 +185,83 @@ function App() {
           </div>
         } />
         
-        {/* ===== RUTAS PARA AGRÓNOMO ===== */}
-        <Route path="/dashboard/agronomo" element={
-          <div className="app-container">
-            <HeaderTecnico />
-            <div className="content-container">
-              Página de agrónomo en construcción
-            </div>
-          </div>
-        } />
+       // Reemplaza todas las rutas del agrónomo que actualmente usan HeaderTecnico:
+
+{/* ===== RUTAS PARA AGRÓNOMO ===== */}
+<Route path="/dashboard/agronomo" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <DashboardAgronomo />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/chat" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <ChatContainer userId={getUserId()} />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/parcelas" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <GestionParcelas API_URL={API_URL} />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/alertas" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      {/* Página de alertas que se implementará después */}
+      <div style={{textAlign: 'center', padding: '50px'}}>
+        <h2>Panel de Alertas</h2>
+        <p>Esta funcionalidad estará disponible próximamente</p>
+      </div>
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/parcelas/:id" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <DetalleParcela API_URL={API_URL} />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/recomendaciones" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      {/* Página de recomendaciones que se implementará después */}
+      <div style={{textAlign: 'center', padding: '50px'}}>
+        <h2>Recomendaciones IA</h2>
+        <p>Esta funcionalidad estará disponible próximamente</p>
+      </div>
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/cultivos" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      {/* Página de estado de cultivos que se implementará después */}
+      <div style={{textAlign: 'center', padding: '50px'}}>
+        <h2>Estado de Cultivos</h2>
+        <p>Esta funcionalidad estará disponible próximamente</p>
+      </div>
+    </div>
+  </div>
+} />
         
         {/* ===== CONFIGURACIÓN GENERAL ===== */}
         <Route path="/configuracion" element={

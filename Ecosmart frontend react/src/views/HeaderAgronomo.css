@@ -1,0 +1,343 @@
+.dashboard-header-agronomo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.5rem;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 100;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 40px;
+  margin-right: 0.5rem;
+}
+
+.app-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #218838;
+  margin: 0;
+}
+
+.platform-subtitle {
+  background-color: #e8f5e9;
+  color: #218838;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.header-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background-color: #f1f1f1;
+  color: #218838;
+}
+
+.nav-item.active {
+  background-color: #e8f5e9;
+  color: #218838;
+}
+
+.nav-item i {
+  font-size: 1rem;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  position: relative;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  background-color: #218838;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+}
+
+.user-avatar.agronomo {
+  background-color: #218838;
+}
+
+.user-avatar.agronomo i {
+  font-size: 1rem;
+  color: white;
+}
+
+.user-info {
+  text-align: left;
+}
+
+.user-name {
+  font-weight: 500;
+  line-height: 1.2;
+  color: #212529;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.user-menu-icon {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  z-index: 1000;
+  border: 1px solid #e9ecef;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  color: #212529;
+  text-decoration: none;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: #218838;
+}
+
+.dropdown-item.logout:hover {
+  background-color: #fff5f5;
+  color: #dc3545;
+}
+
+.dropdown-item i {
+  font-size: 0.9rem;
+  width: 16px;
+  text-align: center;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #e9ecef;
+  margin: 0.5rem 0;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+  .header-nav {
+    display: none;
+  }
+  
+  .user-info {
+    display: none;
+  }
+  
+  .platform-subtitle {
+    display: none;
+  }
+  
+  .dashboard-header-agronomo {
+    padding: 0.5rem 1rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .header-nav {
+    gap: 0.5rem;
+  }
+  
+  .nav-item {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .nav-item span {
+    display: none; /* Solo iconos en tablets */
+  }
+}
+
+/* EFECTOS SUAVES */
+.nav-item:active {
+  transform: translateY(1px);
+  transition: transform 0.1s ease;
+}
+
+.user-profile:active {
+  transform: translateY(1px);
+  transition: transform 0.1s ease;
+}
+
+/* ...existing code... */
+
+/* Alerta de conexión */
+.alerta-conexion {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border-bottom: 2px solid #d39e00;
+  z-index: 1000;
+  padding: 12px 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.alerta-conexion-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #856404;
+}
+
+.alerta-conexion-content i {
+  color: #d39e00;
+  font-size: 18px;
+}
+
+.alerta-conexion-content button {
+  background: #d39e00;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.alerta-conexion-content button:hover {
+  background: #b8860b;
+  transform: translateY(-1px);
+}
+
+/* Botón de reconexión */
+.btn-reconectar {
+  background: rgba(244, 67, 54, 0.2);
+  border: none;
+  color: #f44336;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.btn-reconectar:hover {
+  background: rgba(244, 67, 54, 0.3);
+  transform: scale(1.1);
+}
+
+.btn-reconectar i {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Sugerencias rápidas mejoradas */
+.sugerencias-rapidas {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sugerencias-rapidas button {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border: 1px solid #4CAF50;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #2e7d32;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sugerencias-rapidas button:hover {
+  background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Ajustes para cuando hay alerta de conexión */
+.ecosmart-dashboard {
+  padding-top: 0;
+}
+
+.ecosmart-dashboard.with-alert {
+  padding-top: 60px;
+}
+
+/* Estados del chat mejorados */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  min-width: 120px;
+  justify-content: center;
+}
+
+/* ...existing code... */
