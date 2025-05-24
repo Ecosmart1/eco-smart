@@ -160,6 +160,9 @@ const fetchDatosSensores = async () => {
       };
       setDatosSensores(datosCompletos);
       console.log("Datos cargados:", datosCompletos);
+      console.log("Estructura de nutrientes:", datosCompletos.nutrientes);
+      console.log("Primer elemento de nutrientes:", datosCompletos.nutrientes[0]);
+      console.log("Datos cargados:", datosCompletos);
     } else {
       throw new Error(`Error del servidor: ${response.status}`);
     }
@@ -740,12 +743,20 @@ const fetchDatosSensores = async () => {
                   {datosSensores.nutrientes && datosSensores.nutrientes.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart 
-                        data={datosSensores.nutrientes.map(dato => ({
-                          timestamp: dato.timestamp,
-                          nitrogeno: dato.valor?.nitrogeno || 0,
-                          fosforo: dato.valor?.fosforo || 0,
-                          potasio: dato.valor?.potasio || 0
-                        }))}
+                       // En las líneas 741-745, cambia por esto que maneja ambos formatos:
+                        // Reemplaza las líneas 741-750 con esto:
+                      data={datosSensores.nutrientes
+                        .filter(dato => dato.valor && typeof dato.valor === 'object' && dato.valor.nitrogeno) // Solo objetos con estructura completa
+                        .map(dato => {
+                          console.log("Procesando dato válido:", dato);
+                          return {
+                            timestamp: dato.timestamp,
+                            nitrogeno: dato.valor.nitrogeno,
+                            fosforo: dato.valor.fosforo,
+                            potasio: dato.valor.potasio
+                          };
+                        })
+                      }
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
@@ -766,12 +777,15 @@ const fetchDatosSensores = async () => {
                           ]}
                           labelFormatter={(label) => new Date(label).toLocaleString()}
                         />
-                        <Legend 
-                          formatter={(value) => 
-                            value === "nitrogeno" ? "Nitrógeno" : 
-                            value === "fosforo" ? "Fósforo" : "Potasio"
-                          }
-                        />
+                      <Legend 
+                      formatter={(value) => {
+                        console.log("Valor en legend:", value);  // Para debug
+                        if (value === "Nitrógeno") return "Nitrógeno";
+                        if (value === "Fósforo") return "Fósforo"; 
+                        if (value === "Potasio") return "Potasio";
+                        return value;
+                      }}
+                    />
                         <Bar dataKey="nitrogeno" fill="#8bc34a" name="Nitrógeno" />
                         <Bar dataKey="fosforo" fill="#ff9800" name="Fósforo" />
                         <Bar dataKey="potasio" fill="#9c27b0" name="Potasio" />

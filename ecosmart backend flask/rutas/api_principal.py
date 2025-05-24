@@ -451,16 +451,19 @@ def simulacion_continua_parcela():
                             print(f"  Sensor {id_sensor}: valor={json.dumps(dato['valor'])}")
                         else:
                             print(f"  Sensor {id_sensor}: valor={dato['valor']}")
-                        if not sensor:
-                            continue
+                      
                             
+                        sensor_actual = red_sensores.sensores.get(id_sensor)
+                        if not sensor_actual:
+                            print(f"❌ Sensor {id_sensor} no encontrado en la red de sensores")
+                            continue
                         lectura = LecturaSensor(
                             timestamp=dato["timestamp"],
                             parcela=parcela_id,
                             sensor_id=id_sensor,
-                            tipo=sensor.tipo,
+                            tipo=sensor_actual.tipo,
                             valor=json.dumps(dato["valor"]) if isinstance(dato["valor"], dict) else str(dato["valor"]),
-                            unidad=sensor.unidad
+                            unidad=sensor_actual.unidad
                         )
                         db.session.add(lectura)
                     

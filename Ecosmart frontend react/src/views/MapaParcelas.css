@@ -61,3 +61,18 @@
 .btn-ver-detalle:hover {
   background-color: #218838;
 }
+
+.dashboard-map-container {
+  position: relative;
+  height: 350px;
+  width: 100%;
+  overflow: hidden; /* Previene problemas de scroll dentro del contenedor */
+  border-radius: 8px;
+}
+
+/* Si ya tienes estas clases, modifícalas; si no, agrégalas */
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+  z-index: 1;
+}
