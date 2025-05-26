@@ -66,7 +66,7 @@ def registrar_accion(accion, entidad, extractor_id=None):
                         try:
                             entidad_id = extractor_id(resultado, *args, **kwargs)
                         except Exception as e:
-                            app.logger.error(f"❌ Error usando extractor_id: {e}")
+                            current_app.logger.error(f"❌ Error usando extractor_id: {e}")
                     elif isinstance(resultado, tuple) and len(resultado) > 0:
                         # Es una tupla (respuesta, código)
                         resp_data = resultado[0]

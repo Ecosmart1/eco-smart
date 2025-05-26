@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, current_app
 from flask_cors import CORS
 import os
 import sys
@@ -307,7 +307,7 @@ def actualizar_parametros():
                 red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
                 
         except Exception as e:
-            app.logger.error(f"Error al actualizar sensores: {e}")
+            current_app.logger.error(f"Error al actualizar sensores: {e}")
             return jsonify({"error": f"Error al actualizar sensores: {str(e)}"}), 500
             
         # Registrar log solo si existe el ID de usuario
@@ -317,7 +317,7 @@ def actualizar_parametros():
                 registrar_log(user_id, 'actualizar_parametros', 'parametros', None,
                             detalles=str(nuevos_parametros))
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
                 # No detener la ejecución por errores de log
                 
         return jsonify({
@@ -325,7 +325,7 @@ def actualizar_parametros():
             "parametros": parametros_configurables
         })
     except Exception as e:
-        app.logger.error(f"Error general en actualizar_parametros: {str(e)}")
+        current_app.logger.error(f"Error general en actualizar_parametros: {str(e)}")
         return jsonify({"error": f"Error al actualizar parámetros: {str(e)}"}), 500
 
 # endpoint para seleccionar parcela específica
@@ -368,7 +368,7 @@ def iniciar_simulacion_parcela(parcela_id):
                 if 4 in red_sensores.sensores:
                     red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
             except Exception as e:
-                app.logger.error(f"Error al actualizar parámetros: {e}")
+                current_app.logger.error(f"Error al actualizar parámetros: {e}")
                 # Continuar con los parámetros por defecto
         
         # Guardar el ID de parcela para que la simulación lo use
@@ -386,7 +386,7 @@ def iniciar_simulacion_parcela(parcela_id):
             try:
                 registrar_log(user_id, 'iniciar_simulacion', 'parcela', parcela_id)
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
         
         # Retornar información sobre la simulación iniciada
         duracion_minutos = parametros_configurables.get("simulacion", {}).get("duracion", 60)
@@ -402,7 +402,7 @@ def iniciar_simulacion_parcela(parcela_id):
     except Exception as e:
         # Si hay cualquier error, asegurarse de que no quede una simulación activa
         simulacion_activa = False
-        app.logger.error(f"Error al iniciar simulación: {str(e)}")
+        current_app.logger.error(f"Error al iniciar simulación: {str(e)}")
         return jsonify({"error": f"Error al iniciar simulación: {str(e)}"}), 500
 
 # Función de simulación específica para parcela seleccionada
@@ -536,7 +536,7 @@ def iniciar_simulacion():
             if 4 in red_sensores.sensores:
                 red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
         except Exception as e:
-            print(f"Error al actualizar sensores: {e}")
+            current_app.logger.error(f"Error al actualizar sensores: {e}")
     
     simulacion_activa = True
     hilo_simulacion = threading.Thread(target=simulacion_continua)
@@ -564,7 +564,7 @@ def detener_simulacion():
         try:
             registrar_log(user_id, 'detener_simulacion', 'simulacion', None)
         except Exception as e:
-            app.logger.error(f"Error al registrar log al detener simulación: {e}")
+            current_app.logger.error(f"Error al registrar log al detener simulación: {e}")
             # No detener la ejecución por errores de log
     
     simulacion_activa = False
@@ -658,7 +658,7 @@ def simular_condiciones(condicion):
             red_sensores.sensores[3].valor_minimo = parametros_configurables["phSuelo"]["min"]
             red_sensores.sensores[3].valor_maximo = parametros_configurables["phSuelo"]["max"]
     except Exception as e:
-        print(f"Error al actualizar sensores: {e}")
+        current_app.logger.error(f"Error al actualizar sensores: {e}")
     
     # Devolver los parámetros actualizados junto con el mensaje
     return jsonify({
@@ -739,14 +739,14 @@ def agregar_parcela():
                 registrar_log(user_id, 'crear_parcela', 'parcela', parcela.id,
                           detalles=str(data))
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
                 # No detener la ejecución por errores de log
        
         return jsonify({'mensaje': 'Parcela agregada correctamente', 'id': parcela.id})
     
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error al agregar parcela: {str(e)}")
+        current_app.logger.error(f"Error al agregar parcela: {str(e)}")
         return jsonify({'error': f"Error al crear parcela: {str(e)}"}), 500
 
 @app.route('/api/parcelas', methods=['GET'])
@@ -757,7 +757,8 @@ def listar_parcelas():
         try:
             registrar_log(user_id, 'listar_parcelas', 'parcela', None)
         except Exception as e:
-            app.logger.error(f"Error al registrar log: {e}")
+            current_app.logger.error(f"Error al registrar log: {e}")
+            # No detener la ejecución por errores de log
 
     resultado = []
     for p in parcelas:
@@ -803,7 +804,7 @@ def obtener_conversaciones(user_id):
         return jsonify(resultado)
         
     except Exception as e:
-        app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
+        current_app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
         return jsonify({'error': str(e)}), 500
 #Endpoin para eliminar una parcela
 @app.route('/api/parcelas/<int:id>', methods=['DELETE'])
@@ -826,14 +827,14 @@ def eliminar_parcela(id):
             try:
                 registrar_log(user_id, 'eliminar_parcela', 'parcela', id)
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
                 # No detenemos la ejecución por errores de log
         
         return jsonify({'mensaje': 'Parcela eliminada correctamente'})
     
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error al eliminar parcela: {str(e)}")
+        current_app.logger.error(f"Error al eliminar parcela: {str(e)}")
         return jsonify({'error': f"Error al eliminar parcela: {str(e)}"}), 500
 
 # Endpoint para obtener una parcela específica por ID
@@ -1152,7 +1153,7 @@ def obtener_datos_sensores_recientes(parcela_id):
                     'unidad': '%'
                 }
             except (ValueError, TypeError) as e:
-                app.logger.warning(f"Error al convertir valor de humedad: {e}")
+                current_app.logger.warning(f"Error al convertir valor de humedad: {e}")
         
         # Agregar temperatura si está disponible
         if temperatura:
@@ -1163,7 +1164,7 @@ def obtener_datos_sensores_recientes(parcela_id):
                     'unidad': '°C'
                 }
             except (ValueError, TypeError) as e:
-                app.logger.warning(f"Error al convertir valor de temperatura: {e}")
+                current_app.logger.warning(f"Error al convertir valor de temperatura: {e}")
             
         # Agregar pH si está disponible
         if ph:
@@ -1174,7 +1175,7 @@ def obtener_datos_sensores_recientes(parcela_id):
                     'unidad': ''
                 }
             except (ValueError, TypeError) as e:
-                app.logger.warning(f"Error al convertir valor de pH: {e}")
+                current_app.logger.warning(f"Error al convertir valor de pH: {e}")
             
         # Agregar nutrientes si está disponible
         if nutrientes:
@@ -1187,7 +1188,7 @@ def obtener_datos_sensores_recientes(parcela_id):
                     'unidad': 'mg/L'
                 }
             except (JSONDecodeError, TypeError, ValueError) as e:
-                app.logger.warning(f"Error al parsear JSON de nutrientes: {e}")
+                current_app.logger.warning(f"Error al parsear JSON de nutrientes: {e}")
                 try:
                     # Si falla el JSON, intentar como float
                     resultado['nutrientes'] = {
@@ -1196,12 +1197,12 @@ def obtener_datos_sensores_recientes(parcela_id):
                         'unidad': 'mg/L'
                     }
                 except (ValueError, TypeError) as e:
-                    app.logger.warning(f"Error al convertir valor de nutrientes: {e}")
+                    current_app.logger.warning(f"Error al convertir valor de nutrientes: {e}")
         
         return resultado
     
     except Exception as e:
-        app.logger.error(f"Error obteniendo datos de sensores para parcela {parcela_id}: {str(e)}")
+        current_app.logger.error(f"Error obteniendo datos de sensores para parcela {parcela_id}: {str(e)}")
         return {}
 
 
@@ -1363,12 +1364,12 @@ def obtener_datos_sensores():
                 registrar_log(user_id, 'consulta_datos_sensores', 'parcela', 
                              parcela_id, detalles=f"periodo={periodo}")
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
 
         return jsonify(resultado)
 
     except Exception as e:
-        app.logger.error(f"Error al obtener datos de sensores: {e}")
+        current_app.logger.error(f"Error al obtener datos de sensores: {e}")
         return jsonify({"error": str(e)}), 500
     
 
@@ -1607,7 +1608,8 @@ def resetear_contrasena_codigo():
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    app.logger.error(f"Error no manejado: {str(e)}")
+    from flask import current_app
+    current_app.logger.error(f"Error no manejado: {str(e)}")
     return jsonify({"error": "Error interno del servidor", "details": str(e)}), 500
 
 @app.route('/')
