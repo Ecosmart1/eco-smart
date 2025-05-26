@@ -1,3 +1,21 @@
+/* Forzar alineación a la izquierda para los mensajes del asistente */
+.mensaje.assistant .contenido {
+  text-align: left !important;
+}
+
+/* Para cualquier elemento dentro del mensaje del asistente */
+.mensaje.assistant div, 
+.mensaje.assistant p, 
+.mensaje.assistant h1,
+.mensaje.assistant h2,
+.mensaje.assistant h3,
+.mensaje.assistant h4,
+.mensaje.assistant ul,
+.mensaje.assistant ol,
+.mensaje.assistant pre {
+  text-align: left !important;
+}
+
 .chat-container {
   display: flex;
   height: calc(100vh - 80px);
@@ -365,3 +383,78 @@
   background-color: #1b7a33;
   transform: translateY(-1px);
 }
+/* Estilizar mejor los mensajes del asistente */
+.mensaje.assistant {
+  border-left: 4px solid #22963e;
+  background-color: #f9fffa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+}
+
+.mensaje.assistant:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Estilizar listas en respuestas */
+.mensaje.assistant ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.mensaje.assistant ul li {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.mensaje.assistant ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+/* Estilizado para código y datos técnicos */
+.mensaje.assistant pre,
+.mensaje.assistant code {
+  background: #f0f7f0;
+  border: 1px solid #dceadc;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: monospace;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.92em;
+}
+
+/* Hacer que los encabezados se destaquen */
+.mensaje.assistant h3,
+.mensaje.assistant h4 {
+  color: #22963e;
+  margin-top: 14px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  border-bottom: 1px solid #e0f0e0;
+  padding-bottom: 4px;
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Destacar datos importantes */
+.mensaje.assistant strong {
+  color: #1b7a33;
+}
+
+/* Dar un toque de distinción con un icono */
+.mensaje.assistant::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.mensaje.assistant .contenido {
+  margin-left: 26px; /* Dejar espacio para el icono */
+}
+
