@@ -14,7 +14,9 @@ const Registro = () => {
     confirmPassword: '',
     tipoUsuario: 'agricultor'
   });
-  
+  // Añadir después del useState para formData
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,7 +35,13 @@ const Registro = () => {
       });
     }
   };
+  const togglePasswordVisibility = () => {
+  setShowPassword(!showPassword);
+};
 
+const toggleConfirmPasswordVisibility = () => {
+  setShowConfirmPassword(!showConfirmPassword);
+};
   const handleTipoUsuarioChange = (tipo) => {
     setFormData({
       ...formData,
@@ -185,32 +193,50 @@ const Registro = () => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="password">Contraseña</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={errors.password ? 'input-error' : ''}
-                placeholder="Crea una contraseña segura"
-              />
-              {errors.password && <span className="error-message">{errors.password}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="confirmPassword">Repetir Contraseña</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={errors.confirmPassword ? 'input-error' : ''}
-                placeholder="Repite tu contraseña"
-              />
-              {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
-            </div>
+  <label htmlFor="password">Contraseña</label>
+  <div className="password-input-wrapper">
+    <input
+      type={showPassword ? "text" : "password"}
+      id="password"
+      name="password"
+      value={formData.password}
+      onChange={handleChange}
+      className={errors.password ? 'input-error' : ''}
+      placeholder="Crea una contraseña segura"
+    />
+    <button 
+      type="button"
+      className="toggle-password"
+      onClick={togglePasswordVisibility}
+    >
+      <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+    </button>
+  </div>
+  {errors.password && <span className="error-message">{errors.password}</span>}
+</div>
+
+<div className="form-group">
+  <label htmlFor="confirmPassword">Repetir Contraseña</label>
+  <div className="password-input-wrapper">
+    <input
+      type={showConfirmPassword ? "text" : "password"}
+      id="confirmPassword"
+      name="confirmPassword"
+      value={formData.confirmPassword}
+      onChange={handleChange}
+      className={errors.confirmPassword ? 'input-error' : ''}
+      placeholder="Repite tu contraseña"
+    />
+    <button 
+      type="button"
+      className="toggle-password"
+      onClick={toggleConfirmPasswordVisibility}
+    >
+      <i className={showConfirmPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+    </button>
+  </div>
+  {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+</div>
             
             <div className="form-group tipo-usuario">
               <label>Tipo de Usuario</label>

@@ -11,8 +11,19 @@ const RecuperarContrasena = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // Paso 1: Solicitar código
+
+const togglePasswordVisibility = () => {
+  setShowPassword(!showPassword);
+};
+
+const toggleConfirmPasswordVisibility = () => {
+  setShowConfirmPassword(!showConfirmPassword);
+};
+
+
   const handleSendCode = async (e) => {
     e.preventDefault();
     setError(null);
@@ -143,27 +154,46 @@ const handleResetPassword = async (e) => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="password">Nueva contraseña</label>
-                  <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Nueva contraseña"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="confirm">Repetir contraseña</label>
-                  <input
-                    type="password"
-                    id="confirm"
-                    value={confirm}
-                    onChange={e => setConfirm(e.target.value)}
-                    placeholder="Repite la contraseña"
-                    disabled={isSubmitting}
-                  />
-                </div>
+  <label htmlFor="password">Nueva contraseña</label>
+  <div className="password-input-wrapper">
+    <input
+      type={showPassword ? "text" : "password"}
+      id="password"
+      value={password}
+      onChange={e => setPassword(e.target.value)}
+      placeholder="Nueva contraseña"
+      disabled={isSubmitting}
+    />
+    <button 
+      type="button"
+      className="toggle-password"
+      onClick={togglePasswordVisibility}
+    >
+      <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+    </button>
+  </div>
+</div>
+
+<div className="form-group">
+  <label htmlFor="confirm">Repetir contraseña</label>
+  <div className="password-input-wrapper">
+    <input
+      type={showConfirmPassword ? "text" : "password"}
+      id="confirm"
+      value={confirm}
+      onChange={e => setConfirm(e.target.value)}
+      placeholder="Repite la contraseña"
+      disabled={isSubmitting}
+    />
+    <button 
+      type="button"
+      className="toggle-password"
+      onClick={toggleConfirmPasswordVisibility}
+    >
+      <i className={showConfirmPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+    </button>
+  </div>
+</div>
                 <div className="form-buttons">
                   <button type="button" className="btn-volver" onClick={() => setStep(1)} disabled={isSubmitting}>
                     Volver

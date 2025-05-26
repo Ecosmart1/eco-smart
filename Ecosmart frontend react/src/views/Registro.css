@@ -2,18 +2,17 @@
 
 .registro-page {
   min-height: 100vh;
-  min-width: 100vw;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Cambiado de center a flex-start */
   justify-content: center;
-  padding: 0;
+  padding: 40px 20px; /* Añadir padding vertical y horizontal */
   background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/campo-agricola.png');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   box-sizing: border-box;
+  overflow-y: auto; /* Permitir scroll vertical */
 }
   
   .registro-container {
@@ -280,3 +279,30 @@
       flex-direction: column;
     }
   }
+
+/* Estilos para mostrar/ocultar contraseña */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.toggle-password:hover {
+  color: #2e7d32;
+}
+
+.toggle-password:focus {
+  outline: none;
+}

@@ -10,6 +10,11 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+  setShowPassword(!showPassword);
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,8 +106,10 @@ const Login = () => {
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
+             
+             <div className="password-input-wrapper">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 id="password"
                 name="password"
                 placeholder="Ingresa tu contraseña"
@@ -110,6 +117,14 @@ const Login = () => {
                 onChange={handleChange}
                 required
               />
+              <button 
+                type="button"
+                className="toggle-password"
+                onClick={togglePasswordVisibility}
+              >
+                <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+              </button>
+            </div>
             </div>
             
             <div className="remember-me">
