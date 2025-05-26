@@ -9,9 +9,23 @@ const GestionParcelas = ({ API_URL }) => {
   const [parcelas, setParcelas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState(''); // Estado para mensaje de éxito
+  const [successMessage, setSuccessMessage] = useState('');
+  const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
   const location = useLocation(); 
+  
+  // Obtener el rol del usuario al cargar el componente
+  useEffect(() => {
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (usuarioGuardado) {
+      try {
+        const usuario = JSON.parse(usuarioGuardado);
+        setUserRole(usuario.rol || '');
+      } catch (err) {
+        console.error('Error al parsear datos de usuario:', err);
+      }
+    }
+  }, []);
   
   // Verificar si hay un mensaje de éxito en la navegación
   useEffect(() => {
@@ -68,19 +82,41 @@ const GestionParcelas = ({ API_URL }) => {
     }
   };
 
+  // Función para determinar la ruta base según el rol del usuario
+  const getBaseRoute = () => {
+    if (userRole === 'agronomo') {
+      return '/dashboard/agronomo';
+    } else if (userRole === 'agricultor') {
+      return '/dashboard/agricultor';
+    } else if (userRole === 'tecnico') {
+      return '/dashboard/agronomo'; // Los técnicos usan la misma ruta que los agrónomos
+    } else {
+      // Si no hay rol definido, usar la ruta actual
+      const currentPath = location.pathname;
+      if (currentPath.includes('/dashboard/agronomo')) {
+        return '/dashboard/agronomo';
+      } else if (currentPath.includes('/dashboard/agricultor')) {
+        return '/dashboard/agricultor';
+      } else {
+        // Valor predeterminado si no se puede determinar
+        return '/dashboard';
+      }
+    }
+  };
+
   // Función para ir a crear una nueva parcela
   const handleNewParcela = () => {
-    navigate('/dashboard/agricultor/parcelas/nueva');
+    navigate(`${getBaseRoute()}/parcelas/nueva`);
   };
 
   // Función para ver detalles de una parcela
   const verDetalleParcela = (id) => {
-    navigate(`/dashboard/agricultor/parcelas/${id}`);
+    navigate(`${getBaseRoute()}/parcelas/${id}`);
   };
 
   // Función para editar una parcela
   const editarParcela = (id) => {
-    navigate(`/dashboard/agricultor/parcelas/editar/${id}`);
+    navigate(`${getBaseRoute()}/parcelas/editar/${id}`);
   };
 
   // Mostrar spinner mientras carga

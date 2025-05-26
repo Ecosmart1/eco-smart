@@ -45,6 +45,42 @@ const DetalleParcela = ({ API_URL }) => {
   const [sensores, setSensores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userRole, setUserRole] = useState('');
+
+  // Obtener el rol del usuario al montar el componente
+  useEffect(() => {
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (usuarioGuardado) {
+      try {
+        const usuario = JSON.parse(usuarioGuardado);
+        setUserRole(usuario.rol || '');
+      } catch (err) {
+        console.error('Error al parsear datos de usuario:', err);
+      }
+    }
+  }, []);
+
+  // Función para determinar la ruta base según el rol del usuario
+  const getBaseRoute = () => {
+    if (userRole === 'agronomo') {
+      return '/dashboard/agronomo';
+    } else if (userRole === 'agricultor') {
+      return '/dashboard/agricultor';
+    } else if (userRole === 'tecnico') {
+      return '/dashboard/agronomo'; // Los técnicos usan la misma ruta que los agrónomos
+    } else {
+      // Si no hay rol definido, usar la ruta actual
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/dashboard/agronomo')) {
+        return '/dashboard/agronomo';
+      } else if (currentPath.includes('/dashboard/agricultor')) {
+        return '/dashboard/agricultor';
+      } else {
+        // Valor predeterminado si no se puede determinar
+        return '/dashboard';
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchParcelaData = async () => {
@@ -81,7 +117,7 @@ const DetalleParcela = ({ API_URL }) => {
     if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
       try {
         await axios.delete(`${API_URL}/parcelas/${id}`);
-        navigate('/dashboard/agricultor/parcelas');
+        navigate(`${getBaseRoute()}/parcelas`);
       } catch (err) {
         console.error('Error al eliminar parcela:', err);
         setError('Error al eliminar la parcela. Intente nuevamente más tarde.');
@@ -107,7 +143,7 @@ const DetalleParcela = ({ API_URL }) => {
         <Alert variant="warning">
           No se encontró la parcela solicitada o ocurrió un error al cargarla.
           <div className="mt-3">
-            <Button variant="primary" onClick={() => navigate('/dashboard/agricultor/parcelas')}>
+            <Button variant="primary" onClick={() => navigate(`${getBaseRoute()}/parcelas`)}>
               Volver a la lista de parcelas
             </Button>
           </div>
@@ -122,7 +158,7 @@ const DetalleParcela = ({ API_URL }) => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <Button 
           variant="outline-primary" 
-          onClick={() => navigate('/dashboard/agricultor/parcelas')}
+          onClick={() => navigate(`${getBaseRoute()}/parcelas`)}
           className="d-flex align-items-center"
         >
           <FaArrowLeft className="me-2" /> Volver a parcelas
@@ -132,7 +168,7 @@ const DetalleParcela = ({ API_URL }) => {
           <Button 
             variant="warning" 
             className="me-2"
-            onClick={() => navigate(`/dashboard/agricultor/parcelas/editar/${id}`)}
+            onClick={() => navigate(`${getBaseRoute()}/parcelas/editar/${id}`)}
           >
             <FaEdit className="me-1" /> Editar parcela
           </Button>

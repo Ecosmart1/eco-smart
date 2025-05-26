@@ -1,23 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Form, Button, Row, Col, Alert, Container, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { FaSave, FaTimes } from 'react-icons/fa';
 import './FormularioParcela.css';
-import { getAuthHeaders } from '../services/serviciorutas'; // Asegúrate de importar la función getAuthHeaders
 
-/**
- * Componente FormularioParcela
- * Permite crear o editar una parcela agrícola
- * 
- * @param {function} onClose - Función para cerrar el formulario
- * @param {function} onGuardar - Función para guardar la parcela (compatibilidad)
- * @param {object} parcelaEditar - Datos de una parcela existente para editar
- * @param {string} API_URL - URL base de la API
- * @param {string} redirectUrl - URL a la que redirigir después de guardar
- */
-const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null, API_URL, redirectUrl = '/dashboard/agricultor/parcelas' }) => {
+const FormularioParcela = ({ parcelaEditar, onClose, API_URL, redirectUrl }) => {
   const navigate = useNavigate();
-  
-  // Estado principal para los datos de la parcela
-  const [parcela, setParcela] = useState(parcelaEditar || {
+  const [formData, setFormData] = useState({
     nombre: '',
     ubicacion: '',
     hectareas: '',
@@ -26,362 +16,257 @@ const FormularioParcela = ({ onClose, onGuardar, parcelaEditar = null, API_URL, 
     latitud: '',
     longitud: ''
   });
-
-  // Estados adicionales para manejar el formulario
-  const [errores, setErrores] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false); // Control de envío
-  const [otrosCultivos, setOtrosCultivos] = useState(''); // Para la opción "Otro" en cultivos
-  const [mostrarInputCultivo, setMostrarInputCultivo] = useState(false); // Mostrar campo para cultivo personalizado
-// Detectar cultivos personalizados cuando se carga una parcela para editar
-useEffect(() => {
-  if (parcelaEditar && parcelaEditar.cultivo_actual) {
-    // Lista de cultivos predefinidos
-    const cultivosPredefinidos = [
-      "Maíz", "Trigo", "Soja", "Arroz", "Papa", 
-      "Tomate", "Uva", "Manzana", "Café", "Sin cultivo actual"
-    ];
-    
-    // Si el cultivo actual no está en la lista predefinida, activar el input personalizado
-    if (!cultivosPredefinidos.includes(parcelaEditar.cultivo_actual)) {
-      setMostrarInputCultivo(true);
-      setOtrosCultivos(parcelaEditar.cultivo_actual);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+  const [cultivos, setCultivos] = useState(['Maíz', 'Trigo', 'Soja', 'Girasol', 'Avena', 'Cebada', 'Papa', 'Tomate', 'Lechuga', 'Otro']);
+  
+  // Inicializar formulario si hay una parcela para editar
+  useEffect(() => {
+    if (parcelaEditar) {
+      // Asegurarse de que todos los campos esperados estén inicializados
+      const parcelaFormateada = {
+        nombre: parcelaEditar.nombre || '',
+        ubicacion: parcelaEditar.ubicacion || '',
+        hectareas: parcelaEditar.hectareas || '',
+        cultivo_actual: parcelaEditar.cultivo_actual || '',
+        fecha_siembra: parcelaEditar.fecha_siembra || '',
+        latitud: parcelaEditar.latitud || '',
+        longitud: parcelaEditar.longitud || ''
+      };
+      setFormData(parcelaFormateada);
     }
-  }
-}, [parcelaEditar]);
-  /**
-   * Maneja los cambios en los campos del formulario
-   * Contiene lógica especial para el caso del cultivo "Otro"
-   */
+  }, [parcelaEditar]);
+
+  // Manejar cambios en los inputs del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Manejo especial para cultivo_actual
-    if (name === 'cultivo_actual') {
-      if (value === 'Otro') {
-        setMostrarInputCultivo(true);
-        // No actualizamos el valor del cultivo_actual todavía
-      } else {
-        setMostrarInputCultivo(false);
-        setParcela(prevState => ({
-          ...prevState,
-          [name]: value
-        }));
-      }
-    } else {
-      // Para el resto de campos, actualización normal
-      setParcela(prevState => ({
-        ...prevState,
-        [name]: value
-      }));
-    }
-
-    // Limpiar errores al modificar un campo
-    if (errores[name]) {
-      setErrores(prevErrors => ({
-        ...prevErrors,
-        [name]: null
-      }));
-    }
-  };
-
-  /**
-   * Maneja los cambios en el input de "otros cultivos"
-   * Actualiza tanto el estado local como el valor en parcela
-   */
-  const handleOtrosCultivosChange = (e) => {
-    const value = e.target.value;
-    setOtrosCultivos(value);
-    setParcela(prevState => ({
+    setFormData(prevState => ({
       ...prevState,
-      cultivo_actual: value
+      [name]: value
     }));
   };
 
-  /**
-   * Valida el formulario antes de enviar
-   * @returns {boolean} - true si el formulario es válido
-   */
-  const validarFormulario = () => {
-    const nuevosErrores = {};
-    
-    // Validación del nombre
-    if (!parcela.nombre.trim()) 
-      nuevosErrores.nombre = "El nombre es obligatorio";
-    
-    // Validación del área
-    if (!parcela.hectareas) 
-      nuevosErrores.hectareas = "El área es obligatoria";
-    else if (isNaN(parcela.hectareas) || parcela.hectareas <= 0)
-      nuevosErrores.hectareas = "El área debe ser un número positivo";
-
-    // Validación de coordenadas geográficas
-    if (parcela.latitud && (isNaN(parcela.latitud) || parcela.latitud < -90 || parcela.latitud > 90))
-      nuevosErrores.latitud = "La latitud debe ser un número entre -90 y 90";
-
-    if (parcela.longitud && (isNaN(parcela.longitud) || parcela.longitud < -180 || parcela.longitud > 180))
-      nuevosErrores.longitud = "La longitud debe ser un número entre -180 y 180";
-
-    setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
-  };
-
-  /**
-   * Maneja el cierre del formulario
-   * Utiliza onClose si está disponible, o navega a la ruta indicada
-   */
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate(redirectUrl || '/dashboard/agricultor/parcelas');
-    }
-  }
-
-  /**
-   * Maneja el envío del formulario
-   * Valida, prepara los datos y realiza la petición a la API
-   */
+  // Enviar el formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validarFormulario()) return;
-
-    setIsSubmitting(true);
-
-    // Convertir valores numéricos
-    const parcelaFinal = {
-      ...parcela,
-      hectareas: parseFloat(parcela.hectareas),
-      latitud: parcela.latitud ? parseFloat(parcela.latitud) : null,
-      longitud: parcela.longitud ? parseFloat(parcela.longitud) : null
-    };
-
+    setGuardando(true);
+    setError('');
+    
     try {
-      // Usar onGuardar si está disponible (compatibilidad)
-      if (onGuardar) {
-        onGuardar(parcelaFinal, true);
-        return;
+      // Validar datos
+      if (!formData.nombre) {
+        throw new Error('El nombre de la parcela es obligatorio');
       }
       
-      // Determinar si es creación o actualización
-      if (parcelaEditar && parcelaEditar.id) {
-  // Actualizar parcela existente
-  await fetch(`${API_URL}/parcelas/${parcelaEditar.id}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(), // Usar la función de autenticación
-    body: JSON.stringify(parcelaFinal)
-  });
-  
-  // ...
-} else {
-  // Crear nueva parcela
-  await fetch(`${API_URL}/parcelas`, {
-    method: 'POST',
-    headers: getAuthHeaders(), // Usar la función de autenticación
-    body: JSON.stringify(parcelaFinal)
-  });
-        
-        // Redirigir con mensaje de éxito
-        navigate(redirectUrl, {
-          state: { successMessage: '¡Parcela creada exitosamente!' }
-        });
+      // Formar datos a enviar
+      const parcela = {
+        ...formData,
+        // Asegurarse de que hectareas sea un número
+        hectareas: formData.hectareas ? parseFloat(formData.hectareas) : 0
+      };
+      
+      let response;
+      
+      // Si es edición, hacer PUT, si es nueva, hacer POST
+      if (parcelaEditar) {
+        response = await axios.put(`${API_URL}/parcelas/${parcelaEditar.id}`, parcela);
+      } else {
+        response = await axios.post(`${API_URL}/parcelas`, parcela);
       }
-    } catch (error) {
-      console.error('Error al guardar la parcela:', error);
-      setErrores({ 
-        general: 'Ocurrió un error al guardar la parcela. Por favor, intente nuevamente.' 
-      });
-      setIsSubmitting(false);
+      
+      console.log('Parcela guardada:', response.data);
+      
+      // Redirigir o cerrar según se indique
+      if (redirectUrl) {
+        navigate(redirectUrl, { 
+          state: { 
+            successMessage: parcelaEditar ? 'Parcela actualizada exitosamente' : 'Parcela creada exitosamente' 
+          }
+        });
+      } else if (onClose) {
+        onClose();
+      }
+      
+    } catch (err) {
+      console.error('Error al guardar parcela:', err);
+      setError(err.message || 'Error al guardar la parcela. Intente nuevamente.');
+      setGuardando(false); // Importante: resetear el estado de guardando en caso de error
+    } finally {
+      // Asegurarse de que siempre se resetee el estado de guardando, incluso si hay navegación
+      setTimeout(() => {
+        setGuardando(false);
+      }, 500); // Un pequeño retraso para evitar cambios de estado durante la navegación
     }
   };
 
-  // Renderizado del componente
   return (
-    <div className="parcela-form-overlay">
-      <div className="parcela-form-container">
-        {/* Cabecera del formulario */}
-        <div className="parcela-form-header">
-          <h2>{parcelaEditar ? 'Editar Parcela' : 'Nueva Parcela'}</h2>
-          <button className="btn-cerrar" onClick={handleClose}>×</button>
-        </div>
-
-        {/* Formulario principal */}
-        <form onSubmit={handleSubmit} className="parcela-form">
-          {/* Mensaje de error general */}
-          {errores.general && (
-            <div className="error-general">
-              {errores.general}
-            </div>
-          )}
-          
-          {/* Campo: Nombre de la parcela */}
-          <div className="form-group">
-            <label htmlFor="nombre">Nombre de la parcela *</label>
-            <input
-              type="text"
-              id="nombre"
-              name="nombre"
-              value={parcela.nombre}
-              onChange={handleChange}
-              className={errores.nombre ? 'input-error' : ''}
-            />
-            {errores.nombre && <span className="error-message">{errores.nombre}</span>}
-          </div>
-
-          {/* Campo: Ubicación */}
-          <div className="form-group">
-            <label htmlFor="ubicacion">Ubicación</label>
-            <input
-              type="text"
-              id="ubicacion"
-              name="ubicacion"
-              value={parcela.ubicacion}
-              onChange={handleChange}
-              placeholder="Ej: Sector Norte, Valle Central"
-            />
-          </div>
-
-          {/* Campo: Área (hectáreas) */}
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="hectareas">Área (hectáreas) *</label>
-              <input
-                type="number"
-                id="hectareas"
-                name="hectareas"
-                step="0.01"
-                min="0"
-                value={parcela.hectareas}
+    <Container className="formulario-parcela">
+      <div className="formulario-header">
+        <h2>{parcelaEditar ? 'Editar Parcela' : 'Nueva Parcela'}</h2>
+      </div>
+      
+      {error && (
+        <Alert variant="danger" className="mt-3" dismissible onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+      
+      <Form onSubmit={handleSubmit}>
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Nombre de la parcela *</Form.Label>
+              <Form.Control
+                type="text"
+                name="nombre"
+                value={formData.nombre}
                 onChange={handleChange}
-                className={errores.hectareas ? 'input-error' : ''}
+                required
+                placeholder="Ej: Parcela Norte"
               />
-              {errores.hectareas && <span className="error-message">{errores.hectareas}</span>}
-            </div>
-          </div>
-
-          {/* Fila: Cultivo actual y Fecha de siembra */}
-          <div className="form-row">
-            {/* Campo: Cultivo actual */}
-            <div className="form-group">
-              <label htmlFor="cultivo_actual">Cultivo actual</label>
-              <select
-                id="cultivo_actual"
+            </Form.Group>
+          </Col>
+          
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Ubicación</Form.Label>
+              <Form.Control
+                type="text"
+                name="ubicacion"
+                value={formData.ubicacion}
+                onChange={handleChange}
+                placeholder="Ej: Talca, las rastras"
+              />
+            </Form.Group>
+          </Col>
+        </Row>
+        
+        <Form.Group className="mb-3">
+          <Form.Label>Área (hectáreas) *</Form.Label>
+          <Form.Control
+            type="number"
+            step="0.01"
+            min="0"
+            name="hectareas"
+            value={formData.hectareas}
+            onChange={handleChange}
+            required
+            placeholder="Ej: 5.5"
+          />
+        </Form.Group>
+        
+        <Row>
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Cultivo actual</Form.Label>
+              <Form.Select
                 name="cultivo_actual"
-                value={parcela.cultivo_actual}
+                value={formData.cultivo_actual}
                 onChange={handleChange}
               >
                 <option value="">Seleccione un cultivo</option>
-                <option value="Maíz">Maíz</option>
-                <option value="Trigo">Trigo</option>
-                <option value="Soja">Soja</option>
-                <option value="Arroz">Arroz</option>
-                <option value="Papa">Papa</option>
-                <option value="Tomate">Tomate</option>
-                <option value="Uva">Uva</option>
-                <option value="Manzana">Manzana</option>
-                <option value="Café">Café</option>
-                <option value="Sin cultivo actual">Sin cultivo actual</option>
-                <option value="Otro">Otro...</option>
-              </select>
-              
-              {/* Campo para "Otro" cultivo (aparece condicionalmente) */}
-              {mostrarInputCultivo && (
-                <input
-                  type='text'
-                  placeholder='Especifique el cultivo'
-                  value={otrosCultivos}
-                  onChange={handleOtrosCultivosChange}
-                  className='input-otro-cultivo'
-                  style={{width: '100%', padding: '8px'}}
-                />
-              )}
-            </div>
-
-            {/* Campo: Fecha de siembra */}
-            <div className="form-group">
-              <label htmlFor="fecha_siembra">Fecha de siembra</label>
-              <input
+                {cultivos.map((cultivo, idx) => (
+                  <option key={idx} value={cultivo}>{cultivo}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          
+          <Col md={6}>
+            <Form.Group className="mb-3">
+              <Form.Label>Fecha de siembra</Form.Label>
+              <Form.Control
                 type="date"
-                id="fecha_siembra"
                 name="fecha_siembra"
-                value={parcela.fecha_siembra || ''}
+                value={formData.fecha_siembra}
                 onChange={handleChange}
               />
-              <small style={{ marginTop: '5px', display: 'block', color: '#666' }}>
+              <Form.Text className="text-muted">
                 Deje en blanco si no hay fecha de siembra
-              </small>
-            </div>
-          </div>
-
-          {/* Sección de coordenadas geográficas */}
-          <div className="form-section">
-            <h3>Coordenadas geográficas</h3>
-            <div className="form-row">
-              {/* Campo: Latitud */}
-              <div className="form-group">
-                <label htmlFor="latitud">Latitud</label>
-                <input
-                  type="number"
-                  id="latitud"
+              </Form.Text>
+            </Form.Group>
+          </Col>
+        </Row>
+        
+        <div className="coordenadas-section mt-4">
+          <h5>Coordenadas geográficas</h5>
+          
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Latitud</Form.Label>
+                <Form.Control
+                  type="text"
                   name="latitud"
-                  step="0.000001"
-                  value={parcela.latitud}
+                  value={formData.latitud}
                   onChange={handleChange}
-                  placeholder="Ej: -33.447487"
-                  className={errores.latitud ? 'input-error' : ''}
+                  placeholder="Ej: -35.423296"
                 />
-                {errores.latitud && <span className="error-message">{errores.latitud}</span>}
-              </div>
-              
-              {/* Campo: Longitud */}
-              <div className="form-group">
-                <label htmlFor="longitud">Longitud</label>
-                <input
-                  type="number"
-                  id="longitud"
+              </Form.Group>
+            </Col>
+            
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Longitud</Form.Label>
+                <Form.Control
+                  type="text"
                   name="longitud"
-                  step="0.000001"
-                  value={parcela.longitud}
+                  value={formData.longitud}
                   onChange={handleChange}
-                  placeholder="Ej: -70.673676"
-                  className={errores.longitud ? 'input-error' : ''}
+                  placeholder="Ej: -71.64525"
                 />
-                {errores.longitud && <span className="error-message">{errores.longitud}</span>}
-              </div>
-            </div>
-            {/* Instrucciones específicas sobre "¿Qué hay aquí?" */}
-                <div className="coordenadas-info">
-                  <p>Para obtener las coordenadas exactas de su parcela:</p>
-                  <ol style={{ paddingLeft: '20px', margin: '5px 0' }}>
-                    <li>Abra <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#4CAF50' }}>Google Maps</a></li>
-                    <li>Ubique su parcela y haga clic derecho sobre ella</li>
-                    <li>Seleccione la opción "¿Qué hay aquí?"</li>
-                    <li>Aparecerá una tarjeta en la parte inferior con las coordenadas exactas</li>
-                    <li>Copie estos números: el primero es la latitud y el segundo es la longitud</li>
-                  </ol>
-                </div>
+              </Form.Group>
+            </Col>
+          </Row>
+          
+          <div className="coordenadas-ayuda">
+            <p>Para obtener las coordenadas exactas de su parcela:</p>
+            <ol>
+              <li>Abra <a href="https://maps.google.com" target="_blank" rel="noreferrer">Google Maps</a></li>
+              <li>Ubique su parcela y haga clic derecho sobre ella</li>
+              <li>Seleccione la opción "¿Qué hay aquí?"</li>
+              <li>Aparecerá una tarjeta en la parte inferior con las coordenadas exactas</li>
+              <li>Copie estos números: el primero es la latitud y el segundo es la longitud</li>
+            </ol>
           </div>
-
-          {/* Botones de acción */}
-          <div className="form-actions">
-            <button 
-              type="button" 
-              className="btn-cancelar" 
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              className="btn-guardar"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Guardando...' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        
+        <div className="formulario-botones mt-4">
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={guardando}
+            className="me-2"
+          >
+            <FaTimes className="me-2" /> Cancelar
+          </Button>
+          
+          <Button
+            variant="success"
+            type="submit"
+            disabled={guardando}
+          >
+            {guardando ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <FaSave className="me-2" /> Guardar parcela
+              </>
+            )}
+          </Button>
+        </div>
+      </Form>
+    </Container>
   );
 };
 
