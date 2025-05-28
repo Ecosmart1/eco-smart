@@ -262,6 +262,31 @@ function App() {
     </div>
   </div>
 } />
+
+<Route path="/dashboard/agronomo/parcelas/nueva" element={
+  <div className="app-container">
+    <HeaderAgronomo activeItem="parcelas" />
+    <div className="content-container" style={{ 
+      overflow: 'auto',
+      paddingBottom: '20px'
+    }}>
+      <FormularioParcela 
+        API_URL={API_URL} 
+        mode="create" 
+        redirectUrl="/dashboard/agronomo/parcelas" 
+      />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/parcelas/editar/:id" element={
+  <div className="app-container">
+    <HeaderAgronomo activeItem="parcelas" />
+    <div className="content-container">
+      <EditarParcelaPage API_URL={API_URL} />
+    </div>
+  </div>
+} />
         
         {/* ===== CONFIGURACIÓN GENERAL ===== */}
         <Route path="/configuracion" element={

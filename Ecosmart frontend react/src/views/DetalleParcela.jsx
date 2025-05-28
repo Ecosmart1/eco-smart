@@ -91,15 +91,6 @@ const DetalleParcela = ({ API_URL }) => {
         const response = await axios.get(`${API_URL}/parcelas/${id}`);
         setParcela(response.data);
         
-        // Intentar obtener datos de sensores si tienes un endpoint para ello
-        try {
-          const sensoresResponse = await axios.get(`${API_URL}/parcelas/${id}/sensores`);
-          setSensores(sensoresResponse.data);
-        } catch (err) {
-          // Si no tienes sensores configurados, simplemente ignora el error
-          console.log('No se pudieron cargar los sensores o no existen para esta parcela');
-          setSensores([]);
-        }
         
         setLoading(false);
       } catch (err) {
@@ -278,43 +269,6 @@ const DetalleParcela = ({ API_URL }) => {
               }} 
             />
           </div>
-          
-          {/* Datos de sensores */}
-          <Card className="shadow-sm">
-            <Card.Header className="bg-warning">
-              <h4 className="mb-0">Sensores</h4>
-            </Card.Header>
-            <Card.Body>
-              {sensores.length > 0 ? (
-                <div className="sensores-contenedor">
-                  {sensores.map(sensor => (
-                    <div key={sensor.id} className="sensor-item mb-3 p-3 border rounded">
-                      <h5>{sensor.nombre}</h5>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div className="sensor-valor">
-                          <span className="h3">{sensor.valor}</span> {sensor.unidad}
-                        </div>
-                        <div className="sensor-timestamp text-muted">
-                          Última lectura: {new Date(sensor.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="sensor-estado mt-2">
-                        <div className={`estado-indicador ${sensor.estado === 'normal' ? 'bg-success' : sensor.estado === 'advertencia' ? 'bg-warning' : 'bg-danger'}`}></div>
-                        <span className="ms-2">{sensor.estado || 'Normal'}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Alert variant="info">
-                  No hay sensores configurados para esta parcela.
-                  <div className="mt-2">
-                    <Button variant="outline-primary" size="sm">Agregar sensores</Button>
-                  </div>
-                </Alert>
-              )}
-            </Card.Body>
-          </Card>
         </Col>
       </Row>
     </Container>

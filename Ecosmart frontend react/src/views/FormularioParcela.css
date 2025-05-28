@@ -266,3 +266,72 @@ input[type="date"]::-webkit-datetime-edit-text { color: white; }
 input[type="date"]::-webkit-datetime-edit-month-field { color: white; }
 input[type="date"]::-webkit-datetime-edit-day-field { color: white; }
 input[type="date"]::-webkit-datetime-edit-year-field { color: white; }
+
+/* Añade estos estilos al final del archivo */
+
+/* Estilos para el botón de cancelar */
+.btn-cancelar, .btn-secondary, .btn-outline-secondary {
+  background-color: #f2f2f2 !important;
+  border-color: #6c757d !important;
+  color: #333 !important;
+}
+
+.btn-cancelar:hover, .btn-secondary:hover, .btn-outline-secondary:hover {
+  background-color: #e2e6ea !important;
+  border-color: #5a6268 !important;
+  color: #212529 !important;
+}
+
+/* Reemplazar los estilos actuales del campo de fecha con estos: */
+
+/* Estilos para input de tipo fecha */
+input[type="date"] {
+  color: #212529 !important;
+  background-color: #fff !important;
+}
+
+input[type="date"]:focus {
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+  outline: none;
+}
+
+/* Estilos para placeholder y texto interno - cambiado de blanco a oscuro */
+input[type="date"]::placeholder,
+input[type="date"]::-webkit-datetime-edit {
+  color: #212529;
+}
+
+/* Para navegadores basados en Webkit (Chrome, Safari, Edge) */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper { color: #212529; }
+input[type="date"]::-webkit-datetime-edit-text { color: #212529; }
+input[type="date"]::-webkit-datetime-edit-month-field { color: #212529; }
+input[type="date"]::-webkit-datetime-edit-day-field { color: #212529; }
+input[type="date"]::-webkit-datetime-edit-year-field { color: #212529; }
+
+/* Mejorar la visibilidad del icono del calendario */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.8;
+  cursor: pointer;
+  filter: invert(0.5);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Estilos para el contenedor del formulario */
+.formulario-parcela {
+  background-color: #f9fcf7;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Mejorar el encabezado */
+.formulario-header h2 {
+  color: #28a745;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #28a745;
+}

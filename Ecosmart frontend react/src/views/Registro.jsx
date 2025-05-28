@@ -61,7 +61,12 @@ const toggleConfirmPasswordVisibility = () => {
     if (!formData.apellidoPaterno.trim()) {
       newErrors.apellidoPaterno = 'El apellido paterno es obligatorio';
     }
-    
+    // validar apellido materno
+    if (!formData.apellidoMaterno.trim()) {
+      newErrors.apellidoMaterno = 'El apellido materno es obligatorio';
+    }
+
+
     // Validar email
     if (!formData.email.trim()) {
       newErrors.email = 'El correo electrónico es obligatorio';
@@ -175,7 +180,9 @@ const toggleConfirmPasswordVisibility = () => {
                 value={formData.apellidoMaterno}
                 onChange={handleChange}
                 placeholder="Ingresa tu apellido materno"
+                required
               />
+              {errors.apellidoMaterno && <span className="error-message">{errors.apellidoMaterno}</span>}
             </div>
             
             <div className="form-group">
@@ -188,6 +195,7 @@ const toggleConfirmPasswordVisibility = () => {
                 onChange={handleChange}
                 className={errors.email ? 'input-error' : ''}
                 placeholder="ejemplo@correo.com"
+                required
               />
               {errors.email && <span className="error-message">{errors.email}</span>}
             </div>
