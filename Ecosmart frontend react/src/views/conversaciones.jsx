@@ -8,6 +8,7 @@ import {
   eliminarConversacion 
 } from '../services/servicioOpenrouter.js';
 import './conversaciones.css'; // Asegúrate de tener estilos para el chat
+import Markdown from 'markdown-to-jsx';
 
 const API_URL = "http://localhost:5000/api";
 
@@ -276,7 +277,97 @@ const handleEnviarMensaje = async () => {
     setCargando(false);
   }
 };
+ const enviarEjemplo = async (texto) => {
+  if (!conversacionActual) {
+    // Crea la conversación y espera a que esté lista
+    const res = await nuevaConversacion(userId);
+    const nuevaConv = res.data;
+    setConversacionActual(nuevaConv.id);
+    await cargarConversaciones();
 
+    // Muestra el mensaje de bienvenida y el mensaje de ejemplo del usuario
+    setMensajes([
+      {
+        sender: 'assistant',
+        content: '¡Hola! Soy el asistente de EcoSmart. ¿En qué puedo ayudarte hoy?',
+        timestamp: new Date().toISOString()
+      },
+      {
+        sender: 'user',
+        content: texto,
+        timestamp: new Date().toISOString()
+      }
+    ]);
+
+    // Envía el mensaje de ejemplo usando el ID correcto
+    setTimeout(() => {
+      handleEnviarMensajeEjemplo(texto, nuevaConv.id);
+    }, 100);
+  } else {
+    // Si ya hay conversación, muestra el mensaje y envía normalmente
+    setMensajes(prevMensajes => [
+      ...prevMensajes,
+      {
+        sender: 'user',
+        content: texto,
+        timestamp: new Date().toISOString()
+      }
+    ]);
+    setTimeout(() => {
+      handleEnviarMensajeEjemplo(texto, conversacionActual);
+    }, 0);
+  }
+};
+
+// Modifica handleEnviarMensajeEjemplo para aceptar el ID de conversación
+const handleEnviarMensajeEjemplo = async (texto, convIdParam) => {
+  if (!texto.trim()) return;
+
+  setCargando(true);
+
+  try {
+    let convId = convIdParam || conversacionActual;
+    if (!convId) {
+      const nuevaConv = await nuevaConversacion(userId);
+      convId = nuevaConv.data.id;
+      setConversacionActual(convId);
+      await cargarConversaciones();
+    }
+
+    setMensaje(''); // Limpiar campo de entrada
+
+    const contextData = {
+      parcela_id: parcelaSeleccionada,
+      timestamp: new Date().toISOString()
+    };
+
+    const respuesta = await enviarMensaje(userId, texto, convId, contextData);
+
+    // Si la respuesta es vacía, muestra un mensaje por defecto
+    const respuestaIA = (respuesta.data && respuesta.data.reply && respuesta.data.reply.trim())
+      ? respuesta.data.reply
+      : "No se recibió respuesta de la IA. Intenta nuevamente.";
+
+    const mensajeRespuesta = {
+      sender: 'assistant',
+      content: respuestaIA,
+      timestamp: new Date().toISOString()
+    };
+
+    setMensajes(prevMensajes => [...prevMensajes, mensajeRespuesta]);
+  } catch (error) {
+    setMensajes(prevMensajes => [
+      ...prevMensajes,
+      {
+        sender: 'sistema',
+        content: `Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      }
+    ]);
+  } finally {
+    setCargando(false);
+  }
+};
   const handleEliminarConversacion = async (convId) => {
     try {
       await eliminarConversacion(convId, userId);
@@ -369,13 +460,25 @@ const handleEnviarMensaje = async () => {
               
               <p className="ejemplos-titulo">Puedes preguntarme sobre:</p>
               <div className="ejemplos-preguntas">
-                <button onClick={() => setMensaje("¿Cómo puedo mejorar el riego de mis cultivos?")}>
+                <button
+                  onClick={() => enviarEjemplo("¿Cómo puedo mejorar el riego de mis cultivos?")}
+                >
                   ¿Cómo puedo mejorar el riego de mis cultivos?
                 </button>
-                <button onClick={() => setMensaje("¿Qué datos muestran los sensores de humedad?")}>
+                <button
+                  onClick={() => enviarEjemplo("¿Qué datos muestran los sensores de humedad?")}
+                >
                   ¿Qué datos muestran los sensores de humedad?
                 </button>
-                <button onClick={() => setMensaje(`Recomienda acciones para mi parcela ${parcelaSeleccionada ? getParcelaNombre(parcelaSeleccionada) : ''}`)}>
+                <button
+                  onClick={() =>
+                    enviarEjemplo(
+                      `Recomienda acciones para mi parcela ${
+                        parcelaSeleccionada ? getParcelaNombre(parcelaSeleccionada) : ""
+                      }`
+                    )
+                  }
+                >
                   Recomienda acciones para mi parcela
                 </button>
               </div>
@@ -396,7 +499,26 @@ const handleEnviarMensaje = async () => {
               
               {mensajes.map((msg, idx) => (
                 <div key={idx} className={`mensaje ${msg.sender}`}>
-                  <div className="contenido">{msg.content}</div>
+                  <div className="contenido">
+                    {msg.sender === 'assistant'
+                      ? <Markdown
+                          options={{
+                            forceBlock: true,
+                            overrides: {
+                              h1: { props: { style: { fontSize: '1.2em', margin: '8px 0 4px 0' } } },
+                              h2: { props: { style: { fontSize: '1.1em', margin: '8px 0 4px 0' } } },
+                              h3: { props: { style: { fontSize: '1em', margin: '8px 0 4px 0' } } },
+                              ul: { props: { style: { margin: '2px 0', paddingLeft: '22px', lineHeight: '1.3' } } },
+                              ol: { props: { style: { margin: '2px 0', paddingLeft: '22px', lineHeight: '1.3' } } },
+                              li: { props: { style: { marginBottom: '2px', lineHeight: '1.3' } } },
+                              p: { props: { style: { margin: 0, lineHeight: '1.4' } } }
+                            }
+                          }}
+                        >
+                          {msg.content}
+                        </Markdown>
+                      : msg.content}
+                  </div>
                   <div className="timestamp">{new Date(msg.timestamp).toLocaleTimeString()}</div>
                 </div>
               ))}
