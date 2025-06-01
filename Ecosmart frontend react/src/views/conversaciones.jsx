@@ -148,69 +148,134 @@ const ChatContainer = ({ userId }) => {
     }
   };
 
-  const handleEnviarMensaje = async () => {
-    if (!mensaje.trim()) return;
-    
-    setCargando(true);
-    
-    // Mostrar mensaje del usuario de inmediato
-    const nuevoMensaje = {
-      sender: 'user',
-      content: mensaje,
-      timestamp: new Date().toISOString()
-    };
-    setMensajes([...mensajes, nuevoMensaje]);
-    
+const obtenerDatosParcela = async (parcelaId) => {
     try {
-      // Si no hay conversación actual, crear una nueva
-      let convId = conversacionActual;
-      if (!convId) {
-        console.log('Creando nueva conversación...');
-        const nuevaConv = await nuevaConversacion(userId);
-        convId = nuevaConv.data.id;
-        setConversacionActual(convId);
-        await cargarConversaciones();
-      }
-      
-      console.log(`Enviando mensaje a conversación ${convId}`);
-      const mensajeEnviado = mensaje;
-      setMensaje(''); // Limpiar campo de entrada
-      
-      // Crear objeto de contexto con parcela seleccionada
-      const contextData = {
-        parcela_id: parcelaSeleccionada,
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log("Enviando con contexto:", contextData);
-      
-      // Enviar mensaje con el contexto de los sensores
-      const respuesta = await enviarMensaje(userId, mensajeEnviado, convId, contextData);
-      console.log('Respuesta recibida:', respuesta);
-      
-      // Añadir respuesta del asistente
-      const mensajeRespuesta = {
-        sender: 'assistant',
-        content: respuesta.data.reply,
-        timestamp: new Date().toISOString()
-      };
-      
-      setMensajes(prevMensajes => [...prevMensajes, mensajeRespuesta]);
+      const response = await fetch(`${API_URL}/parcela/${parcelaId}/datos`);
+      if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
+      return await response.json();
     } catch (error) {
-      console.error('Error:', error);
-      // Mostrar mensaje de error
-      setMensajes(prevMensajes => [
-        ...prevMensajes, 
-        {
-          sender: 'sistema',
-          content: `Error: ${error.message}`,
-          timestamp: new Date().toISOString()
-        }
-      ]);
-    } finally {
-      setCargando(false);
+      console.error("Error al obtener datos de parcela:", error);
+      throw error;
     }
   };
+
+const handleEnviarMensaje = async () => {
+  if (!mensaje.trim()) return;
+  
+  setCargando(true);
+  
+  // Mostrar mensaje del usuario de inmediato
+  const nuevoMensaje = {
+    sender: 'user',
+    content: mensaje,
+    timestamp: new Date().toISOString()
+  };
+  setMensajes([...mensajes, nuevoMensaje]);
+  
+  try {
+    // NUEVO: Detectar si el mensaje es sobre datos de parcela
+    if (mensaje.toLowerCase().includes("datos de mi parcela")) {
+      // Verificar que haya una parcela seleccionada
+      if (!parcelaSeleccionada) {
+        throw new Error("No hay una parcela seleccionada. Por favor, selecciona una parcela primero.");
+      }
+      
+      console.log(`Obteniendo datos para parcela ID: ${parcelaSeleccionada}`);
+      setMensaje(''); // Limpiar campo de entrada
+
+      try {
+        // Llamar a la API directamente para obtener datos de parcela
+        const datosParcela = await obtenerDatosParcela(parcelaSeleccionada);
+        
+        // Formatear los datos de manera legible
+        const datosFormateados = `# Datos de la parcela: ${getParcelaNombre(parcelaSeleccionada)}\n\n` +
+          Object.entries(datosParcela).map(([key, value]) => {
+            // Si es un array, formatearlo como lista
+            if (Array.isArray(value)) {
+              return `- **${key}**: ${value.join(', ')}`;
+            }
+            return `- **${key}**: ${value}`;
+          }).join('\n');
+        
+        // Crear mensaje de respuesta con los datos
+        const mensajeRespuesta = {
+          sender: 'assistant',
+          content: datosFormateados,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Guardar en el historial de la conversación si hay una activa
+        if (conversacionActual) {
+          await enviarMensaje(
+            userId, 
+            `Datos de parcela ${getParcelaNombre(parcelaSeleccionada)}`, 
+            conversacionActual, 
+            { tipo: "datos_parcela", parcela_id: parcelaSeleccionada }
+          );
+        }
+        
+        setMensajes(prevMensajes => [...prevMensajes, mensajeRespuesta]);
+        return; // Termina aquí, no continúes con el flujo normal
+      } catch (parcelaError) {
+        console.error("Error obteniendo datos de parcela:", parcelaError);
+        throw new Error(`No se pudieron obtener los datos. Detalles: ${parcelaError.message}`);
+      }
+    }
+    
+    // FLUJO NORMAL para otros mensajes
+    let convId = conversacionActual;
+    if (!convId) {
+      console.log('Creando nueva conversación...');
+      const nuevaConv = await nuevaConversacion(userId);
+      convId = nuevaConv.data.id;
+      setConversacionActual(convId);
+      await cargarConversaciones();
+    }
+    
+    console.log(`Enviando mensaje a conversación ${convId}`);
+    const mensajeEnviado = mensaje;
+    setMensaje(''); // Limpiar campo de entrada
+    
+    // Crear objeto de contexto con parcela seleccionada
+    const contextData = {
+      parcela_id: parcelaSeleccionada,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Añadir ubicación si está disponible (para futuras integraciones)
+    // if (ubicacionActual) {
+    //   contextData.ubicacion = ubicacionActual;
+    // }
+    
+    console.log("Enviando con contexto:", contextData);
+    
+    // Enviar mensaje con el contexto al sistema de IA
+    const respuesta = await enviarMensaje(userId, mensajeEnviado, convId, contextData);
+    console.log('Respuesta recibida:', respuesta);
+    
+    // Añadir respuesta del asistente
+    const mensajeRespuesta = {
+      sender: 'assistant',
+      content: respuesta.data.reply,
+      timestamp: new Date().toISOString()
+    };
+    
+    setMensajes(prevMensajes => [...prevMensajes, mensajeRespuesta]);
+  } catch (error) {
+    console.error('Error:', error);
+    // Mostrar mensaje de error
+    setMensajes(prevMensajes => [
+      ...prevMensajes, 
+      {
+        sender: 'sistema',
+        content: `Error: ${error.message}`,
+        timestamp: new Date().toISOString()
+      }
+    ]);
+  } finally {
+    setCargando(false);
+  }
+};
 
   const handleEliminarConversacion = async (convId) => {
     try {

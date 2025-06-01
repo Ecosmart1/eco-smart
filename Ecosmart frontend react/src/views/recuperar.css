@@ -2,200 +2,227 @@
 
 .recuperar-page {
   min-height: 100vh;
-  width: 100vw;
-  background: #2e7d32;
+  width: 100%;
+  background-image: linear-gradient(rgba(46, 125, 50, 0.9), rgba(27, 94, 32, 0.8)), url('/campo-agricola.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .recuperar-container {
   background: #fff;
   border-radius: 16px;
-  padding: 48px 36px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  padding: 30px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: 480px; /* Aumenta el ancho máximo */
+  max-width: 480px;
+  animation: fadeIn 0.5s ease;
+}
+
+/* Encabezado */
+.recuperar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-direction: row;
+}
+
+.recuperar-logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+.recuperar-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2e7d32;
+  margin: 0;
+}
+
+/* Formulario */
+.recuperar-form-container {
+  width: 100%;
+}
+
+.recuperar-form-container h2 {
+  color: #2e7d32;
+  text-align: center;
+  margin: 0 0 15px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.recuperar-description {
+  text-align: center;
+  color: #555;
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Mensajes */
+.success-message {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
+  border: 1px solid #c8e6c9;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
+  border: 1px solid #ffcdd2;
+}
+
+/* Campos de formulario */
+.form-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-  
-  .recuperar-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 30px;
-  }
-  
-  .recuperar-logo {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 10px;
-  }
-  
-  .recuperar-header h1 {
-    font-size: 28px;
-    font-weight: 600;
-    color: white;
-    margin: 0;
-  }
-  
-  /* Contenedor del formulario */
-  .recuperar-form-container {
-  background-color: white;
-  border-radius: 12px;
-  padding: 40px 32px; /* Más espacio */
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  margin-bottom: 16px;
   width: 100%;
 }
-  
-  .recuperar-form-container h2 {
-    color: #2e7d32;
-    text-align: center;
-    margin-bottom: 15px;
-    font-size: 24px;
+
+.form-group label {
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #444;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: #f9f9f9;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  border-color: #2e7d32;
+  outline: none;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+/* Botones */
+.form-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.btn-volver, .btn-enviar {
+  flex: 1;
+  padding: 12px 0;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  font-size: 15px;
+  transition: all 0.2s;
+}
+
+.btn-volver {
+  background-color: #f0f0f0;
+  color: #444;
+  border: 1px solid #ddd;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-enviar {
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-volver:hover {
+  background-color: #e5e5e5;
+}
+
+.btn-enviar:hover {
+  background-color: #1b5e20;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-enviar:disabled {
+  background-color: #a5d6a7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Footer */
+.recuperar-footer {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 14px;
+  color: white;
+}
+
+.recuperar-footer a {
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.recuperar-footer a:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Animación */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
-  .recuperar-description {
-    text-align: center;
-    color: #666;
-    margin-bottom: 25px;
-    font-size: 15px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  /* Mensajes de éxito y error */
-  .success-message {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .recuperar-container {
+    padding: 25px 20px;
   }
-  
-  .error-message {
-    background-color: #ffebee;
-    color: #c62828;
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    font-size: 14px;
-    text-align: center;
-  }
-  
-  /* Formulario */
-  .recuperar-form {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 10px;
-  }
-  
-  .form-group label {
-    font-size: 14px;
-    margin-bottom: 8px;
-    color: #555;
-    font-weight: 500;
-  }
-  
-  .form-group input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 15px;
-    transition: border-color 0.3s;
-  }
-  
-  .form-group input:focus {
-    border-color: #2e7d32;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
-  }
-  
-  /* Botones */
+
   .form-buttons {
-    display: flex;
-    gap: 15px;
-    margin-top: 20px;
-  }
-  
-  .btn-volver, .btn-enviar {
-    flex: 1;
-    padding: 14px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: center;
-    font-size: 16px;
-    transition: all 0.3s;
+    flex-direction: column;
   }
   
   .btn-volver {
-    background-color: #f5f5f5;
-    color: #555;
-    border: 1px solid #ddd;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin-bottom: 10px;
   }
-  
-  .btn-enviar {
-    background-color: #2e7d32;
-    color: white;
-    border: none;
-  }
-  
-  .btn-volver:hover {
-    background-color: #eeeeee;
-  }
-  
-  .btn-enviar:hover {
-    background-color: #1b5e20;
-  }
-  
-  .btn-enviar:disabled {
-    background-color: #a5d6a7;
-    cursor: not-allowed;
-  }
-  
-  /* Footer */
-  .recuperar-footer {
-    text-align: center;
-    margin-top: 20px;
-    font-size: 14px;
-    color: rgb(0, 0, 0);
-  }
-  
-  .recuperar-footer a {
-    color: #013369;
-    text-decoration: none;
-    font-weight: 500;
-  }
-  
-  .recuperar-footer a:hover {
-    text-decoration: underline;
-  }
-  
-  /* Responsive */
-  @media (max-width: 576px) {
-    .recuperar-form-container {
-      padding: 20px;
-    }
-    
-    .form-buttons {
-      flex-direction: column;
-    }
-    
-    .recuperar-description {
-      font-size: 14px;
-    }
-  }
+}

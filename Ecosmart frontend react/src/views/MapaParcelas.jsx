@@ -1,6 +1,6 @@
 // MapaParcelas.jsx
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'; // Añadido useMap
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
@@ -28,6 +28,42 @@ const defaultIcon = new Icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
+
+// Componente que actualiza el mapa cuando hay scroll o cambio de tamaño
+function MapaActualizador() {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Actualiza el mapa inmediatamente
+    map.invalidateSize();
+    
+    // Y después de un pequeño retraso para asegurar renderizado completo
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 300);
+    
+    // Actualiza cuando hay scroll en la página
+    const handleScroll = () => {
+      map.invalidateSize();
+    };
+    
+    // Actualiza cuando cambia el tamaño de la ventana
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [map]);
+  
+  return null; // Este componente no renderiza nada visual
+}
 
 const MapaParcelas = ({ API_URL }) => {
   const [parcelas, setParcelas] = useState([]);
@@ -100,6 +136,7 @@ const MapaParcelas = ({ API_URL }) => {
         zoom={calcularZoom()} 
         style={{ height: "350px", width: "100%", borderRadius: "8px" }}
       >
+        <MapaActualizador /> {/* Componente que soluciona el problema de scroll */}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

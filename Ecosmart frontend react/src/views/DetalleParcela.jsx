@@ -45,6 +45,42 @@ const DetalleParcela = ({ API_URL }) => {
   const [sensores, setSensores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userRole, setUserRole] = useState('');
+
+  // Obtener el rol del usuario al montar el componente
+  useEffect(() => {
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (usuarioGuardado) {
+      try {
+        const usuario = JSON.parse(usuarioGuardado);
+        setUserRole(usuario.rol || '');
+      } catch (err) {
+        console.error('Error al parsear datos de usuario:', err);
+      }
+    }
+  }, []);
+
+  // Función para determinar la ruta base según el rol del usuario
+  const getBaseRoute = () => {
+    if (userRole === 'agronomo') {
+      return '/dashboard/agronomo';
+    } else if (userRole === 'agricultor') {
+      return '/dashboard/agricultor';
+    } else if (userRole === 'tecnico') {
+      return '/dashboard/agronomo'; // Los técnicos usan la misma ruta que los agrónomos
+    } else {
+      // Si no hay rol definido, usar la ruta actual
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/dashboard/agronomo')) {
+        return '/dashboard/agronomo';
+      } else if (currentPath.includes('/dashboard/agricultor')) {
+        return '/dashboard/agricultor';
+      } else {
+        // Valor predeterminado si no se puede determinar
+        return '/dashboard';
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchParcelaData = async () => {
@@ -55,15 +91,6 @@ const DetalleParcela = ({ API_URL }) => {
         const response = await axios.get(`${API_URL}/parcelas/${id}`);
         setParcela(response.data);
         
-        // Intentar obtener datos de sensores si tienes un endpoint para ello
-        try {
-          const sensoresResponse = await axios.get(`${API_URL}/parcelas/${id}/sensores`);
-          setSensores(sensoresResponse.data);
-        } catch (err) {
-          // Si no tienes sensores configurados, simplemente ignora el error
-          console.log('No se pudieron cargar los sensores o no existen para esta parcela');
-          setSensores([]);
-        }
         
         setLoading(false);
       } catch (err) {
@@ -81,7 +108,7 @@ const DetalleParcela = ({ API_URL }) => {
     if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
       try {
         await axios.delete(`${API_URL}/parcelas/${id}`);
-        navigate('/dashboard/agricultor/parcelas');
+        navigate(`${getBaseRoute()}/parcelas`);
       } catch (err) {
         console.error('Error al eliminar parcela:', err);
         setError('Error al eliminar la parcela. Intente nuevamente más tarde.');
@@ -107,7 +134,7 @@ const DetalleParcela = ({ API_URL }) => {
         <Alert variant="warning">
           No se encontró la parcela solicitada o ocurrió un error al cargarla.
           <div className="mt-3">
-            <Button variant="primary" onClick={() => navigate('/dashboard/agricultor/parcelas')}>
+            <Button variant="primary" onClick={() => navigate(`${getBaseRoute()}/parcelas`)}>
               Volver a la lista de parcelas
             </Button>
           </div>
@@ -122,7 +149,7 @@ const DetalleParcela = ({ API_URL }) => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <Button 
           variant="outline-primary" 
-          onClick={() => navigate('/dashboard/agricultor/parcelas')}
+          onClick={() => navigate(`${getBaseRoute()}/parcelas`)}
           className="d-flex align-items-center"
         >
           <FaArrowLeft className="me-2" /> Volver a parcelas
@@ -132,7 +159,7 @@ const DetalleParcela = ({ API_URL }) => {
           <Button 
             variant="warning" 
             className="me-2"
-            onClick={() => navigate(`/dashboard/agricultor/parcelas/editar/${id}`)}
+            onClick={() => navigate(`${getBaseRoute()}/parcelas/editar/${id}`)}
           >
             <FaEdit className="me-1" /> Editar parcela
           </Button>
@@ -242,43 +269,6 @@ const DetalleParcela = ({ API_URL }) => {
               }} 
             />
           </div>
-          
-          {/* Datos de sensores */}
-          <Card className="shadow-sm">
-            <Card.Header className="bg-warning">
-              <h4 className="mb-0">Sensores</h4>
-            </Card.Header>
-            <Card.Body>
-              {sensores.length > 0 ? (
-                <div className="sensores-contenedor">
-                  {sensores.map(sensor => (
-                    <div key={sensor.id} className="sensor-item mb-3 p-3 border rounded">
-                      <h5>{sensor.nombre}</h5>
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div className="sensor-valor">
-                          <span className="h3">{sensor.valor}</span> {sensor.unidad}
-                        </div>
-                        <div className="sensor-timestamp text-muted">
-                          Última lectura: {new Date(sensor.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="sensor-estado mt-2">
-                        <div className={`estado-indicador ${sensor.estado === 'normal' ? 'bg-success' : sensor.estado === 'advertencia' ? 'bg-warning' : 'bg-danger'}`}></div>
-                        <span className="ms-2">{sensor.estado || 'Normal'}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Alert variant="info">
-                  No hay sensores configurados para esta parcela.
-                  <div className="mt-2">
-                    <Button variant="outline-primary" size="sm">Agregar sensores</Button>
-                  </div>
-                </Alert>
-              )}
-            </Card.Body>
-          </Card>
         </Col>
       </Row>
     </Container>

@@ -128,48 +128,71 @@ const DashboardAgricultor = () => {
   };
 
   // Función para obtener datos de sensores
-  const fetchDatosSensores = async () => {
-    try {
-      // Definir periodo de tiempo para la consulta
-      let periodo;
-      switch(rangoTiempo) {
-        case '7d': periodo = '7d'; break;
-        case '30d': periodo = '30d'; break;
-        default: periodo = '24h'; break;
-      }
-      
-      // Definir parcela para la consulta
-      const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
-                       (parcelas.length > 0 ? parcelas[0].id : null);
-      
-      if (!parcelaId) return; // No hay parcelas para consultar
-      
-      // CORREGIDO: Usar 'parcela' en lugar de 'parcela_id'
-      const response = await fetch(
-      `${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`,
-      { headers: getAuthHeaders() } // Usar la función importada
-    );
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Asegurarse de que todos los tipos de datos estén presentes
-        const datosCompletos = {
-          humedad: data.humedad || [],
-          temperatura: data.temperatura || [],
-          ph: data.ph || [],
-          nutrientes: data.nutrientes || []
-        };
-        setDatosSensores(datosCompletos);
-        console.log("Datos cargados:", datosCompletos);
-      }
-
-      
-    } catch (error) {
-      console.error('Error al obtener datos de sensores:', error);
-      // Si hay error, usar datos de prueba
-      generarDatosPrueba();
+const fetchDatosSensores = async () => {
+  try {
+    // Definir periodo de tiempo para la consulta
+    let periodo;
+    switch(rangoTiempo) {
+      case '7d': periodo = '7d'; break;
+      case '30d': periodo = '30d'; break;
+      default: periodo = '24h'; break;
     }
-  };
+    
+    // Definir parcela para la consulta
+    const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
+                     (parcelas.length > 0 ? parcelas[0].id : null);
+    
+    if (!parcelaId) return; // No hay parcelas para consultar
+    
+    const response = await fetch(
+      `${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`,
+      { headers: getAuthHeaders() } 
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      // Asegurarse de que todos los tipos de datos estén presentes
+      const datosCompletos = {
+        humedad: data.humedad || [],
+        temperatura: data.temperatura || [],
+        ph: data.ph || [],
+        nutrientes: data.nutrientes || []
+      };
+      setDatosSensores(datosCompletos);
+      console.log("Datos cargados:", datosCompletos);
+      console.log("Estructura de nutrientes:", datosCompletos.nutrientes);
+      console.log("Primer elemento de nutrientes:", datosCompletos.nutrientes[0]);
+      console.log("Datos cargados:", datosCompletos);
+    } else {
+      throw new Error(`Error del servidor: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error al obtener datos de sensores:', error);
+    // Usar datos de prueba en caso de error
+    setDatosSensores({
+      temperatura: [{ 
+        timestamp: new Date().toISOString(), 
+        valor: 22.5 
+      }],
+      humedad: [{ 
+        timestamp: new Date().toISOString(), 
+        valor: 45.2 
+      }],
+      ph: [{ 
+        timestamp: new Date().toISOString(), 
+        valor: 6.8 
+      }],
+      nutrientes: [{ 
+        timestamp: new Date().toISOString(), 
+        valor: { 
+          nitrogeno: 150, 
+          fosforo: 45, 
+          potasio: 200 
+        } 
+      }]
+    });
+  }
+};
 
 
   
@@ -294,7 +317,11 @@ const DashboardAgricultor = () => {
                       <span className="detail-value">{parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : '-'}</span>
                     </div>
                   </div>
-                  <button className="parcela-btn-detalle">Ver Detalles</button>
+                  {/*Cada parcela al pulsar ver detalles debe redirigir a su informacion*/}
+                  <button className="parcela-btn-detalle"
+                  onClick={() => navigate(`/dashboard/agricultor/parcelas/${parcela.id}`)}>
+                  Ver Detalles</button>
+
                 </div>
               ))}
             </div>
@@ -716,12 +743,20 @@ const DashboardAgricultor = () => {
                   {datosSensores.nutrientes && datosSensores.nutrientes.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart 
-                        data={datosSensores.nutrientes.map(dato => ({
-                          timestamp: dato.timestamp,
-                          nitrogeno: dato.valor?.nitrogeno || 0,
-                          fosforo: dato.valor?.fosforo || 0,
-                          potasio: dato.valor?.potasio || 0
-                        }))}
+                       // En las líneas 741-745, cambia por esto que maneja ambos formatos:
+                        // Reemplaza las líneas 741-750 con esto:
+                      data={datosSensores.nutrientes
+                        .filter(dato => dato.valor && typeof dato.valor === 'object' && dato.valor.nitrogeno) // Solo objetos con estructura completa
+                        .map(dato => {
+                          console.log("Procesando dato válido:", dato);
+                          return {
+                            timestamp: dato.timestamp,
+                            nitrogeno: dato.valor.nitrogeno,
+                            fosforo: dato.valor.fosforo,
+                            potasio: dato.valor.potasio
+                          };
+                        })
+                      }
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
@@ -742,12 +777,15 @@ const DashboardAgricultor = () => {
                           ]}
                           labelFormatter={(label) => new Date(label).toLocaleString()}
                         />
-                        <Legend 
-                          formatter={(value) => 
-                            value === "nitrogeno" ? "Nitrógeno" : 
-                            value === "fosforo" ? "Fósforo" : "Potasio"
-                          }
-                        />
+                      <Legend 
+                      formatter={(value) => {
+                        console.log("Valor en legend:", value);  // Para debug
+                        if (value === "Nitrógeno") return "Nitrógeno";
+                        if (value === "Fósforo") return "Fósforo"; 
+                        if (value === "Potasio") return "Potasio";
+                        return value;
+                      }}
+                    />
                         <Bar dataKey="nitrogeno" fill="#8bc34a" name="Nitrógeno" />
                         <Bar dataKey="fosforo" fill="#ff9800" name="Fósforo" />
                         <Bar dataKey="potasio" fill="#9c27b0" name="Potasio" />

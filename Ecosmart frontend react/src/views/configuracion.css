@@ -64,6 +64,7 @@
     font-size: 15px;
     background: #fafafa;
     transition: border-color 0.3s;
+    color: #222;
   }
   
   .config-form input:focus {

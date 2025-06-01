@@ -8,3 +8,4 @@ python-dotenv
 flask-cors
 pandas
 psycopg2-binary
+flask-mail

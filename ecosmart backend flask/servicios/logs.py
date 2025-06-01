@@ -49,63 +49,46 @@ def registrar_log(usuario_id, accion, entidad, entidad_id, detalles=None):
         raise
 
 
-def registrar_accion(accion, entidad, obtener_entidad_id=None):
-    """
-    Decorador que registra automáticamente una acción al llamar a un endpoint.
-    
-    Args:
-        accion: El tipo de acción (crear_parcela, consultar_datos, etc.)
-        entidad: La entidad afectada (parcela, usuario, etc.)
-        obtener_entidad_id: Función opcional que extrae el ID de la entidad del resultado
-        
-    Ejemplo de uso:
-        @app.route('/api/parcelas', methods=['POST'])
-        @registrar_accion('crear_parcela', 'parcela', lambda resultado, *args, **kwargs: resultado.get('id'))
-        def agregar_parcela():
-            # ...
-    """
-    def decorador(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            # Ejecutar la función original
-            resultado = f(*args, **kwargs)
-            
+
+def registrar_accion(accion, entidad, extractor_id=None):
+    def decorador(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            resultado = func(*args, **kwargs)
             try:
-                # Obtener el ID de usuario del header
                 user_id = request.headers.get('X-User-Id')
-                
-                if not user_id:
-                    print(f"⚠️ No se encontró X-User-Id para {accion} en {entidad}")
-                    return resultado
-                
-                # Determinar el ID de la entidad
-                entidad_id = None
-                
-                # Si hay una función para obtener el ID
-                if obtener_entidad_id:
-                    try:
-                        entidad_id = obtener_entidad_id(resultado, *args, **kwargs)
-                    except Exception as e:
-                        print(f"❌ Error obteniendo entidad_id: {e}")
-                
-                # Si hay un ID en los kwargs (común en rutas como /parcela/<id>)
-                elif 'id' in kwargs:
-                    entidad_id = kwargs['id']
-                elif 'parcela_id' in kwargs:
-                    entidad_id = kwargs['parcela_id']
-                
-                # Obtener detalles de la petición
-                detalles = None
-                if request.method in ['POST', 'PUT'] and request.is_json:
-                    detalles = request.json
-                
-                # Registrar la acción
-                registrar_log(user_id, accion, entidad, entidad_id, detalles)
-                
+                if user_id:
+                    entidad_id = None
+                    
+                    # Extraer el ID de la entidad según el tipo de respuesta
+                    if extractor_id:
+                        # Usar la función extractora personalizada
+                        try:
+                            entidad_id = extractor_id(resultado, *args, **kwargs)
+                        except Exception as e:
+                            current_app.logger.error(f"❌ Error usando extractor_id: {e}")
+                    elif isinstance(resultado, tuple) and len(resultado) > 0:
+                        # Es una tupla (respuesta, código)
+                        resp_data = resultado[0]
+                        if hasattr(resp_data, 'get_json'):
+                            # Es un objeto Response
+                            json_data = resp_data.get_json()
+                            entidad_id = json_data.get('id')
+                    elif hasattr(resultado, 'get_json'):
+                        # Es un objeto Response directo
+                        json_data = resultado.get_json()
+                        if isinstance(json_data, dict):
+                            entidad_id = json_data.get('id')
+                    
+                    # Si no se ha encontrado un ID y hay un parámetro 'id' en la ruta
+                    if entidad_id is None and 'id' in kwargs:
+                        entidad_id = kwargs['id']
+                    
+                    # Registrar la acción
+                    registrar_log(user_id, accion, entidad, entidad_id)
             except Exception as e:
-                print(f"❌ Error al registrar log desde decorador: {e}")
-                # No interrumpir el flujo normal
-                
+                app.logger.error(f"❌ Error al registrar acción: {str(e)}")
+            
             return resultado
-        return decorated_function
+        return wrapper
     return decorador

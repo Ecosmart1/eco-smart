@@ -12,6 +12,42 @@ const EditarParcelaPage = ({ API_URL }) => {
   const [parcela, setParcela] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState('');
+  
+  // Obtener el rol del usuario al montar el componente
+  useEffect(() => {
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (usuarioGuardado) {
+      try {
+        const usuario = JSON.parse(usuarioGuardado);
+        setUserRole(usuario.rol || '');
+      } catch (err) {
+        console.error('Error al parsear datos de usuario:', err);
+      }
+    }
+  }, []);
+
+  // Función para determinar la ruta base según el rol del usuario
+  const getBaseRoute = () => {
+    if (userRole === 'agronomo') {
+      return '/dashboard/agronomo';
+    } else if (userRole === 'agricultor') {
+      return '/dashboard/agricultor';
+    } else if (userRole === 'tecnico') {
+      return '/dashboard/agronomo'; // Los técnicos usan la misma ruta que los agrónomos
+    } else {
+      // Si no hay rol definido, usar la ruta actual
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/dashboard/agronomo')) {
+        return '/dashboard/agronomo';
+      } else if (currentPath.includes('/dashboard/agricultor')) {
+        return '/dashboard/agricultor';
+      } else {
+        // Valor predeterminado si no se puede determinar
+        return '/dashboard';
+      }
+    }
+  };
   
   // Cargar los datos de la parcela al montar el componente
   useEffect(() => {
@@ -33,7 +69,7 @@ const EditarParcelaPage = ({ API_URL }) => {
 
   // Manejar el cierre del formulario
   const handleClose = () => {
-    navigate('/dashboard/agricultor/parcelas');
+    navigate(`${getBaseRoute()}/parcelas`);
   };
 
   // Si está cargando, mostrar spinner
@@ -70,7 +106,7 @@ const EditarParcelaPage = ({ API_URL }) => {
           parcelaEditar={parcela}
           onClose={handleClose}
           API_URL={API_URL}
-          redirectUrl="/dashboard/agricultor/parcelas"
+          redirectUrl={`${getBaseRoute()}/parcelas`}
         />
       ) : (
         <div className="error-container">

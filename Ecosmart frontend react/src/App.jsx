@@ -5,12 +5,17 @@ import { useState, useEffect } from 'react';
 import LandingPage from './views/LandingPage';
 import Login from "./views/Login";
 import Registro from "./views/Registro";
-import RecuperarContrasena from './views/recuperar';
+import RecuperarContrasena from './views/RecuperarContrasena';
 
 // ===== COMPONENTES DE NAVEGACIÓN =====
 import HeaderTecnico from './views/headertecnico';
+<<<<<<< HEAD
 import HeaderAgricultor from './views/HeaderAgricultor';
 import HeaderAgronomo from './views/HeaderAgronomo';
+=======
+import HeaderAgricultor from './views/headeragricultor';
+import HeaderAgronomo from './views/HeaderAgronomo'; // Comentado temporalmente
+>>>>>>> origin/main
 
 // ===== VISTAS PARA TÉCNICO =====
 import DashboardTecnico from './views/DashboardTecnico';
@@ -262,6 +267,34 @@ function App() {
     </div>
   </div>
 } />
+<<<<<<< HEAD
+=======
+
+<Route path="/dashboard/agronomo/parcelas/nueva" element={
+  <div className="app-container">
+    <HeaderAgronomo activeItem="parcelas" />
+    <div className="content-container" style={{ 
+      overflow: 'auto',
+      paddingBottom: '20px'
+    }}>
+      <FormularioParcela 
+        API_URL={API_URL} 
+        mode="create" 
+        redirectUrl="/dashboard/agronomo/parcelas" 
+      />
+    </div>
+  </div>
+} />
+
+<Route path="/dashboard/agronomo/parcelas/editar/:id" element={
+  <div className="app-container">
+    <HeaderAgronomo activeItem="parcelas" />
+    <div className="content-container">
+      <EditarParcelaPage API_URL={API_URL} />
+    </div>
+  </div>
+} />
+>>>>>>> origin/main
         
         {/* ===== CONFIGURACIÓN GENERAL ===== */}
         <Route path="/configuracion" element={

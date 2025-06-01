@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, current_app
 from flask_cors import CORS
 import os
 import sys
@@ -15,8 +15,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
 from sqlalchemy import func
-
-
+from random import randint
+import smtplib
+from email.mime.text import MIMEText
 
 
 
@@ -30,7 +31,7 @@ CORS(app, resources={
 })  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -306,7 +307,7 @@ def actualizar_parametros():
                 red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
                 
         except Exception as e:
-            app.logger.error(f"Error al actualizar sensores: {e}")
+            current_app.logger.error(f"Error al actualizar sensores: {e}")
             return jsonify({"error": f"Error al actualizar sensores: {str(e)}"}), 500
             
         # Registrar log solo si existe el ID de usuario
@@ -316,7 +317,7 @@ def actualizar_parametros():
                 registrar_log(user_id, 'actualizar_parametros', 'parametros', None,
                             detalles=str(nuevos_parametros))
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
                 # No detener la ejecución por errores de log
                 
         return jsonify({
@@ -324,7 +325,7 @@ def actualizar_parametros():
             "parametros": parametros_configurables
         })
     except Exception as e:
-        app.logger.error(f"Error general en actualizar_parametros: {str(e)}")
+        current_app.logger.error(f"Error general en actualizar_parametros: {str(e)}")
         return jsonify({"error": f"Error al actualizar parámetros: {str(e)}"}), 500
 
 # endpoint para seleccionar parcela específica
@@ -367,7 +368,7 @@ def iniciar_simulacion_parcela(parcela_id):
                 if 4 in red_sensores.sensores:
                     red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
             except Exception as e:
-                app.logger.error(f"Error al actualizar parámetros: {e}")
+                current_app.logger.error(f"Error al actualizar parámetros: {e}")
                 # Continuar con los parámetros por defecto
         
         # Guardar el ID de parcela para que la simulación lo use
@@ -385,7 +386,7 @@ def iniciar_simulacion_parcela(parcela_id):
             try:
                 registrar_log(user_id, 'iniciar_simulacion', 'parcela', parcela_id)
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
         
         # Retornar información sobre la simulación iniciada
         duracion_minutos = parametros_configurables.get("simulacion", {}).get("duracion", 60)
@@ -401,7 +402,7 @@ def iniciar_simulacion_parcela(parcela_id):
     except Exception as e:
         # Si hay cualquier error, asegurarse de que no quede una simulación activa
         simulacion_activa = False
-        app.logger.error(f"Error al iniciar simulación: {str(e)}")
+        current_app.logger.error(f"Error al iniciar simulación: {str(e)}")
         return jsonify({"error": f"Error al iniciar simulación: {str(e)}"}), 500
 
 # Función de simulación específica para parcela seleccionada
@@ -454,13 +455,17 @@ def simulacion_continua_parcela():
                         if not sensor:
                             continue
                             
+                        sensor_actual = red_sensores.sensores.get(id_sensor)
+                        if not sensor_actual:
+                            print(f"❌ Sensor {id_sensor} no encontrado en la red de sensores")
+                            continue
                         lectura = LecturaSensor(
                             timestamp=dato["timestamp"],
                             parcela=parcela_id,
                             sensor_id=id_sensor,
-                            tipo=sensor.tipo,
+                            tipo=sensor_actual.tipo,
                             valor=json.dumps(dato["valor"]) if isinstance(dato["valor"], dict) else str(dato["valor"]),
-                            unidad=sensor.unidad
+                            unidad=sensor_actual.unidad
                         )
                         db.session.add(lectura)
                     
@@ -531,7 +536,7 @@ def iniciar_simulacion():
             if 4 in red_sensores.sensores:
                 red_sensores.sensores[4].frecuencia = parametros_configurables.get("simulacion", {}).get("intervalo", 5)
         except Exception as e:
-            print(f"Error al actualizar sensores: {e}")
+            current_app.logger.error(f"Error al actualizar sensores: {e}")
     
     simulacion_activa = True
     hilo_simulacion = threading.Thread(target=simulacion_continua)
@@ -559,7 +564,7 @@ def detener_simulacion():
         try:
             registrar_log(user_id, 'detener_simulacion', 'simulacion', None)
         except Exception as e:
-            app.logger.error(f"Error al registrar log al detener simulación: {e}")
+            current_app.logger.error(f"Error al registrar log al detener simulación: {e}")
             # No detener la ejecución por errores de log
     
     simulacion_activa = False
@@ -653,7 +658,7 @@ def simular_condiciones(condicion):
             red_sensores.sensores[3].valor_minimo = parametros_configurables["phSuelo"]["min"]
             red_sensores.sensores[3].valor_maximo = parametros_configurables["phSuelo"]["max"]
     except Exception as e:
-        print(f"Error al actualizar sensores: {e}")
+        current_app.logger.error(f"Error al actualizar sensores: {e}")
     
     # Devolver los parámetros actualizados junto con el mensaje
     return jsonify({
@@ -734,14 +739,14 @@ def agregar_parcela():
                 registrar_log(user_id, 'crear_parcela', 'parcela', parcela.id,
                           detalles=str(data))
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
                 # No detener la ejecución por errores de log
        
         return jsonify({'mensaje': 'Parcela agregada correctamente', 'id': parcela.id})
     
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error al agregar parcela: {str(e)}")
+        current_app.logger.error(f"Error al agregar parcela: {str(e)}")
         return jsonify({'error': f"Error al crear parcela: {str(e)}"}), 500
 
 @app.route('/api/parcelas', methods=['GET'])
@@ -752,7 +757,8 @@ def listar_parcelas():
         try:
             registrar_log(user_id, 'listar_parcelas', 'parcela', None)
         except Exception as e:
-            app.logger.error(f"Error al registrar log: {e}")
+            current_app.logger.error(f"Error al registrar log: {e}")
+            # No detener la ejecución por errores de log
 
     resultado = []
     for p in parcelas:
@@ -798,7 +804,7 @@ def obtener_conversaciones(user_id):
         return jsonify(resultado)
         
     except Exception as e:
-        app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
+        current_app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
         return jsonify({'error': str(e)}), 500
 #Endpoin para eliminar una parcela
 @app.route('/api/parcelas/<int:id>', methods=['DELETE'])
@@ -821,14 +827,14 @@ def eliminar_parcela(id):
             try:
                 registrar_log(user_id, 'eliminar_parcela', 'parcela', id)
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
                 # No detenemos la ejecución por errores de log
         
         return jsonify({'mensaje': 'Parcela eliminada correctamente'})
     
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error al eliminar parcela: {str(e)}")
+        current_app.logger.error(f"Error al eliminar parcela: {str(e)}")
         return jsonify({'error': f"Error al eliminar parcela: {str(e)}"}), 500
 
 # Endpoint para obtener una parcela específica por ID
@@ -1104,45 +1110,101 @@ def chat():
     
 # Añadir esta función para obtener datos recientes de sensores
 
+
 def obtener_datos_sensores_recientes(parcela_id):
     try:
         # Usar datetime.now(UTC) en lugar de utcnow()
         desde = datetime.now(UTC) - timedelta(hours=24)
         
-        # CORREGIDO: Usar el nombre correcto de los tipos (primera letra mayúscula)
+        # Consultar los diferentes tipos de sensores
         humedad = LecturaSensor.query.filter(
             LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Humedad',  # Cambiado de 'humedad' a 'Humedad'
+            LecturaSensor.tipo == 'Humedad',
             LecturaSensor.timestamp >= desde
         ).order_by(LecturaSensor.timestamp.desc()).first()
         
         temperatura = LecturaSensor.query.filter(
             LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Temperatura',  # Cambiado de 'temperatura' a 'Temperatura'
+            LecturaSensor.tipo == 'Temperatura',
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp.desc()).first()
+        
+        ph = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'pH del suelo',
+            LecturaSensor.timestamp >= desde
+        ).order_by(LecturaSensor.timestamp.desc()).first()
+        
+        nutrientes = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.tipo == 'Nutrientes',
             LecturaSensor.timestamp >= desde
         ).order_by(LecturaSensor.timestamp.desc()).first()
         
         # Construir resultado con datos disponibles
         resultado = {}
-        if humedad:
-            resultado['humedad'] = {
-                'valor': humedad.valor,
-                'timestamp': humedad.timestamp.isoformat(),
-                'unidad': '%'
-            }
         
+        # Agregar humedad si está disponible
+        if humedad:
+            try:
+                resultado['humedad'] = {
+                    'valor': float(humedad.valor),
+                    'timestamp': humedad.timestamp.isoformat(),
+                    'unidad': '%'
+                }
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error al convertir valor de humedad: {e}")
+        
+        # Agregar temperatura si está disponible
         if temperatura:
-            resultado['temperatura'] = {
-                'valor': temperatura.valor,
-                'timestamp': temperatura.timestamp.isoformat(),
-                'unidad': '°C'
-            }
+            try:
+                resultado['temperatura'] = {
+                    'valor': float(temperatura.valor),
+                    'timestamp': temperatura.timestamp.isoformat(),
+                    'unidad': '°C'
+                }
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error al convertir valor de temperatura: {e}")
+            
+        # Agregar pH si está disponible
+        if ph:
+            try:
+                resultado['ph'] = {
+                    'valor': float(ph.valor),
+                    'timestamp': ph.timestamp.isoformat(),
+                    'unidad': ''
+                }
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error al convertir valor de pH: {e}")
+            
+        # Agregar nutrientes si está disponible
+        if nutrientes:
+            try:
+                # Intentar parsear el valor como JSON (podría ser un diccionario serializado)
+                valor_nutrientes = json.loads(nutrientes.valor)
+                resultado['nutrientes'] = {
+                    'valor': valor_nutrientes,
+                    'timestamp': nutrientes.timestamp.isoformat(),
+                    'unidad': 'mg/L'
+                }
+            except (JSONDecodeError, TypeError, ValueError) as e:
+                current_app.logger.warning(f"Error al parsear JSON de nutrientes: {e}")
+                try:
+                    # Si falla el JSON, intentar como float
+                    resultado['nutrientes'] = {
+                        'valor': float(nutrientes.valor),
+                        'timestamp': nutrientes.timestamp.isoformat(),
+                        'unidad': 'mg/L'
+                    }
+                except (ValueError, TypeError) as e:
+                    current_app.logger.warning(f"Error al convertir valor de nutrientes: {e}")
         
         return resultado
     
     except Exception as e:
-        print(f"Error obteniendo datos de sensores para parcela {parcela_id}: {str(e)}")
+        current_app.logger.error(f"Error obteniendo datos de sensores para parcela {parcela_id}: {str(e)}")
         return {}
+
 
 # Añadir esta función para construir el mensaje enriquecido
 # Modifica la función construir_mensaje_sistema_avanzado para manejar correctamente los datos de sensores
@@ -1225,6 +1287,8 @@ Eres un experto en agricultura de precisión y tu objetivo es ayudar al agricult
 def obtener_datos_sensores():
     try:
         parcela_id = request.args.get('parcela')  # Usar 'parcela' como parámetro
+        if not parcela_id:
+            return jsonify({"error": "Falta parámetro 'parcela'"}), 400
         periodo = request.args.get('periodo', '24h')
         
         # Calcular fecha desde usando UTC
@@ -1300,12 +1364,12 @@ def obtener_datos_sensores():
                 registrar_log(user_id, 'consulta_datos_sensores', 'parcela', 
                              parcela_id, detalles=f"periodo={periodo}")
             except Exception as e:
-                app.logger.error(f"Error al registrar log: {e}")
+                current_app.logger.error(f"Error al registrar log: {e}")
 
         return jsonify(resultado)
 
     except Exception as e:
-        app.logger.error(f"Error al obtener datos de sensores: {e}")
+        current_app.logger.error(f"Error al obtener datos de sensores: {e}")
         return jsonify({"error": str(e)}), 500
     
 
@@ -1465,10 +1529,87 @@ def resumen_logs():
     
     return jsonify(resultado)
 
+#envia un correo de recuperacion de contraseña
+def enviar_correo_recuperacion(destinatario, codigo):
+    remitente = "ecosmartutalca@gmail.com" 
+    password = "fstn dafh rtve hhvm"  # contraseña de aplicación de Gmail
+    asunto = "Solicitud de recuperación de contraseña - EcoSmart"
+    cuerpo = f"""
+Estimado usuario,
+
+Hemos recibido una solicitud para restablecer la contraseña de su cuenta en EcoSmart.
+
+Su código de recuperación es: {codigo}
+
+Si usted no solicitó este cambio, ignore este mensaje. El código expirará en 15 minutos por motivos de seguridad.
+
+Saludos cordiales,
+Equipo EcoSmart
+
+Este es un correo generado automáticamente, por favor no responda.
+Si necesita asistencia, contáctenos a través de nuestro sitio web.
+"""
+
+    msg = MIMEText(cuerpo)
+    msg['Subject'] = asunto
+    msg['From'] = remitente
+    msg['To'] = destinatario
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(remitente, password)
+            server.sendmail(remitente, destinatario, msg.as_string())
+        print(f"Correo de recuperación enviado a {destinatario}")
+    except Exception as e:
+        print(f"Error al enviar correo: {e}")
+
+
+# Endpoint para recuperar contraseña
+@app.route('/api/recuperar', methods=['POST'])
+def recuperar_contrasena():
+    data = request.json
+    email = data.get('email')
+    usuario = Usuario.query.filter_by(email=email).first()
+    if not usuario:
+        return jsonify({'error': 'No existe una cuenta con ese correo'}), 404
+
+    # Generar código de 6 dígitos
+    codigo = f"{randint(100000, 999999)}"
+    usuario.codigo_recuperacion = codigo
+    usuario.codigo_expira = datetime.utcnow() + timedelta(minutes=15)
+    db.session.commit()
+
+    #envia un correo real con el codigo
+    enviar_correo_recuperacion(usuario.email, codigo)
+
+    return jsonify({'mensaje': 'Se ha enviado un código a tu correo'})
+
+
+@app.route('/api/resetear', methods=['POST'])
+def resetear_contrasena_codigo():
+    data = request.json
+    email = data.get('email')
+    codigo = data.get('codigo')
+    nueva_password = data.get('password')
+
+    usuario = Usuario.query.filter_by(email=email, codigo_recuperacion=codigo).first()
+    if not usuario or usuario.codigo_expira < datetime.utcnow():
+        return jsonify({'error': 'Código inválido o expirado'}), 400
+
+    # Verificar que la nueva contraseña no sea igual a la anterior
+    if check_password_hash(usuario.password, nueva_password):
+        return jsonify({'error': 'La nueva contraseña no puede ser igual a la anterior.'}), 400
+
+    usuario.password = generate_password_hash(nueva_password)
+    usuario.codigo_recuperacion = None
+    usuario.codigo_expira = None
+    db.session.commit()
+    return jsonify({'mensaje': 'Contraseña actualizada correctamente'})
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    app.logger.error(f"Error no manejado: {str(e)}")
+    from flask import current_app
+    current_app.logger.error(f"Error no manejado: {str(e)}")
     return jsonify({"error": "Error interno del servidor", "details": str(e)}), 500
 
 @app.route('/')

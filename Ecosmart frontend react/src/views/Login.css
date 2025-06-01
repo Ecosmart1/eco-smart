@@ -282,10 +282,12 @@ body, html {
 }
 
 .login-info h2 {
-  font-size: 28px;
+  font-size: 40px;
   margin-bottom: 20px;
   position: relative;
   display: inline-block;
+  color: #000000;
+
 }
 
 .login-info h2::after {
@@ -299,7 +301,7 @@ body, html {
 }
 
 .login-info p {
-  font-size: 16px;
+  font-size: 20px;
   margin-bottom: 30px;
   line-height: 1.6;
 }
@@ -314,7 +316,7 @@ body, html {
   display: flex;
   align-items: center;
   margin-bottom: 18px;
-  font-size: 16px;
+  font-size: 20px;
   position: relative;
   padding-left: 35px;
 }
@@ -322,7 +324,7 @@ body, html {
 .login-features i {
   position: absolute;
   left: 0;
-  font-size: 18px;
+  font-size: 20px;
   color: #a5d6a7;
 }
 
@@ -333,7 +335,7 @@ body, html {
 }
 
 .login-brands p {
-  font-size: 14px;
+  font-size: 17px;
   margin-bottom: 15px;
   opacity: 0.8;
 }
@@ -348,7 +350,7 @@ body, html {
   background-color: rgba(255, 255, 255, 0.1);
   padding: 10px 18px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 15px;
   transition: all 0.3s ease;
 }
 
@@ -400,4 +402,29 @@ body, html {
     font-size: 12px;
     padding: 6px 10px;
   }
+}/* Estilos para mostrar/ocultar contraseña */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.toggle-password:hover {
+  color: #2e7d32;
+}
+
+.toggle-password:focus {
+  outline: none;
 }
