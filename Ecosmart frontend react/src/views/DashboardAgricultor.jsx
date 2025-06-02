@@ -4,6 +4,7 @@ import './DashboardAgricultor.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
 import FormularioParcela from './FormularioParcela';
 import { getAuthHeaders } from '../services/serviciorutas'; // Asegúrate de que esta función esté exportada correctamente
+import servicioRecomendaciones from '../services/servicioRecomendaciones';
 // Importaciones de Recharts para gráficos
 import {
   LineChart,
@@ -31,6 +32,8 @@ const DashboardAgricultor = () => {
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [mostrarGraficosPopup, setMostrarGraficosPopup] = useState(false);
+  const [recomendaciones, setRecomendaciones] = useState([]);
+  const [cargandoRecomendaciones, setCargandoRecomendaciones] = useState(false);
   
   // Nuevos estados para sensores
   const [datosSensores, setDatosSensores] = useState({
@@ -52,6 +55,80 @@ const DashboardAgricultor = () => {
   // Abrir/cerrar formulario de nueva parcela
   const abrirFormulario = () => setMostrarFormulario(true);
   const cerrarFormulario = () => setMostrarFormulario(false);
+  
+
+  const cargarRecomendaciones = async (maxCaracteres = 150) => {
+    try {
+      setCargandoRecomendaciones(true);
+      const recomendacionesData = await servicioRecomendaciones.obtenerRecomendaciones(false, maxCaracteres);
+      setRecomendaciones(recomendacionesData);
+    } catch (error) {
+      console.error("Error al cargar recomendaciones:", error);
+      // Usar recomendaciones estáticas si falla
+      setRecomendaciones([
+        {
+          id: 'rec-fallback-1',
+          parcela: 'Campo Este',
+          cultivo: 'Maíz',
+          recomendacion: 'Campo Este necesita riego inmediato. La humedad del suelo ha bajado a niveles críticos.'
+        },
+        {
+          id: 'rec-fallback-2',
+          parcela: 'Todas las parcelas',
+          cultivo: 'General',
+          recomendacion: 'Se prevén lluvias para el fin de semana. Considere ajustar los programas de riego.'
+        },
+        {
+          id: 'rec-fallback-3',
+          parcela: 'Viñedo Norte',
+          cultivo: 'Viñas',
+          recomendacion: 'Las condiciones son favorables para el desarrollo de hongos en Viñedo Norte.'
+        }
+      ]);
+    } finally {
+      setCargandoRecomendaciones(false);
+    }
+  };
+
+  // Función para determinar el ícono según el contenido de la recomendación
+  const obtenerIconoRecomendacion = (recomendacion) => {
+    const texto = recomendacion.toLowerCase();
+    if (texto.includes('riego') || texto.includes('humedad') || texto.includes('agua')) {
+      return 'tint';
+    } else if (texto.includes('lluvia') || texto.includes('precipitacion')) {
+      return 'cloud-rain';
+    } else if (texto.includes('fertiliz') || texto.includes('nutrient')) {
+      return 'leaf';
+    } else if (texto.includes('plaga') || texto.includes('insect') || texto.includes('hongo')) {
+      return 'bug';
+    } else if (texto.includes('temperatura') || texto.includes('clima') || texto.includes('calor')) {
+      return 'thermometer-half';
+    }
+    return 'seedling';
+  };
+  
+  // Obtener título basado en el tipo de recomendación
+  const obtenerTituloRecomendacion = (recomendacion) => {
+    const texto = recomendacion.toLowerCase();
+    if (texto.includes('riego') || texto.includes('humedad') || texto.includes('agua')) {
+      return 'Riego recomendado';
+    } else if (texto.includes('lluvia') || texto.includes('precipitacion')) {
+      return 'Alerta de lluvia';
+    } else if (texto.includes('fertiliz') || texto.includes('nutrient')) {
+      return 'Fertilización';
+    } else if (texto.includes('plaga') || texto.includes('insect') || texto.includes('hongo')) {
+      return 'Prevención de plagas';
+    } else if (texto.includes('temperatura') || texto.includes('clima')) {
+      return 'Alerta climática';
+    }
+    return 'Recomendación';
+  };
+
+  useEffect(() => {
+    if (usuario && (parcelas.length > 0)) {
+      cargarRecomendaciones();
+    }
+  }, [usuario, parcelas.length]);
 
   // Guardar parcela en backend
   const guardarParcela = async (parcelaData) => {
@@ -549,43 +626,61 @@ const fetchDatosSensores = async () => {
             </div>
           </div>
 
-          <div className="dashboard-card recomendaciones-panel">
-            <div className="card-header">
-              <h3>Recomendaciones</h3>
-            </div>
-            <div className="recomendaciones-list">
-              <div className="recomendacion-item">
-                <div className="recomendacion-icon">
-                  <i className="fas fa-tint"></i>
-                </div>
-                <div className="recomendacion-content">
-                  <h4>Riego recomendado</h4>
-                  <p>Campo Este necesita riego inmediato. La humedad del suelo ha bajado a niveles críticos.</p>
-                  <button className="btn-recomendacion">Programar riego</button>
-                </div>
-              </div>
-              <div className="recomendacion-item">
-                <div className="recomendacion-icon">
-                  <i className="fas fa-cloud-rain"></i>
-                </div>
-                <div className="recomendacion-content">
-                  <h4>Alerta de lluvia</h4>
-                  <p>Se prevén lluvias para el fin de semana. Considere ajustar los programas de riego.</p>
-                  <button className="btn-recomendacion">Ajustar riego</button>
-                </div>
-              </div>
-              <div className="recomendacion-item">
-                <div className="recomendacion-icon">
-                  <i className="fas fa-bug"></i>
-                </div>
-                <div className="recomendacion-content">
-                  <h4>Prevención de plagas</h4>
-                  <p>Las condiciones son favorables para el desarrollo de hongos en Viñedo Norte.</p>
-                  <button className="btn-recomendacion">Ver tratamiento</button>
-                </div>
-              </div>
-            </div>
+          // Reemplazar la sección actual de recomendaciones
+
+<div className="dashboard-card recomendaciones-panel">
+  <div className="card-header">
+    <h3>Recomendaciones</h3>
+    <div className="header-actions">
+      <Link to="/dashboard/agricultor/recomendaciones" className="ver-todo">Ver todas</Link>
+      <button 
+        onClick={() => cargarRecomendaciones()} 
+        className={`btn-actualizar-recomendaciones ${cargandoRecomendaciones ? 'loading' : ''}`}
+        disabled={cargandoRecomendaciones}
+      >
+        <i className={`fas ${cargandoRecomendaciones ? 'fa-spinner fa-spin' : 'fa-sync'}`}></i>
+      </button>
+    </div>
+  </div>
+  <div className="recomendaciones-list">
+    {cargandoRecomendaciones ? (
+      <div className="recomendaciones-cargando">
+        <i className="fas fa-spinner fa-spin"></i>
+        <span>Generando recomendaciones...</span>
+      </div>
+    ) : recomendaciones.length > 0 ? (
+      recomendaciones.slice(0, 3).map((rec, index) => (
+        <div className="recomendacion-item" key={rec.id || `rec-${index}`}>
+          <div className="recomendacion-icon">
+            <i className={`fas fa-${obtenerIconoRecomendacion(rec.recomendacion)}`}></i>
           </div>
+          <div className="recomendacion-content">
+            <h4>{obtenerTituloRecomendacion(rec.recomendacion)}</h4>
+            <p><strong>{rec.parcela} - {rec.cultivo}:</strong> {rec.recomendacion}</p>
+            <button 
+              className="btn-recomendacion"
+              onClick={() => consultarAsistente('general', null, rec.parcela)}
+            >
+              <i className="fas fa-robot"></i> Asistencia IA
+            </button>
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="recomendaciones-empty">
+        <i className="fas fa-info-circle"></i>
+        <span>No hay recomendaciones disponibles en este momento.</span>
+      </div>
+    )}
+    
+    {recomendaciones.length > 0 && (
+      <div className="actualizacion-info">
+        <i className="fas fa-info-circle"></i>
+        <span>Recomendaciones basadas en datos de sensores de los últimos 7 días.</span>
+      </div>
+    )}
+  </div>
+</div>
         </div>
       </div>
       

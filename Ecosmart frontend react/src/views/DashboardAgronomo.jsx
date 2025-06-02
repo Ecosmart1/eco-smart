@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import './DashboardAgronomo.css';
 import { getAuthHeaders } from '../services/serviciorutas';
 import FormularioParcela from './FormularioParcela';
+import servicioRecomendaciones from '../services/servicioRecomendaciones.js';
 import {
   LineChart,
   BarChart,
@@ -42,6 +43,10 @@ const DashboardAgronomo = () => {
   const [conversaciones, setConversaciones] = useState([]);
   const [errorConexion, setErrorConexion] = useState(false);
   const [estadoIA, setEstadoIA] = useState('conectado');
+  
+  // Nuevos estados para recomendaciones
+  const [recomendaciones, setRecomendaciones] = useState([]);
+  const [cargandoRecomendaciones, setCargandoRecomendaciones] = useState(false);
   
   const navigate = useNavigate();
 
@@ -96,6 +101,8 @@ const DashboardAgronomo = () => {
       // Cargar datos
       fetchParcelas();
       inicializarChat(usuarioObj.id);
+      // Cargar recomendaciones iniciales
+      cargarRecomendaciones();
       
     } catch (error) {
       console.error('Error al parsear usuario:', error);
@@ -103,6 +110,27 @@ const DashboardAgronomo = () => {
       navigate('/login');
     }
   }, [navigate]);
+
+  // Función para cargar recomendaciones
+  const cargarRecomendaciones = async (maxCaracteres = 100) => {
+    if (!usuario) return;
+    
+    try {
+      setCargandoRecomendaciones(true);
+      const recomendacionesData = await servicioRecomendaciones.obtenerRecomendaciones(false, maxCaracteres);
+      setRecomendaciones(recomendacionesData);
+    } catch (error) {
+      console.error("Error al cargar recomendaciones:", error);
+    } finally {
+      setCargandoRecomendaciones(false);
+    }
+  };
+
+  // Función para solicitar recomendaciones específicas al asistente
+  const solicitarRecomendacionesAlAsistente = async () => {
+    setMensajeChat("Proporciona recomendaciones precisas para el manejo de mis cultivos basadas en los datos de sensores de los últimos 7 días.");
+    await enviarMensaje();
+  };
 
   // Función para verificar y renovar token si es necesario - MODIFICADA
   const verificarAutenticacion = async () => {
@@ -348,6 +376,10 @@ const DashboardAgronomo = () => {
         }));
         setParcelas(parcelasConEstado);
         setErrorConexion(false);
+        
+        // También actualizar las recomendaciones después de obtener las parcelas
+        await cargarRecomendaciones();
+        
         setCargando(false);
         return;
       } else {
@@ -406,6 +438,10 @@ const DashboardAgronomo = () => {
       }
     ];
     setParcelas(parcelasEjemplo);
+    
+    // Cargar recomendaciones con datos de ejemplo
+    await cargarRecomendaciones();
+    
     setCargando(false);
   };
 
@@ -444,6 +480,9 @@ const DashboardAgronomo = () => {
         await inicializarChat(usuarioId);
       }
 
+      // MODIFICADO: Preparar contexto para incluir datos del servicio de recomendaciones
+      const contextoDatos = await servicioRecomendaciones.prepararContextoParaAsistente();
+      
       const contextData = {
         timestamp: new Date().toISOString(),
         user_role: usuario?.rol || 'agronomo',
@@ -467,7 +506,9 @@ const DashboardAgronomo = () => {
           sensores_activos: false,
           ultima_actualizacion: new Date().toISOString(),
           modo_operacion: errorConexion ? 'offline' : 'online'
-        }
+        },
+        // Incluir datos agrícolas del servicio de recomendaciones
+        datos_agricolas: contextoDatos
       };
 
       const response = await enviarMensajeAPI(usuarioId, mensajeEnviado, convId, contextData);
@@ -618,24 +659,6 @@ const DashboardAgronomo = () => {
     { name: 'Óptimo', value: parcelasOptimas || 0, color: '#4CAF50' }
   ];
 
-  const recomendacionesEjemplo = [
-    {
-      cultivo: 'Tomate',
-      parcela: 'Viñedo Sur',
-      recomendacion: 'Implementar riego por goteo y monitorear plagas específicas del tomate.'
-    },
-    {
-      cultivo: 'Maíz',
-      parcela: 'Campo Norte',
-      recomendacion: 'Aplicar fertilización nitrogenada en fase V6-V8.'
-    },
-    {
-      cultivo: 'Trigo',
-      parcela: 'Huerto Oeste',
-      recomendacion: 'CRÍTICO: Evaluar inmediatamente problemas de riego.'
-    }
-  ];
-
   const obtenerColorEstadoIA = () => {
     switch (estadoIA) {
       case 'conectado': return '#4CAF50';
@@ -780,25 +803,51 @@ const DashboardAgronomo = () => {
             <div className="panel-header">
               <h2 className="panel-title">Recomendaciones IA</h2>
               <p className="panel-subtitle">Análisis basado en el estado actual de los cultivos</p>
+              <button 
+                onClick={() => cargarRecomendaciones()} 
+                className={`btn-actualizar-recomendaciones ${cargandoRecomendaciones ? 'loading' : ''}`}
+                disabled={cargandoRecomendaciones}
+              >
+                <i className={`fas ${cargandoRecomendaciones ? 'fa-spinner fa-spin' : 'fa-sync'}`}></i>
+                {cargandoRecomendaciones ? ' Actualizando...' : ' Actualizar'}
+              </button>
             </div>
             
             <div className="recomendaciones-list">
-              {recomendacionesEjemplo.slice(0, 3).map((rec, index) => (
-                <div key={index} className="recomendacion-item">
-                  <div className="recomendacion-icon">
-                    <i className={`fas fa-${index === 0 ? 'tint' : index === 1 ? 'leaf' : 'exclamation-triangle'}`}></i>
-                  </div>
-                  <div className="recomendacion-content">
-                    <span className="recomendacion-cultivo">{rec.cultivo} - {rec.parcela}: </span>
-                    <span className="recomendacion-texto">{rec.recomendacion}</span>
-                  </div>
+              {cargandoRecomendaciones ? (
+                <div className="recomendaciones-cargando">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Generando recomendaciones...</span>
                 </div>
-              ))}
+              ) : recomendaciones.length > 0 ? (
+                recomendaciones.slice(0, 3).map((rec, index) => (
+                  <div key={index} className="recomendacion-item">
+                    <div className="recomendacion-icon">
+                      <i className={`fas fa-${
+                        rec.recomendacion.toLowerCase().includes('riego') ? 'tint' : 
+                        rec.recomendacion.toLowerCase().includes('fertiliz') ? 'leaf' :
+                        rec.recomendacion.toLowerCase().includes('plaga') ? 'bug' :
+                        'seedling'
+                      }`}></i>
+                    </div>
+                    <div className="recomendacion-content">
+                      <span className="recomendacion-cultivo">{rec.cultivo} - {rec.parcela}: </span>
+                      <span className="recomendacion-texto">{rec.recomendacion}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="recomendaciones-empty">
+                  <i className="fas fa-info-circle"></i>
+                  <span>No hay recomendaciones disponibles en este momento.</span>
+                </div>
+              )}
               
               <div className="actualizacion-info">
                 <i className="fas fa-info-circle"></i>
                 <span>
-                  Recomendaciones actualizadas basadas en datos {errorConexion ? 'locales' : 'en tiempo real'}. 
+                  Recomendaciones actualizadas basadas en datos de los últimos 7 días
+                  {errorConexion ? ' (simulados)' : ''}. 
                   {errorConexion && ' Conecta sensores para análisis más precisos.'}
                 </span>
               </div>
@@ -927,8 +976,8 @@ const DashboardAgronomo = () => {
                       <button onClick={() => setMensajeChat("¿Qué recomendaciones tienes para el riego?")}>
                         💧 Consejos de riego
                       </button>
-                      <button onClick={() => setMensajeChat("¿Cómo controlar plagas en mis cultivos?")}>
-                        🐛 Control de plagas
+                      <button onClick={() => solicitarRecomendacionesAlAsistente()}>
+                        🌿 Generar recomendaciones
                       </button>
                     </div>
                   </div>
