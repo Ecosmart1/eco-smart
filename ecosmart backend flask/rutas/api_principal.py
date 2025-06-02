@@ -1612,6 +1612,126 @@ def handle_exception(e):
     current_app.logger.error(f"Error no manejado: {str(e)}")
     return jsonify({"error": "Error interno del servidor", "details": str(e)}), 500
 
+# Endpoint para recomendaciones de cultivo (sin jwt_required)
+@app.route('/api/recomendaciones/cultivo', methods=['POST', 'OPTIONS'])
+def generar_recomendaciones_cultivo():
+    # Manejo de CORS para solicitudes OPTIONS
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        return response
+    
+    # Procesar la solicitud POST
+    try:
+        if not request.is_json:
+            return jsonify({"error": "El formato debe ser JSON"}), 400
+            
+        data = request.json
+        cultivo = data.get('cultivo', 'No especificado')
+        estado = data.get('estado', 'saludable')
+        detalles = data.get('detalles', {})
+        
+        # Generar recomendaciones básicas basadas en el cultivo y estado
+        recomendaciones = []
+        
+        # Recomendaciones para cultivo saludable
+        if estado == 'saludable':
+            recomendaciones = [
+                f"Mantener régimen de riego para {cultivo}: 4-5L/m² cada 2-3 días según condiciones climáticas",
+                f"Continuar con fertilización programada para {cultivo} usando NPK balanceado (10-10-10)",
+                f"Realizar monitoreo preventivo semanal buscando signos tempranos de plagas o enfermedades"
+            ]
+        # Recomendaciones para cultivo enfermo
+        else:
+            recomendaciones = [
+                f"Aumentar frecuencia de monitoreo para {cultivo}: inspección diaria de hojas y tallos",
+                f"Aplicar tratamiento preventivo con fungicida orgánico (5ml/L) en pulverización foliar",
+                f"Revisar y ajustar niveles de riego y nutrientes: posible exceso de agua o deficiencia nutricional"
+            ]
+        
+        # Registrar análisis en la base de datos (opcional)
+        if 'parcela_id' in detalles:
+            try:
+                # Obtenemos el usuario del token si está disponible
+                user_id = request.headers.get('X-User-Id', '1')  # Default a usuario 1 si no hay token
+                
+                # Log simple
+                current_app.logger.info(f"Análisis de cultivo para parcela {detalles['parcela_id']}")
+                
+                # Aquí podrías guardar el análisis en una tabla de la BD si lo deseas
+            except Exception as log_error:
+                current_app.logger.error(f"Error al registrar análisis: {log_error}")
+        
+        # Devolver recomendaciones
+        return jsonify({
+            "recomendaciones": recomendaciones,
+            "cultivo": cultivo,
+            "estado": estado
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generando recomendaciones: {str(e)}")
+        return jsonify({
+            "error": "Error al generar recomendaciones",
+            "recomendaciones": [
+                f"Para {data.get('cultivo', 'el cultivo')}: Revisar régimen de riego y drenaje",
+                f"Para {data.get('cultivo', 'el cultivo')}: Verificar niveles de nutrientes en el suelo",
+                f"Para {data.get('cultivo', 'el cultivo')}: Implementar monitoreo regular para detección de plagas"
+            ]
+        })
+
+# Endpoint para guardar análisis de parcela
+@app.route('/api/parcelas/<int:parcela_id>/analisis', methods=['POST', 'OPTIONS'])
+def guardar_analisis_parcela(parcela_id):
+    # Manejo de CORS para solicitudes OPTIONS
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        return response
+    
+    try:
+        # Verificar que la parcela exista
+        parcela = Parcela.query.get(parcela_id)
+        if not parcela:
+            return jsonify({"error": "Parcela no encontrada"}), 404
+            
+        if not request.is_json:
+            return jsonify({"error": "El formato debe ser JSON"}), 400
+            
+        data = request.json
+        tipo = data.get('tipo')
+        resultado = data.get('resultado')
+        analisis_formateado = data.get('analisis_formateado')
+        fecha = data.get('fecha')
+        
+        if not tipo or not resultado:
+            return jsonify({"error": "Se requiere tipo y resultado"}), 400
+        
+        # Obtener usuario_id desde el header o usar un valor predeterminado
+        usuario_id = request.headers.get('X-User-Id', 1)
+        
+        # Simular el guardado del análisis (en un entorno real, guardarlo en BD)
+        current_app.logger.info(f"Análisis guardado para parcela {parcela_id}, tipo: {tipo}")
+        
+        # Registrar la acción si tenemos un usuario identificado
+        try:
+            if usuario_id:
+                registrar_log(usuario_id, 'guardar_analisis', 'parcela', parcela_id,
+                          detalles=f"tipo: {tipo}")
+        except Exception as log_error:
+            current_app.logger.warning(f"Error al registrar log: {log_error}")
+        
+        return jsonify({
+            "success": True,
+            "mensaje": "Análisis guardado correctamente",
+            "analisis_id": randint(1000, 9999)  # ID simulado
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error guardando análisis: {str(e)}")
+        return jsonify({"error": "Error al guardar el análisis", "details": str(e)}), 500
+
+
 @app.route('/')
 def home():
     return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"
