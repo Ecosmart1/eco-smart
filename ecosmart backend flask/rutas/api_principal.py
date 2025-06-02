@@ -18,6 +18,7 @@ from sqlalchemy import func
 from random import randint
 import smtplib
 from email.mime.text import MIMEText
+import re
 
 
 
@@ -54,23 +55,192 @@ def registrar_usuario():
 
     return jsonify({'mensaje': 'Usuario registrado correctamente'})
 
-#@app.route('/api/usuarios/<int:id>', methods=['GET'])
+@app.route('/api/usuarios', methods=['GET'])
+def obtener_usuarios():
+    try:
+        # Verificar autorización (esto debería ser mejorado con un sistema de tokens)
+        user_id = request.headers.get('X-User-Id')
+        user_rol = request.headers.get('X-User-Rol')
+        
+        if not user_id or user_rol not in ['tecnico', 'admin']:
+            return jsonify({'error': 'No autorizado'}), 403
+        
+        # Consulta los usuarios
+        usuarios = Usuario.query.all()
+        
+        # Convierte a JSON (sin incluir contraseñas)
+        usuarios_data = [{
+            'id': usuario.id,
+            'nombre': usuario.nombre,
+            'email': usuario.email,
+            'rol': usuario.rol
+        } for usuario in usuarios]
+        
+        return jsonify(usuarios_data)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al listar usuarios: {str(e)}")
+        return jsonify({'error': 'Error al procesar la solicitud'}), 500
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
-    data = request.json
-    usuario = Usuario.query.filter_by(email=data['email']).first()
-    registrar_log(usuario.id, 'login', 'usuario', usuario.id)
-    if usuario and check_password_hash(usuario.password, data['password']):
+    try:
+        if request.content_type and 'application/json' in request.content_type:
+            data = request.get_json(force=True)
+        else:
+            try:
+                content = request.data.decode('utf-8')
+            except UnicodeDecodeError:
+                content = request.data.decode('latin-1')
+            data = json.loads(content)
+
+        if 'email' not in data or 'password' not in data:
+            return jsonify({'error': 'Faltan credenciales'}), 400
+
+        email = data['email'].strip().lower()
+        usuario = Usuario.query.filter_by(email=email).first()
+
+        if not usuario or not check_password_hash(usuario.password, data['password']):
+            return jsonify({'error': 'Credenciales incorrectas'}), 401
+
+        try:
+            registrar_log(usuario.id, 'login', 'usuario', usuario.id)
+        except Exception as log_error:
+            current_app.logger.error(f"Error al registrar log de login: {log_error}")
+
         return jsonify({
             'id': usuario.id,
             'nombre': usuario.nombre,
             'email': usuario.email,
             'rol': usuario.rol
         })
-    else:
-        return jsonify({'error': 'Credenciales incorrectas'}), 401
+
+    except Exception as e:
+        current_app.logger.error(f"Error en login: {str(e)}")
+        return jsonify({'error': 'Error al procesar la solicitud'}), 500
+
+
+@app.route('/api/recomendaciones/cultivo', methods=['POST', 'OPTIONS'])
+def generar_recomendaciones_cultivo():
+    # Manejo de CORS para solicitudes OPTIONS
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        return response
     
-    
+    # Procesar la solicitud POST
+    try:
+        if not request.is_json:
+            return jsonify({"error": "El formato debe ser JSON"}), 400
+            
+        data = request.json
+        cultivo = data.get('cultivo', 'No especificado')
+        estado = data.get('estado', 'saludable')
+        detalles = data.get('detalles', {})
+        
+        # Obtener datos de sensores si hay una parcela especificada
+        datos_sensores = {}
+        if 'parcela_id' in detalles:
+            parcela_id = detalles['parcela_id']
+            parcela = Parcela.query.get(parcela_id)
+            if parcela:
+                datos_sensores = obtener_datos_sensores_recientes(parcela_id)
+        
+        # Construir prompt para la IA
+   
+
+        # Construir prompt para la IA
+        prompt = f"""Como experto agrónomo, genera exactamente 3 recomendaciones BREVES y ESPECÍFICAS para un cultivo de {cultivo} 
+        que se encuentra en estado {estado}.
+        
+        Datos del cultivo:
+        - Tipo: {cultivo}
+        - Estado actual: {estado}
+        """
+        
+        # Añadir datos de sensores si están disponibles
+        if datos_sensores:
+            prompt += "\nDatos de sensores recientes:\n"
+            if 'temperatura' in datos_sensores:
+                prompt += f"- Temperatura: {datos_sensores['temperatura']['valor']}{datos_sensores['temperatura']['unidad']}\n"
+            if 'humedad' in datos_sensores:
+                prompt += f"- Humedad del suelo: {datos_sensores['humedad']['valor']}{datos_sensores['humedad']['unidad']}\n"
+            if 'ph' in datos_sensores:
+                prompt += f"- pH del suelo: {datos_sensores['ph']['valor']}\n"
+            
+        prompt += """\n
+        FORMATO DE RESPUESTA:
+        - Cada recomendación debe tener máximo 50 palabras
+        - Usar viñetas (-)
+        - Ser específica y accionable
+        - Incluir cantidades o frecuencias cuando sea posible
+        
+        Ejemplo:
+        - Regar 2-3L/m² cada 48 horas en horas de menor calor
+        - Aplicar fertilizante NPK 10-10-10 a razón de 30g/m²
+        - Inspeccionar hojas semanalmente buscando signos de plagas"""
+        
+
+        # Enviar a la IA
+        messages = [
+            {"role": "system", "content": "Eres un experto agrónomo especializado en cultivos y agricultura de precisión."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # Usar la función de envío a IA existente
+        recomendaciones_text = send_to_deepseek(messages)
+        
+        # Procesar la respuesta para extraer recomendaciones
+        # (La IA puede devolver texto con formato, así que lo convertimos a una lista)
+        recomendaciones_lines = recomendaciones_text.strip().split('\n')
+        recomendaciones = []
+        for line in recomendaciones_lines:
+            # Eliminar marcadores de lista como "1.", "-", "*" al principio de la línea
+            clean_line = re.sub(r'^[\d\-\*\.]+\s*', '', line.strip())
+            if clean_line and len(clean_line) > 10:  # Líneas con contenido sustancial
+                recomendaciones.append(clean_line)
+        
+        # Si no se obtuvieron recomendaciones válidas, usar las predefinidas como respaldo
+        if not recomendaciones:
+            if estado == 'saludable':
+                recomendaciones = [
+                    f"Mantener régimen de riego para {cultivo}: 4-5L/m² cada 2-3 días según condiciones",
+                    # ... más recomendaciones de respaldo
+                ]
+            else:
+                recomendaciones = [
+                    f"Aumentar frecuencia de monitoreo para {cultivo}: inspección diaria",
+                    # ... más recomendaciones de respaldo
+                ]
+        
+        # Registrar la acción
+        user_id = request.headers.get('X-User-Id')
+        if user_id and 'parcela_id' in detalles:
+            try:
+                registrar_log(user_id, 'generar_recomendaciones', 'parcela', detalles['parcela_id'])
+            except Exception as log_error:
+                current_app.logger.error(f"Error al registrar log: {log_error}")
+        
+        # Devolver recomendaciones
+        return jsonify({
+            "recomendaciones": recomendaciones,
+            "cultivo": cultivo,
+            "estado": estado,
+            "generado_por_ia": True
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generando recomendaciones: {str(e)}")
+        return jsonify({
+            "error": "Error al generar recomendaciones",
+            "recomendaciones": [
+                f"Para {data.get('cultivo', 'el cultivo')}: Revisar régimen de riego y drenaje",
+                # ... recomendaciones de respaldo
+            ],
+            "generado_por_ia": False
+        })
+
+
+
 
 
 
@@ -1613,72 +1783,6 @@ def handle_exception(e):
     return jsonify({"error": "Error interno del servidor", "details": str(e)}), 500
 
 # Endpoint para recomendaciones de cultivo (sin jwt_required)
-@app.route('/api/recomendaciones/cultivo', methods=['POST', 'OPTIONS'])
-def generar_recomendaciones_cultivo():
-    # Manejo de CORS para solicitudes OPTIONS
-    if request.method == 'OPTIONS':
-        response = app.make_default_options_response()
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        return response
-    
-    # Procesar la solicitud POST
-    try:
-        if not request.is_json:
-            return jsonify({"error": "El formato debe ser JSON"}), 400
-            
-        data = request.json
-        cultivo = data.get('cultivo', 'No especificado')
-        estado = data.get('estado', 'saludable')
-        detalles = data.get('detalles', {})
-        
-        # Generar recomendaciones básicas basadas en el cultivo y estado
-        recomendaciones = []
-        
-        # Recomendaciones para cultivo saludable
-        if estado == 'saludable':
-            recomendaciones = [
-                f"Mantener régimen de riego para {cultivo}: 4-5L/m² cada 2-3 días según condiciones climáticas",
-                f"Continuar con fertilización programada para {cultivo} usando NPK balanceado (10-10-10)",
-                f"Realizar monitoreo preventivo semanal buscando signos tempranos de plagas o enfermedades"
-            ]
-        # Recomendaciones para cultivo enfermo
-        else:
-            recomendaciones = [
-                f"Aumentar frecuencia de monitoreo para {cultivo}: inspección diaria de hojas y tallos",
-                f"Aplicar tratamiento preventivo con fungicida orgánico (5ml/L) en pulverización foliar",
-                f"Revisar y ajustar niveles de riego y nutrientes: posible exceso de agua o deficiencia nutricional"
-            ]
-        
-        # Registrar análisis en la base de datos (opcional)
-        if 'parcela_id' in detalles:
-            try:
-                # Obtenemos el usuario del token si está disponible
-                user_id = request.headers.get('X-User-Id', '1')  # Default a usuario 1 si no hay token
-                
-                # Log simple
-                current_app.logger.info(f"Análisis de cultivo para parcela {detalles['parcela_id']}")
-                
-                # Aquí podrías guardar el análisis en una tabla de la BD si lo deseas
-            except Exception as log_error:
-                current_app.logger.error(f"Error al registrar análisis: {log_error}")
-        
-        # Devolver recomendaciones
-        return jsonify({
-            "recomendaciones": recomendaciones,
-            "cultivo": cultivo,
-            "estado": estado
-        })
-        
-    except Exception as e:
-        current_app.logger.error(f"Error generando recomendaciones: {str(e)}")
-        return jsonify({
-            "error": "Error al generar recomendaciones",
-            "recomendaciones": [
-                f"Para {data.get('cultivo', 'el cultivo')}: Revisar régimen de riego y drenaje",
-                f"Para {data.get('cultivo', 'el cultivo')}: Verificar niveles de nutrientes en el suelo",
-                f"Para {data.get('cultivo', 'el cultivo')}: Implementar monitoreo regular para detección de plagas"
-            ]
-        })
 
 # Endpoint para guardar análisis de parcela
 @app.route('/api/parcelas/<int:parcela_id>/analisis', methods=['POST', 'OPTIONS'])

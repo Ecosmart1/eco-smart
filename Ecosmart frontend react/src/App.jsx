@@ -29,7 +29,8 @@ import EditarParcelaPage from './views/EditarParcelaPage';
 
 // ===== VISTAS PARA AGRICULTOR =====
 import DashboardAgronomo from './views/DashboardAgronomo';
-
+import EstadoCultivos from './views/EstadoCultivos';
+import DetalleCultivo from './views/DetalleCultivo';
 
 
 
@@ -215,6 +216,17 @@ function App() {
   </div>
 } />
 
+<Route path="/dashboard/agronomo/cultivos/:id" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <DetalleCultivo API_URL={API_URL} />
+    </div>
+  </div>
+} />
+
+
+
 <Route path="/dashboard/agronomo/alertas" element={
   <div className="app-container">
     <HeaderAgronomo />
@@ -254,11 +266,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      {/* Página de estado de cultivos que se implementará después */}
-      <div style={{textAlign: 'center', padding: '50px'}}>
-        <h2>Estado de Cultivos</h2>
-        <p>Esta funcionalidad estará disponible próximamente</p>
-      </div>
+      <EstadoCultivos API_URL={API_URL} />
     </div>
   </div>
 } />
