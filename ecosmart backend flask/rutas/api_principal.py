@@ -10,7 +10,7 @@ import threading
 import pandas as pd
 import json
 from json import JSONDecodeError
-from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, AlertaSensor
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
@@ -32,7 +32,7 @@ CORS(app, resources={
 })  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
+app.config['SQLALCHEMY_DATABASE_URI'] = '...'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -263,22 +263,49 @@ parametros_configurables = {
     "temperatura": {
         "min": parametros["temperatura"][0],
         "max": parametros["temperatura"][1],
+        "alerta_baja": 5,    # Alerta si < 5°C
+        "alerta_alta": 38,   # Alerta si > 38°C
+        "critico_bajo": 0,   # Crítico si < 0°C
+        "critico_alto": 42,  # Crítico si > 42°C
         "variacion": 1.0
     },
     "humedadSuelo": {
         "min": parametros["humedad"][0],
         "max": parametros["humedad"][1],
+        "alerta_baja": 25,
+        "alerta_alta": 75,
+        "critico_bajo": 15,
+        "critico_alto": 90,
         "variacion": 2.0
     },
     "phSuelo": {
         "min": parametros["ph"][0],
         "max": parametros["ph"][1],
+        "alerta_baja": 5.0,   # Alerta si < 5.0
+        "alerta_alta": 8.0,   # Alerta si > 8.0
+        "critico_bajo": 4.5,  # Crítico si < 4.5
+        "critico_alto": 8.5,  # Crítico si > 8.5
         "variacion": 0.1
     },
     "nutrientes": {
-        "nitrogeno": {"min": 100, "max": 300},
-        "fosforo": {"min": 20, "max": 80},
-        "potasio": {"min": 100, "max": 250}
+        "nitrogeno": {"min": 100, 
+                      "max": 300,
+                    "alerta_baja": 110,
+                    "alerta_alta": 290,   
+                    "critico_bajo": 90,   
+                    "critico_alto": 320  }, 
+        "fosforo": {"min": 20, "max": 80,
+                    "alerta_baja": 22,    
+                    "alerta_alta": 78,    
+                    "critico_bajo": 15,   
+                    "critico_alto": 85   },
+        "potasio": {"min": 100, 
+                    "max": 250,
+                    "alerta_baja": 22,    
+                    "alerta_alta": 78,    
+                    "critico_bajo": 15,   
+                    "critico_alto": 85    
+                    }
     },
     "simulacion": {
         "intervalo": 5,
@@ -353,6 +380,12 @@ def simulacion_continua():
         if time.time() >= tiempo_fin and simulacion_activa:
             print("Simulación completada: se alcanzó la duración configurada")
             simulacion_activa = False
+            # Guardar alertas al finalizar
+            parcela_id = None
+            parcelas_disponibles = Parcela.query.all()
+            if parcelas_disponibles:
+                parcela_id = parcelas_disponibles[0].id
+            guardar_alertas_finales(parcela_id, ultimos_datos, parametros_configurables)
 
 # Fin de la simulación e exportación de datos
 @app.route('/api/exportar_csv', methods=['GET'])
@@ -582,7 +615,6 @@ def simulacion_continua_parcela():
     try:
         # Abre el contexto de aplicación para este hilo
         with app.app_context():
-            # Obtener la parcela seleccionada con manejo de errores
             parcela_id = app.config.get('PARCELA_SIMULACION')
             if not parcela_id:
                 print("❌ Error: No se especificó parcela para la simulación")
@@ -662,12 +694,145 @@ def simulacion_continua_parcela():
             if time.time() >= tiempo_fin and simulacion_activa:
                 print(f"Simulación completada para parcela {parcela.nombre}: se alcanzó la duración configurada")
                 simulacion_activa = False
+                # Guardar alertas al finalizar
+                guardar_alertas_finales(parcela_id, ultimos_datos, parametros_configurables)
                 
     except Exception as e:
-        print(f"❌ Error general en simulación_continua_parcela: {e}")
+        print(f"❌ Error general en simulacion_continua_parcela: {e}")
         # Asegurar que se desactive la simulación en caso de error
         simulacion_activa = False
 
+def guardar_alertas_finales(parcela_id, datos, parametros):
+    """
+    Guarda alertas críticas en la base de datos al finalizar la simulación,
+    según los valores críticos definidos en los parámetros configurables.
+    """
+    try:
+        if not parcela_id or not datos:
+            return
+
+        now = datetime.now(UTC)
+
+        # Temperatura
+        temp = datos.get(1, {}).get("valor")
+        if temp is not None:
+            if temp < parametros["temperatura"]["critico_bajo"]:
+                alerta = AlertaSensor(
+                    parcela=parcela_id,
+                    sensor_id=1,
+                    tipo="Temperatura",
+                    valor=float(temp),
+                    severidad="critico",
+                    mensaje=f"Temperatura extremadamente baja: {temp}°C",
+                    timestamp=now,
+                    activa=True
+                )
+                db.session.add(alerta)
+            elif temp > parametros["temperatura"]["critico_alto"]:
+                alerta = AlertaSensor(
+                    parcela=parcela_id,
+                    sensor_id=1,
+                    tipo="Temperatura",
+                    valor=float(temp),
+                    severidad="critico",
+                    mensaje=f"Temperatura extremadamente alta: {temp}°C",
+                    timestamp=now,
+                    activa=True
+                )
+                db.session.add(alerta)
+
+        # Humedad
+        humedad = datos.get(2, {}).get("valor")
+        if humedad is not None:
+            if humedad < parametros["humedadSuelo"]["critico_bajo"]:
+                alerta = AlertaSensor(
+                    parcela=parcela_id,
+                    sensor_id=2,
+                    tipo="Humedad",
+                    valor=float(humedad),
+                    severidad="critico",
+                    mensaje=f"Humedad del suelo extremadamente baja: {humedad}%",
+                    timestamp=now,
+                    activa=True
+                )
+                db.session.add(alerta)
+            elif humedad > parametros["humedadSuelo"]["critico_alto"]:
+                alerta = AlertaSensor(
+                    parcela=parcela_id,
+                    sensor_id=2,
+                    tipo="Humedad",
+                    valor=float(humedad),
+                    severidad="critico",
+                    mensaje=f"Humedad del suelo extremadamente alta: {humedad}%",
+                    timestamp=now,
+                    activa=True
+                )
+                db.session.add(alerta)
+
+        # pH
+        ph = datos.get(3, {}).get("valor")
+        if ph is not None:
+            if ph < parametros["phSuelo"]["critico_bajo"]:
+                alerta = AlertaSensor(
+                    parcela=parcela_id,
+                    sensor_id=3,
+                    tipo="pH del suelo",
+                    valor=float(ph),
+                    severidad="critico",
+                    mensaje=f"pH del suelo demasiado bajo: {ph}",
+                    timestamp=now,
+                    activa=True
+                )
+                db.session.add(alerta)
+            elif ph > parametros["phSuelo"]["critico_alto"]:
+                alerta = AlertaSensor(
+                    parcela=parcela_id,
+                    sensor_id=3,
+                    tipo="pH del suelo",
+                    valor=float(ph),
+                    severidad="critico",
+                    mensaje=f"pH del suelo demasiado alto: {ph}",
+                    timestamp=now,
+                    activa=True
+                )
+                db.session.add(alerta)
+
+        # Nutrientes (si existen)
+        nutrientes = datos.get(4, {}).get("valor")
+        if isinstance(nutrientes, dict):
+            for nutriente, valor in nutrientes.items():
+                critico_bajo = parametros["nutrientes"].get(nutriente, {}).get("critico_bajo")
+                critico_alto = parametros["nutrientes"].get(nutriente, {}).get("critico_alto")
+                sensor_id = 4
+                if critico_bajo is not None and valor < critico_bajo:
+                    alerta = AlertaSensor(
+                        parcela=parcela_id,
+                        sensor_id=sensor_id,
+                        tipo=f"Nutriente {nutriente}",
+                        valor=float(valor),
+                        severidad="critico",
+                        mensaje=f"{nutriente.capitalize()} muy bajo: {valor} mg/L",
+                        timestamp=now,
+                        activa=True
+                    )
+                    db.session.add(alerta)
+                elif critico_alto is not None and valor > critico_alto:
+                    alerta = AlertaSensor(
+                        parcela=parcela_id,
+                        sensor_id=sensor_id,
+                        tipo=f"Nutriente {nutriente}",
+                        valor=float(valor),
+                        severidad="critico",
+                        mensaje=f"{nutriente.capitalize()} muy alto: {valor} mg/L",
+                        timestamp=now,
+                        activa=True
+                    )
+                    db.session.add(alerta)
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al guardar alertas finales: {e}")
 
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
