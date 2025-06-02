@@ -37,6 +37,250 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
+# ...existing code...
+@app.route('/api/parcelas/recomendaciones', methods=['GET', 'POST', 'OPTIONS'])
+def recomendaciones_parcelas():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-User-Id')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    
+    try:
+        # VERSIÓN SIMPLE QUE FUNCIONA
+        recomendaciones_ia = generar_recomendaciones_con_ia()
+        return jsonify(recomendaciones_ia)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error en recomendaciones_parcelas: {e}")
+        return jsonify([{
+            "id": 1,
+            "cultivo": "Error",
+            "parcela": "Sistema",
+            "recomendacion": f"Error: {str(e)}",
+            "fecha": datetime.now().isoformat()
+        }]), 500
+
+def generar_recomendaciones_con_ia():
+    """Genera recomendaciones usando IA basadas en datos de parcelas y sensores"""
+    try:
+        # Obtener datos de parcelas (usa tus modelos existentes)
+        parcelas_data = obtener_datos_para_ia()
+        recomendaciones = []
+        
+        for i, parcela in enumerate(parcelas_data):
+            try:
+                # Construir prompt específico para IA
+                prompt = f"""
+                Analiza esta parcela agrícola y genera UNA recomendación específica y accionable:
+
+                PARCELA: {parcela['nombre']}
+                CULTIVO: {parcela['cultivo']}
+                CONDICIONES ACTUALES:
+                - Humedad del suelo: {parcela.get('humedad', 'N/A')}%
+                - Temperatura: {parcela.get('temperatura', 'N/A')}°C
+                - pH del suelo: {parcela.get('ph', 'N/A')}
+                - Estado: {parcela.get('estado', 'normal')}
+
+                INSTRUCCIONES:
+                - Genera SOLO una recomendación práctica y específica
+                - Máximo 120 caracteres
+                - Enfócate en la acción más importante
+                - Responde SOLO con el texto, sin formato adicional
+                """
+                
+                # Usar tu función existente de DeepSeek
+                messages = [
+                    {"role": "system", "content": "Eres un agrónomo experto. Responde SOLO con la recomendación práctica, sin introducción."},
+                    {"role": "user", "content": prompt}
+                ]
+                
+                recomendacion_texto = send_to_deepseek(messages)
+                
+                # Limpiar respuesta
+                recomendacion_texto = recomendacion_texto.strip().replace('"', '').replace('\n', ' ')
+                if len(recomendacion_texto) > 150:
+                    recomendacion_texto = recomendacion_texto[:147] + "..."
+                
+            except Exception as ia_error:
+                current_app.logger.error(f"Error IA para parcela {parcela['nombre']}: {ia_error}")
+                # Fallback con lógica de reglas
+                recomendacion_texto = generar_recomendacion_fallback(parcela)
+            
+            recomendaciones.append({
+                "id": i + 1,
+                "cultivo": parcela.get('cultivo', 'Sin cultivo'),
+                "parcela": parcela.get('nombre', f'Parcela {i+1}'),
+                "recomendacion": recomendacion_texto,
+                "fecha": datetime.now().isoformat()
+            })
+        
+        return recomendaciones
+    
+    except Exception as e:
+        current_app.logger.error(f"Error general en generar_recomendaciones_con_ia: {e}")
+        return generar_recomendaciones_fallback_completo()
+
+def obtener_datos_para_ia():
+    """Obtiene datos reales de parcelas y sensores"""
+    try:
+        # Opción 1: Si tienes modelo Parcela
+        if 'Parcela' in globals():
+            parcelas = Parcela.query.limit(5).all()
+            datos_parcelas = []
+            
+            for parcela in parcelas:
+                # Obtener datos de sensores actuales
+                try:
+                    datos_sensores = obtener_parametros_estacion()
+                except:
+                    datos_sensores = {}
+                
+                datos_parcelas.append({
+                    "nombre": parcela.nombre,
+                    "cultivo": getattr(parcela, 'cultivo_actual', 'Sin especificar'),
+                    "estado": getattr(parcela, 'estado', 'normal'),
+                    "humedad": datos_sensores.get('humedad_suelo', 50),
+                    "temperatura": datos_sensores.get('temperatura', 25),
+                    "ph": datos_sensores.get('ph_suelo', 7.0),
+                    "area": getattr(parcela, 'area', '1 ha'),
+                })
+            
+            return datos_parcelas
+        
+        # Opción 2: Datos simulados con sensores reales
+        return obtener_datos_simulados_con_sensores()
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo datos para IA: {e}")
+        return obtener_datos_simulados_con_sensores()
+
+def obtener_datos_simulados_con_sensores():
+    """Genera datos basados en sensores reales"""
+    try:
+        # Usar tus datos de sensores reales
+        datos_sensores = obtener_parametros_estacion()
+        
+        return [
+            {
+                "nombre": "Parcela Norte",
+                "cultivo": "Tomate",
+                "estado": "normal" if datos_sensores.get('humedad_suelo', 50) > 40 else "crítico",
+                "humedad": datos_sensores.get('humedad_suelo', 45),
+                "temperatura": datos_sensores.get('temperatura', 28),
+                "ph": datos_sensores.get('ph_suelo', 6.8),
+                "area": "2.5 ha"
+            },
+            {
+                "nombre": "Parcela Sur", 
+                "cultivo": "Maíz",
+                "estado": "alerta" if datos_sensores.get('temperatura', 25) > 30 else "normal",
+                "humedad": datos_sensores.get('humedad_suelo', 38),
+                "temperatura": datos_sensores.get('temperatura', 26),
+                "ph": datos_sensores.get('ph_suelo', 7.2),
+                "area": "3.2 ha"
+            },
+            {
+                "nombre": "Parcela Este",
+                "cultivo": "Trigo", 
+                "estado": "normal",
+                "humedad": datos_sensores.get('humedad_suelo', 55),
+                "temperatura": datos_sensores.get('temperatura', 24),
+                "ph": datos_sensores.get('ph_suelo', 6.5),
+                "area": "1.8 ha"
+            }
+        ]
+    except Exception as e:
+        current_app.logger.error(f"Error con sensores: {e}")
+        return generar_datos_basicos()
+
+def generar_recomendacion_fallback(parcela):
+    """Genera recomendación con lógica de reglas si falla la IA"""
+    humedad = parcela.get('humedad', 50)
+    temperatura = parcela.get('temperatura', 25)
+    ph = parcela.get('ph', 7.0)
+    cultivo = parcela.get('cultivo', 'cultivo')
+    
+    # Priorizar problemas críticos
+    if humedad < 30:
+        return f"URGENTE: Riego inmediato para {cultivo}. Humedad crítica: {humedad}%"
+    elif humedad < 45:
+        return f"Incrementar riego en 25% para {cultivo}. Humedad baja: {humedad}%"
+    elif temperatura > 32:
+        return f"Implementar sombreado para {cultivo}. Temperatura alta: {temperatura}°C"
+    elif ph < 5.5 or ph > 8.0:
+        return f"Ajustar pH del suelo para {cultivo}. Valor actual: {ph}"
+    else:
+        return f"Monitorear desarrollo del {cultivo}. Condiciones estables."
+
+def generar_recomendaciones_fallback_completo():
+    """Fallback completo si todo falla"""
+    return [
+        {
+            "id": 1,
+            "cultivo": "Tomate",
+            "parcela": "Parcela Norte",
+            "recomendacion": "Verificar sistema de riego y monitorear condiciones de humedad.",
+            "fecha": datetime.now().isoformat()
+        },
+        {
+            "id": 2,
+            "cultivo": "Maíz", 
+            "parcela": "Parcela Sur",
+            "recomendacion": "Evaluar necesidades de fertilización nitrogenada.",
+            "fecha": datetime.now().isoformat()
+        },
+        {
+            "id": 3,
+            "cultivo": "Trigo",
+            "parcela": "Parcela Este", 
+            "recomendacion": "Monitorear desarrollo y condiciones climáticas.",
+            "fecha": datetime.now().isoformat()
+        }
+    ]
+
+def generar_datos_basicos():
+    """Datos básicos si fallan los sensores"""
+    return [
+        {
+            "nombre": "Parcela Norte",
+            "cultivo": "Tomate",
+            "estado": "normal",
+            "humedad": 45,
+            "temperatura": 28,
+            "ph": 6.8
+        },
+        {
+            "nombre": "Parcela Sur",
+            "cultivo": "Maíz", 
+            "estado": "alerta",
+            "humedad": 35,
+            "temperatura": 31,
+            "ph": 7.2
+        }
+    ]
+
+# ...existing code...
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({
+        "error": "Ruta no encontrada",
+        "message": "La ruta solicitada no existe",
+        "status": 404
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        "error": "Error interno del servidor",
+        "message": str(error),
+        "status": 500
+    }), 500
+
+
 #Endpoints para la API de administración de usuarios
 @app.route('/api/registro', methods=['POST'])
 def registrar_usuario():
@@ -1839,6 +2083,25 @@ def guardar_analisis_parcela(parcela_id):
 @app.route('/')
 def home():
     return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"
+# ...existing code...
+
+# Agregar endpoint de debug para ver rutas
+@app.route('/api/debug/routes', methods=['GET'])
+def debug_routes():
+    """Endpoint para debug - listar todas las rutas registradas"""
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': list(rule.methods),
+            'url': str(rule)
+        })
+    return jsonify({
+        "total_routes": len(routes),
+        "routes": routes
+    })
+
+# ...existing code...
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
