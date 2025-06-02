@@ -26,6 +26,7 @@ import GestionParcelas from './views/GestionParcelas';
 import DetalleParcela from './views/DetalleParcela';
 import FormularioParcela from './views/FormularioParcela';
 import EditarParcelaPage from './views/EditarParcelaPage';
+import RecomendacionesPage from './views/Recomendaciones';
 
 // ===== VISTAS PARA AGRICULTOR =====
 import DashboardAgronomo from './views/DashboardAgronomo';
@@ -185,7 +186,14 @@ function App() {
           </div>
         } />
         
-       // Reemplaza todas las rutas del agrónomo que actualmente usan HeaderTecnico:
+       <Route path="/dashboard/agricultor/recomendaciones" element={
+  <div className="app-container">
+    <HeaderAgricultor />
+    <div className="content-container">
+      <RecomendacionesPage />
+    </div>
+  </div>
+} />
 
 {/* ===== RUTAS PARA AGRÓNOMO ===== */}
 <Route path="/dashboard/agronomo" element={
@@ -241,11 +249,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      {/* Página de recomendaciones que se implementará después */}
-      <div style={{textAlign: 'center', padding: '50px'}}>
-        <h2>Recomendaciones IA</h2>
-        <p>Esta funcionalidad estará disponible próximamente</p>
-      </div>
+      <RecomendacionesPage/>
     </div>
   </div>
 } />
