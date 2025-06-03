@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './HeaderAgronomo.css';
 
 const HeaderAgronomo = ({ activeItem }) => {
   const [usuario, setUsuario] = useState(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [alertasAbierto, setAlertasAbierto] = useState(false);
   const navigate = useNavigate();
+
+  const menuRef = useRef();
+  const alertasRef = useRef();
+  const [alertas, setAlertas] = useState([]);
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -24,13 +29,41 @@ const HeaderAgronomo = ({ activeItem }) => {
   const cerrarSesion = () => {
     localStorage.removeItem('ecosmart_user');
     localStorage.removeItem('ecosmart_token');
-    // Disparar evento para limpiar datos de chat
     window.dispatchEvent(new CustomEvent('session_cleared'));
     navigate('/login');
   };
 
+  // Cargar alertas
+  useEffect(() => {
+    fetch('http://localhost:5000/api/alertas')
+      .then(res => res.json())
+      .then(data => setAlertas(Array.isArray(data) ? data : []))
+      .catch(() => setAlertas([]));
+  }, []);
+
+  // Cierra ambos menús si se hace click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        menuRef.current && !menuRef.current.contains(event.target) &&
+        alertasRef.current && !alertasRef.current.contains(event.target)
+      ) {
+        setMenuAbierto(false);
+        setAlertasAbierto(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Al abrir un menú, cierra el otro
   const toggleMenu = () => {
     setMenuAbierto(!menuAbierto);
+    if (!menuAbierto) setAlertasAbierto(false);
+  };
+  const toggleAlertas = () => {
+    setAlertasAbierto(!alertasAbierto);
+    if (!alertasAbierto) setMenuAbierto(false);
   };
 
   return (
@@ -54,12 +87,6 @@ const HeaderAgronomo = ({ activeItem }) => {
           Parcelas
         </Link>
         <Link 
-          to="/dashboard/agronomo/alertas" 
-          className={`nav-item ${activeItem === 'alertas' ? 'active' : ''}`}
-        >
-          Alertas
-        </Link>
-        <Link 
           to="/dashboard/agronomo/chat" 
           className={`nav-item ${activeItem === 'chat' ? 'active' : ''}`}
         >
@@ -67,41 +94,76 @@ const HeaderAgronomo = ({ activeItem }) => {
         </Link>
       </div>
       
-      <div className="user-profile" onClick={toggleMenu}>
-        <div className="user-avatar agronomo">
-          <i className="fas fa-user-tie"></i>
+      <div className="header-user-alertas">
+        <div className="notificaciones-wrapper" ref={alertasRef}>
+          <button
+            className="icono-campana"
+            onClick={toggleAlertas}
+            aria-label="Ver alertas"
+          >
+            <i className="fas fa-bell"></i>
+            {alertas.length > 0 && (
+              <span className="badge-alerta">{alertas.length}</span>
+            )}
+          </button>
+          {alertasAbierto && (
+            <div className="menu-alertas">
+              <h4>Alertas recientes</h4>
+              {alertas.length === 0 ? (
+                <div className="alerta-vacia">Sin alertas</div>
+              ) : (
+                <ul>
+                  {alertas.map(alerta => (
+                    <li key={alerta.id} className={`alerta-item ${alerta.severidad}`}>
+                      <div>
+                        <strong>{alerta.mensaje}</strong>
+                        <div className="alerta-detalle">
+                          <span>{alerta.fecha}</span> | <span>{alerta.parcela}</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
-        <div className="user-info">
-          <div className="user-name">{usuario?.nombre}</div>
-          <div className="user-role">
-            {usuario?.rol === 'agronomo' ? 'Agrónomo' : 'Técnico Agrícola'}
+        <div className="user-profile" onClick={toggleMenu} ref={menuRef}>
+          <div className="user-avatar agronomo">
+            <i className="fas fa-user-tie"></i>
           </div>
-        </div>
-        <div className="user-menu-icon">
-          <i className={`fas fa-chevron-${menuAbierto ? 'up' : 'down'}`}></i>
-        </div>
-        
-        {menuAbierto && (
-          <div className="user-dropdown-menu">
-            <Link to="/dashboard/agronomo/perfil" className="dropdown-item">
-              <i className="fas fa-user"></i>
-              Mi Perfil
-            </Link>
-            <Link to="/configuracion" className="dropdown-item">
-              <i className="fas fa-cog"></i>
-              Configuración
-            </Link>
-            <Link to="/dashboard/agronomo/reportes" className="dropdown-item">
-              <i className="fas fa-chart-bar"></i>
-              Reportes
-            </Link>
-            <div className="dropdown-divider"></div>
-            <div className="dropdown-item logout" onClick={cerrarSesion}>
-              <i className="fas fa-sign-out-alt"></i>
-              Cerrar Sesión
+          <div className="user-info">
+            <div className="user-name">{usuario?.nombre}</div>
+            <div className="user-role">
+              {usuario?.rol === 'agronomo' ? 'Agrónomo' : 'Técnico Agrícola'}
             </div>
           </div>
-        )}
+          <div className="user-menu-icon">
+            <i className={`fas fa-chevron-${menuAbierto ? 'up' : 'down'}`}></i>
+          </div>
+          
+          {menuAbierto && (
+            <div className="user-dropdown-menu">
+              <Link to="/dashboard/agronomo/perfil" className="dropdown-item">
+                <i className="fas fa-user"></i>
+                Mi Perfil
+              </Link>
+              <Link to="/configuracion" className="dropdown-item">
+                <i className="fas fa-cog"></i>
+                Configuración
+              </Link>
+              <Link to="/dashboard/agronomo/reportes" className="dropdown-item">
+                <i className="fas fa-chart-bar"></i>
+                Reportes
+              </Link>
+              <div className="dropdown-divider"></div>
+              <div className="dropdown-item logout" onClick={cerrarSesion}>
+                <i className="fas fa-sign-out-alt"></i>
+                Cerrar Sesión
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

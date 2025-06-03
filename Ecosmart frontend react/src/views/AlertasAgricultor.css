@@ -1,0 +1,50 @@
+.alertas-page {
+  max-width: 600px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 32px 24px;
+}
+
+.alertas-page h2 {
+  margin-bottom: 24px;
+  color: #22963e;
+}
+
+.alertas-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+}
+
+.alerta-item {
+  border-bottom: 1px solid #eee;
+  padding: 12px 0;
+}
+
+.alerta-item.critico strong { color: #d32f2f; }
+.alerta-item.alerta strong { color: #fbc02d; }
+.alerta-item.normal strong { color: #22963e; }
+
+.alerta-detalle {
+  font-size: 0.9em;
+  color: #888;
+  margin-top: 2px;
+}
+
+.alerta-vacia {
+  color: #888;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.volver-btn {
+  margin-top: 24px;
+  background: #22963e;
+  color: #fff;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}

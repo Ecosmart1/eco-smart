@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './HeaderAgricultor.css';
 
 const HeaderAgricultor = ({ activeItem }) => {
   const [usuario, setUsuario] = useState(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [alertasAbierto, setAlertasAbierto] = useState(false);
+  const [alertas, setAlertas] = useState([]);
   const navigate = useNavigate();
+  const menuRef = useRef(null);
+  const alertasRef = useRef(null);
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -26,9 +30,40 @@ const HeaderAgricultor = ({ activeItem }) => {
     navigate('/login');
   };
 
+   // Cargar alertas
+   useEffect(() => {
+    if (!usuario) return; // Espera a que usuario esté definido
+    fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
+      .then(res => res.json())
+      .then(data => setAlertas(Array.isArray(data) ? data : []))
+      .catch(() => setAlertas([]));
+  }, [usuario]);
+  
+  // Cierra ambos menús si se hace click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        menuRef.current && !menuRef.current.contains(event.target) &&
+        alertasRef.current && !alertasRef.current.contains(event.target)
+      ) {
+        setMenuAbierto(false);
+        setAlertasAbierto(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  
+  // Al abrir un menú, cierra el otro
   const toggleMenu = () => {
     setMenuAbierto(!menuAbierto);
+    if (!menuAbierto) setAlertasAbierto(false);
   };
+  const toggleAlertas = () => {
+    setAlertasAbierto(!alertasAbierto);
+    if (!alertasAbierto) setMenuAbierto(false);
+  };
+  
 
   return (
     <div className="dashboard-header">
@@ -55,12 +90,12 @@ const HeaderAgricultor = ({ activeItem }) => {
         >
           Sensores
         </Link>
-        <Link 
+       {/* <Link 
           to="/dashboard/agricultor/alertas" 
           className={`nav-item ${activeItem === 'alertas' ? 'active' : ''}`}
         >
           Alertas
-        </Link>
+        </Link>-*/}
         <Link 
           to="/dashboard/agricultor/chat" 
           className={`nav-item ${activeItem === 'chat' ? 'active' : ''}`}
@@ -68,24 +103,69 @@ const HeaderAgricultor = ({ activeItem }) => {
           Asistente IA
         </Link>
       </div>
-      <div className="user-profile" onClick={toggleMenu}>
-        <div className="user-avatar">
-          {usuario?.nombre.charAt(0)}
+      <div className="header-user-alertas">
+        <div className="notificaciones-wrapper" ref={alertasRef}>
+          <button
+            className="icono-campana"
+            onClick={() => navigate('/dashboard/agricultor/alertas')}
+            aria-label="Ver alertas"
+          >
+            <i className="fas fa-bell"></i>
+            {alertas.length > 0 && (
+              <span className="badge-alerta">{alertas.length}</span>
+            )}
+          </button>
+          {alertasAbierto && (
+            <div className="menu-alertas">
+              <h4>Alertas recientes</h4>
+              {alertas.length === 0 ? (
+                <div className="alerta-vacia">Sin alertas</div>
+              ) : (
+                <ul>
+                  {alertas.map(alerta => (
+                    <li
+                      key={alerta.id}
+                      className={`alerta-item ${alerta.severidad}`}
+                      onClick={() => navigate('/dashboard/agricultor/alertas')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div>
+                        <strong>{alerta.mensaje}</strong>
+                        <div className="alerta-detalle">
+                          <span>{alerta.fecha}</span> | <span>{alerta.parcela}</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                className="ver-todas-alertas-btn"
+                onClick={() => navigate('/dashboard/agricultor/alertas')}
+              >
+                Ver todas
+              </button>
+            </div>
+          )}
         </div>
-        <div className="user-info">
-          <div className="user-name">{usuario?.nombre}</div>
-          <div className="user-role">Agricultor</div>
-        </div>
-        <div className="user-menu-icon">▼</div>
-        
-        {menuAbierto && (
-          <div className="user-dropdown-menu">
-            {/*  Al pulsar en configuracion en el header agricultor debera llevarte a configuracion de contraseña */ }
-            <Link to="/configuracion" className="dropdown-item">Configuración</Link>
-            <div className="dropdown-divider"></div>
-            <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>
+        <div className="user-profile" onClick={toggleMenu} ref={menuRef}>
+          <div className="user-avatar">
+            {usuario?.nombre?.charAt(0)}
           </div>
-        )}
+          <div className="user-info">
+            <div className="user-name">{usuario?.nombre}</div>
+            <div className="user-role">Agricultor</div>
+          </div>
+          <div className="user-menu-icon">▼</div>
+          {menuAbierto && (
+            <div className="user-dropdown-menu">
+              {/* Al pulsar en configuración debe llevar a configuración de contraseña */}
+              <Link to="/configuracion" className="dropdown-item">Configuración</Link>
+              <div className="dropdown-divider"></div>
+              <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

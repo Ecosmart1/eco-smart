@@ -32,7 +32,7 @@ import RecomendacionesPage from './views/Recomendaciones';
 import DashboardAgronomo from './views/DashboardAgronomo';
 import EstadoCultivos from './views/EstadoCultivos';
 import DetalleCultivo from './views/DetalleCultivo';
-
+import AlertasAgricultor from './views/AlertasAgricultor';
 
 
 
@@ -139,7 +139,7 @@ function App() {
           <div className="app-container">
             <HeaderAgricultor />
             <div className="content-container">
-              {/* Contenido de alertas */}
+              <AlertasAgricultor userId={getUserId()} />
             </div>
           </div>
         } />

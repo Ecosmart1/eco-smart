@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file, current_app
+from flask import Flask, jsonify, request, send_file, current_app, Blueprint
 from flask_cors import CORS
 import os
 import sys
@@ -32,7 +32,7 @@ CORS(app, resources={
 })  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = '...'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -2244,7 +2244,34 @@ def guardar_analisis_parcela(parcela_id):
         current_app.logger.error(f"Error guardando análisis: {str(e)}")
         return jsonify({"error": "Error al guardar el análisis", "details": str(e)}), 500
 
+@app.route('/api/alertas', methods=['GET'])
+def obtener_alertas():
+    user_id = request.args.get('user_id')
+    if user_id:
+        parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
+        parcelas_ids = [p.id for p in parcelas_usuario]
+        # SOLO alertas activas
+        alertas = AlertaSensor.query.filter(
+            AlertaSensor.parcela_id.in_(parcelas_ids),
+            AlertaSensor.activa == True
+        ).order_by(AlertaSensor.fecha.desc()).limit(20).all()
+    else:
+        alertas = AlertaSensor.query.filter(
+            AlertaSensor.activa == True
+        ).order_by(AlertaSensor.fecha.desc()).limit(20).all()
 
+    resultado = []
+    for alerta in alertas:
+        parcela = Parcela.query.get(alerta.parcela_id)
+        resultado.append({
+            "id": alerta.id,
+            "mensaje": alerta.mensaje,
+            "fecha": alerta.fecha.strftime("%d/%m/%Y %H:%M"),
+            "parcela": parcela.nombre if parcela else "Desconocida",
+            "tipo": alerta.tipo,
+            "severidad": alerta.severidad
+        })
+    return jsonify(resultado)
 @app.route('/')
 def home():
     return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"

@@ -27,6 +27,7 @@ import {
   nuevaConversacion, 
   eliminarConversacion 
 } from '../services/servicioOpenrouter.js';
+import Markdown from 'markdown-to-jsx';
 
 const API_URL = "http://localhost:5000/api";
 
@@ -599,7 +600,29 @@ const DashboardAgronomo = () => {
     navigate('/login');
   };
 
-  
+  // Detectar conexión/desconexión a internet
+  useEffect(() => {
+    const actualizarEstadoConexion = () => {
+      if (!window.navigator.onLine) {
+        setEstadoIA('desconectado');
+        setErrorConexion(true);
+      } else if (estadoIA === 'desconectado') {
+        setEstadoIA('conectado');
+        setErrorConexion(false);
+      }
+    };
+
+    window.addEventListener('offline', actualizarEstadoConexion);
+    window.addEventListener('online', actualizarEstadoConexion);
+
+    // Verifica al montar
+    actualizarEstadoConexion();
+
+    return () => {
+      window.removeEventListener('offline', actualizarEstadoConexion);
+      window.removeEventListener('online', actualizarEstadoConexion);
+    };
+  }, [estadoIA]);
 
   // Si no hay usuario, mostrar cargando o redirigir
   if (!usuario) {
@@ -664,6 +687,7 @@ const DashboardAgronomo = () => {
       case 'conectado': return '#4CAF50';
       case 'reconectando': return '#FFC107';
       case 'error': return '#F44336';
+      case 'desconectado': return '#9E9E9E';
       default: return '#9E9E9E';
     }
   };
@@ -673,6 +697,7 @@ const DashboardAgronomo = () => {
       case 'conectado': return 'IA Conectada';
       case 'reconectando': return 'Reconectando...';
       case 'error': return 'Error de conexión';
+      case 'desconectado': return 'Sin conexión a internet';
       default: return 'Desconectado';
     }
   };
@@ -983,13 +1008,34 @@ const DashboardAgronomo = () => {
                   </div>
                 </div>
               ) : (
-                historialChat.map(msg => (
-                  <div key={msg.id} className={`chat-asistente-message ${msg.tipo === 'usuario' ? 'user' : msg.tipo === 'error' ? 'error' : 'bot'}`}>
+                historialChat.map((msg, idx) => (
+                  <div key={msg.id || idx} className={`chat-asistente-message ${msg.tipo === 'usuario' ? 'user' : msg.tipo === 'error' ? 'error' : 'bot'}`}>
                     <div className={`chat-asistente-bubble ${msg.tipo === 'usuario' ? 'user' : msg.tipo === 'error' ? 'error' : 'bot'}`}>
-                      {msg.mensaje}
+                      {msg.tipo === 'ia'
+                        ? (
+                          <Markdown
+                            options={{
+                              forceBlock: true,
+                              overrides: {
+                              h1: { props: { style: { fontSize: '1.2em', margin: '8px 0 4px 0' } } },
+                              h2: { props: { style: { fontSize: '1.1em', margin: '8px 0 4px 0' } } },
+                              h3: { props: { style: { fontSize: '1em', margin: '8px 0 4px 0' } } },
+                              ul: { props: { style: { margin: '2px 0', paddingLeft: '22px', lineHeight: '1.3' } } },
+                              ol: { props: { style: { margin: '2px 0', paddingLeft: '22px', lineHeight: '1.3' } } },
+                              li: { props: { style: { marginBottom: '2px', lineHeight: '1.3' } } },
+                              p: { props: { style: { margin: 0, lineHeight: '1.4' } } }
+                            }
+                            }}
+                          >
+                            {msg.mensaje}
+                          </Markdown>
+                        )
+                        : msg.mensaje}
                     </div>
                     <div className="message-timestamp">
-                      {msg.timestamp.toLocaleTimeString()}
+                      {msg.timestamp instanceof Date
+                        ? msg.timestamp.toLocaleTimeString()
+                        : new Date(msg.timestamp).toLocaleTimeString()}
                     </div>
                   </div>
                 ))
