@@ -74,3 +74,15 @@ class LogAccionUsuario(db.Model):
     entidad_id = db.Column(db.Integer, nullable=True)   # ID de la parcela/usuario/etc.
     detalles = db.Column(db.Text, nullable=True)        # JSON/string con detalles extra de la acción
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class AlertaSensor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    parcela = db.Column(db.Integer)
+    sensor_id = db.Column(db.Integer)
+    tipo = db.Column(db.String)
+    valor = db.Column(db.Float)
+    severidad = db.Column(db.String)  # 'alerta' o 'critico'
+    mensaje = db.Column(db.String)
+    timestamp = db.Column(db.DateTime)
+    activa = db.Column(db.Boolean, default=True)  # True si la alerta sigue activa, False si ya fue resuelta
