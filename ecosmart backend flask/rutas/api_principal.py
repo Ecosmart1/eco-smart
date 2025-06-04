@@ -92,7 +92,7 @@ def generar_recomendaciones_con_ia():
                 
                 # Usar tu función existente de DeepSeek
                 messages = [
-                    {"role": "system", "content": "Eres un agrónomo experto. Responde SOLO con la recomendación práctica, sin introducción."},
+                    {"role": "system", "content": "Eres un agrónomo experto. Responde SOLO con la recomendación práctica,no respondas preguntas que no sean del ambito agricola, sin introducción."},
                     {"role": "user", "content": prompt}
                 ]
                 
@@ -394,7 +394,7 @@ def generar_recomendaciones_cultivo():
 
         # Construir prompt para la IA
         prompt = f"""Como experto agrónomo, genera exactamente 3 recomendaciones BREVES y ESPECÍFICAS para un cultivo de {cultivo} 
-        que se encuentra en estado {estado}.
+        que se encuentra en estado, {estado}.
         
         Datos del cultivo:
         - Tipo: {cultivo}
@@ -426,7 +426,7 @@ def generar_recomendaciones_cultivo():
 
         # Enviar a la IA
         messages = [
-            {"role": "system", "content": "Eres un experto agrónomo especializado en cultivos y agricultura de precisión."},
+            {"role": "system", "content": "Eres un experto agrónomo especializado en cultivos y agricultura de precisión,solo responde preguntas del ambito agricola."},
             {"role": "user", "content": prompt}
         ]
         
