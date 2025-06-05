@@ -2247,18 +2247,19 @@ def guardar_analisis_parcela(parcela_id):
 @app.route('/api/alertas', methods=['GET'])
 def obtener_alertas():
     user_id = request.args.get('user_id')
+    inactivas = request.args.get('inactivas')
+    query = AlertaSensor.query
+
     if user_id:
         parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
         parcelas_ids = [p.id for p in parcelas_usuario]
-        # SOLO alertas activas
-        alertas = AlertaSensor.query.filter(
-            AlertaSensor.parcela.in_(parcelas_ids),
-            AlertaSensor.activa == True
-        ).order_by(AlertaSensor.timestamp.desc()).limit(20).all()
+        query = query.filter(AlertaSensor.parcela.in_(parcelas_ids))
+    if inactivas == "1":
+        query = query.filter(AlertaSensor.activa == False)
     else:
-        alertas = AlertaSensor.query.filter(
-            AlertaSensor.activa == True
-        ).order_by(AlertaSensor.timestamp.desc()).limit(20).all()
+        query = query.filter(AlertaSensor.activa == True)
+
+    alertas = query.order_by(AlertaSensor.timestamp.desc()).limit(20).all()
 
     resultado = []
     for alerta in alertas:
@@ -2272,6 +2273,25 @@ def obtener_alertas():
             "severidad": alerta.severidad
         })
     return jsonify(resultado)
+
+@app.route('/api/alertas/<int:alerta_id>/revisada', methods=['PUT'])
+def marcar_alerta_como_revisada(alerta_id):
+    alerta = AlertaSensor.query.get(alerta_id)
+    if not alerta:
+        return jsonify({'error': 'Alerta no encontrada'}), 404
+    alerta.activa = False
+    db.session.commit()
+    return jsonify({'mensaje': 'Alerta marcada como revisada'})
+
+@app.route('/api/alertas/<int:alerta_id>', methods=['DELETE'])
+def eliminar_alerta(alerta_id):
+    alerta = AlertaSensor.query.get(alerta_id)
+    if not alerta:
+        return jsonify({'error': 'Alerta no encontrada'}), 404
+    db.session.delete(alerta)
+    db.session.commit()
+    return jsonify({'mensaje': 'Alerta eliminada correctamente'})
+
 @app.route('/')
 def home():
     return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"

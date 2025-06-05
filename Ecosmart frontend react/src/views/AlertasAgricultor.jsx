@@ -1,51 +1,144 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import HeaderAgricultor from './headeragricultor';
 import './AlertasAgricultor.css';
 
-const AlertasAgricultor = ({ usuario }) => {
+const TickIcon = () => (
+  <svg className="tick-icon" width="18" height="18" viewBox="0 0 20 20" fill="none">
+    <circle cx="10" cy="10" r="10" fill="#22963e"/>
+    <path d="M6 10.5L9 13.5L14 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const AlertasUsuario = () => {
   const [alertas, setAlertas] = useState([]);
-  const navigate = useNavigate();
+  const [historial, setHistorial] = useState([]);
+  const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
-  if (!usuario) return;
-  fetch('http://localhost:5000/api/alertas')
-    .then(res => res.json())
-    .then(data => {
-      console.log('Alertas recibidas:', data);
-      setAlertas(
-        Array.isArray(data)
-          ? data.map(alerta => ({
-              ...alerta,
-              parcela: alerta.parcela || alerta.parcelaNombre || alerta.parcela_nombre || 'Sin nombre'
-            }))
-          : []
-      );
+    // Obtener usuario desde localStorage
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (!usuarioGuardado) return;
+    const usuarioObj = JSON.parse(usuarioGuardado);
+    setUsuario(usuarioObj);
+
+    // Traer alertas activas
+    fetch(`http://localhost:5000/api/alertas`)
+      .then(res => res.json())
+      .then(data => setAlertas(Array.isArray(data) ? data : []))
+      .catch(() => setAlertas([]));
+
+    // Traer historial de alertas (inactivas)
+    fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+      .then(res => res.json())
+      .then(data => setHistorial(Array.isArray(data) ? data : []))
+      .catch(() => setHistorial([]));
+  }, []);
+
+  // Marcar alerta como revisada
+  const marcarComoRevisada = (alertaId) => {
+    fetch(`http://localhost:5000/api/alertas/${alertaId}/revisada`, {
+      method: 'PUT'
     })
-    .catch(() => setAlertas([]));
-}, [usuario]);
+      .then(res => {
+        if (res.ok) {
+          setAlertas(alertas.filter(a => a.id !== alertaId));
+          // Opcional: recargar historial
+          fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+            .then(res => res.json())
+            .then(data => setHistorial(Array.isArray(data) ? data : []));
+        }
+      });
+  };
+
+  // Eliminar alerta
+  const eliminarAlerta = (alertaId) => {
+    fetch(`http://localhost:5000/api/alertas/${alertaId}`, {
+      method: 'DELETE'
+    })
+      .then(res => {
+        if (res.ok) {
+          setAlertas(alertas.filter(a => a.id !== alertaId));
+          setHistorial(historial.filter(a => a.id !== alertaId));
+        }
+      });
+  };
 
   return (
-    <div className="alertas-page">
-      <h2>Alertas recientes</h2>
-      {alertas.length === 0 ? (
-        <div className="alerta-vacia">Sin alertas activas</div>
-      ) : (
-        <ul className="alertas-lista">
-          {alertas.map(alerta => (
-            <li key={alerta.id} className={`alerta-item ${alerta.severidad}`}>
-              <div>
-                <strong>{alerta.mensaje}</strong>
-                <div className="alerta-detalle">
-                  <span>{alerta.timestamp}</span> | <span>{alerta.parcela}</span>
+    <div className="alertas-usuario-page">
+      <div className="alertas-usuario-content">
+        <h2>Alertas actuales</h2>
+        {alertas.length === 0 ? (
+          <div className="alerta-vacia">No hay alertas activas para tu cuenta.</div>
+        ) : (
+          <ul className="alertas-usuario-lista">
+            {alertas.map(alerta => (
+              <li key={alerta.id} className={`alerta-usuario-item ${alerta.severidad}`}>
+                <div className="alerta-usuario-header">
+                  <span className={`alerta-severidad-badge ${alerta.severidad}`}>{alerta.severidad.toUpperCase()}</span>
+                  <span className="alerta-tipo">{alerta.tipo}</span>
+                  <span className="alerta-fecha">{alerta.timestamp}</span>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      <button className="volver-btn" onClick={() => navigate(-1)}>Volver</button>
+                <div className="alerta-usuario-body">
+                  <strong>{alerta.mensaje}</strong>
+                  <div className="alerta-info-extra">
+                    <span><b>Parcela:</b> {alerta.parcela}</span>
+                  </div>
+                  <div className="alerta-acciones">
+                    <button
+                      className="btn-alerta revisar"
+                      onClick={() => marcarComoRevisada(alerta.id)}
+                    >
+                      <TickIcon /> Marcar como revisada
+                    </button>
+                    <button
+                      className="btn-alerta eliminar"
+                      onClick={() => eliminarAlerta(alerta.id)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <h2 style={{ marginTop: 40 }}>Historial de alertas</h2>
+        {historial.length === 0 ? (
+          <div className="alerta-vacia">No hay alertas antiguas.</div>
+        ) : (
+          <ul className="alertas-usuario-lista">
+            {historial.map(alerta => (
+              <li key={alerta.id} className={`alerta-usuario-item ${alerta.severidad} historial`}>
+                <div className="alerta-usuario-header">
+                  <span className={`alerta-severidad-badge ${alerta.severidad}`}>{alerta.severidad.toUpperCase()}</span>
+                  <span className="alerta-tipo">{alerta.tipo}</span>
+                  <span className="alerta-fecha">{alerta.timestamp}</span>
+                  <span className="alerta-tick-revisada" title="Revisada">
+                    <TickIcon />
+                  </span>
+                </div>
+                <div className="alerta-usuario-body">
+                  <strong>{alerta.mensaje}</strong>
+                  <div className="alerta-info-extra">
+                    <span><b>Parcela:</b> {alerta.parcela}</span>
+                  </div>
+                  <div className="alerta-acciones">
+                    <button
+                      className="btn-alerta eliminar"
+                      onClick={() => eliminarAlerta(alerta.id)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };
 
-export default AlertasAgricultor;
+export default AlertasUsuario;
