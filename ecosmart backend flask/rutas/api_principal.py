@@ -2252,21 +2252,21 @@ def obtener_alertas():
         parcelas_ids = [p.id for p in parcelas_usuario]
         # SOLO alertas activas
         alertas = AlertaSensor.query.filter(
-            AlertaSensor.parcela_id.in_(parcelas_ids),
+            AlertaSensor.parcela.in_(parcelas_ids),
             AlertaSensor.activa == True
-        ).order_by(AlertaSensor.fecha.desc()).limit(20).all()
+        ).order_by(AlertaSensor.timestamp.desc()).limit(20).all()
     else:
         alertas = AlertaSensor.query.filter(
             AlertaSensor.activa == True
-        ).order_by(AlertaSensor.fecha.desc()).limit(20).all()
+        ).order_by(AlertaSensor.timestamp.desc()).limit(20).all()
 
     resultado = []
     for alerta in alertas:
-        parcela = Parcela.query.get(alerta.parcela_id)
+        parcela = Parcela.query.get(alerta.parcela)
         resultado.append({
             "id": alerta.id,
             "mensaje": alerta.mensaje,
-            "fecha": alerta.fecha.strftime("%d/%m/%Y %H:%M"),
+            "timestamp": alerta.timestamp.strftime("%d/%m/%Y %H:%M"),
             "parcela": parcela.nombre if parcela else "Desconocida",
             "tipo": alerta.tipo,
             "severidad": alerta.severidad

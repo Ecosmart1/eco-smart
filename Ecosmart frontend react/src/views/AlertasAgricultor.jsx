@@ -7,12 +7,22 @@ const AlertasAgricultor = ({ usuario }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!usuario) return;
-    fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
-      .then(res => res.json())
-      .then(data => setAlertas(Array.isArray(data) ? data : []))
-      .catch(() => setAlertas([]));
-  }, [usuario]);
+  if (!usuario) return;
+  fetch('http://localhost:5000/api/alertas')
+    .then(res => res.json())
+    .then(data => {
+      console.log('Alertas recibidas:', data);
+      setAlertas(
+        Array.isArray(data)
+          ? data.map(alerta => ({
+              ...alerta,
+              parcela: alerta.parcela || alerta.parcelaNombre || alerta.parcela_nombre || 'Sin nombre'
+            }))
+          : []
+      );
+    })
+    .catch(() => setAlertas([]));
+}, [usuario]);
 
   return (
     <div className="alertas-page">
@@ -26,7 +36,7 @@ const AlertasAgricultor = ({ usuario }) => {
               <div>
                 <strong>{alerta.mensaje}</strong>
                 <div className="alerta-detalle">
-                  <span>{alerta.fecha}</span> | <span>{alerta.parcela}</span>
+                  <span>{alerta.timestamp}</span> | <span>{alerta.parcela}</span>
                 </div>
               </div>
             </li>
