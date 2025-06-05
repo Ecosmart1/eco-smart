@@ -17,8 +17,8 @@ const EstadoCultivos = ({ API_URL }) => {
   // Activar modo simulación para desarrollo
   const MODO_SIMULACION = false;
   
-  // API key de Plant.ID (reemplazar con una clave real si se va a usar el modo real)
-  const PLANT_ID_API_KEY = 'nT9YCVhjRurG7vLzjX8hIsA4dcLccU2AkNGt7F2YS80XecBDpz';
+  // API key de Plant.ID 
+  const PLANT_ID_API_KEY = '5dgLQhjpnEdHqFtrorCQ2EXRfRkAaSFmXKXvuVaAp7T0kgNxBo';
   
   // Cargar parcelas al iniciar el componente
   useEffect(() => {
