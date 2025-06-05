@@ -20,36 +20,134 @@ const EstadoCultivos = ({ API_URL }) => {
   // API key de Plant.ID 
   const PLANT_ID_API_KEY = '5dgLQhjpnEdHqFtrorCQ2EXRfRkAaSFmXKXvuVaAp7T0kgNxBo';
   
-  // Cargar parcelas al iniciar el componente
-  useEffect(() => {
-    const cargarParcelas = async () => {
-      try {
-        setCargando(true);
-        const token = localStorage.getItem('ecosmart_token');
+
+
+
+// Función para formatear la edad en días a formato legible
+const formatearEdad = (diasTotal) => {
+  if (!diasTotal || diasTotal < 0) return 'No calculada';
+  
+  if (diasTotal === 0) return 'Recién sembrado';
+  if (diasTotal === 1) return '1 día';
+  if (diasTotal < 7) return `${diasTotal} días`;
+  
+  const semanas = Math.floor(diasTotal / 7);
+  const diasExtra = diasTotal % 7;
+  
+  if (diasTotal < 30) {
+    return diasExtra === 0 
+      ? `${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`
+      : `${semanas}s ${diasExtra}d`;
+  }
+  
+  const meses = Math.floor(diasTotal / 30);
+  const diasExtraMes = diasTotal % 30;
+  
+  if (diasTotal < 365) {
+    return diasExtraMes === 0
+      ? `${meses} ${meses === 1 ? 'mes' : 'meses'}`
+      : `${meses}m ${Math.floor(diasExtraMes / 7)}s`;
+  }
+  
+  const años = Math.floor(diasTotal / 365);
+  const mesesExtra = Math.floor((diasTotal % 365) / 30);
+  
+  return mesesExtra === 0
+    ? `${años} ${años === 1 ? 'año' : 'años'}`
+    : `${años}a ${mesesExtra}m`;
+};
+
+// Función para obtener el color del progreso
+const obtenerColorProgreso = (progreso) => {
+  if (progreso < 25) return '#e74c3c'; // Rojo - Inicial
+  if (progreso < 50) return '#f39c12'; // Naranja - Desarrollo
+  if (progreso < 75) return '#f1c40f'; // Amarillo - Crecimiento
+  if (progreso < 90) return '#27ae60'; // Verde - Madurando
+  return '#2ecc71'; // Verde claro - Listo para cosecha
+};
+
+// Función para determinar el estado basado en progreso real
+const determinarEstado = (cultivo) => {
+  if (!cultivo) return 'sin-cultivo';
+  
+  const progreso = cultivo.progreso_cosecha || 0;
+  const edad = cultivo.edad_dias || 0;
+  
+  // Lógica para determinar estado basado en datos reales
+  if (progreso >= 90) return 'listo-cosecha';
+  if (progreso >= 75) return 'óptimo';
+  if (progreso >= 50) return 'bueno';
+  if (progreso >= 25) return 'desarrollo';
+  if (edad === 0) return 'recien-sembrado';
+  return 'crecimiento';
+};
+
+
+// REEMPLAZAR desde línea 24 hasta línea 52:
+
+useEffect(() => {
+  const cargarParcelas = async () => {
+    try {
+      setCargando(true);
+      
+      // CAMBIO: Usar endpoint correcto sin token por ahora
+      const response = await fetch(`${API_URL}/parcelas`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': '1' // Agregar user ID para logs
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Parcelas cargadas desde API:", data);
         
-        const response = await fetch(`${API_URL}/parcelas`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        // PROCESAR DATOS REALES: Agregar estado calculado a cada parcela
+        const parcelasConEstado = data.map(parcela => {
+          console.log("Procesando parcela:", parcela.nombre, "con cultivo:", parcela.cultivo);
+          
+          return {
+            ...parcela,
+            estado: determinarEstado(parcela.cultivo),
+            // Asegurar que existe información del cultivo procesada
+            cultivo_procesado: parcela.cultivo ? {
+              ...parcela.cultivo,
+              edad_formateada: formatearEdad(parcela.cultivo.edad_dias),
+              fecha_siembra_formateada: parcela.cultivo.fecha_siembra ? 
+                new Date(parcela.cultivo.fecha_siembra).toLocaleDateString('es-ES', {
+                  day: '2-digit',
+                  month: '2-digit', 
+                  year: 'numeric'
+                }) : 'No especificada'
+            } : null
+          };
         });
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Parcelas cargadas:", data.length);
-          setParcelas(data);
-        } else {
-          throw new Error('Error al cargar las parcelas');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        setError(error.message);
-      } finally {
-        setCargando(false);
+        console.log("Parcelas procesadas:", parcelasConEstado);
+        setParcelas(parcelasConEstado);
+        setError(null);
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-    };
-    
-    cargarParcelas();
-  }, [API_URL]);
+    } catch (error) {
+      console.error('Error al cargar parcelas:', error);
+      setError(`Error al cargar las parcelas: ${error.message}`);
+      
+      // En caso de error, usar datos vacíos para evitar crashes
+      setParcelas([]);
+    } finally {
+      setCargando(false);
+    }
+  };
+  
+  cargarParcelas();
+}, [API_URL]);
+
+
+
+
+
+
 
   // Función para convertir imagen a base64
   const fileToBase64 = (file) => {
@@ -332,44 +430,113 @@ const EstadoCultivos = ({ API_URL }) => {
         </div>
       </div>
       
-      <div className="cultivos-grid">
-        {parcelas
-          .filter(p => filtroActivo === 'todos' || (p.estado || 'óptimo') === filtroActivo)
-          .map(parcela => (
-            <div key={parcela.id} className={`cultivo-card estado-${parcela.estado}`}>
-              <div className="cultivo-header">
-                <h3>{parcela.cultivo_actual || 'Sin cultivo'}</h3>
-                <span className={`estado-badge ${parcela.estado || 'óptimo'}`}>
-                  {parcela.estado || 'óptimo'}
-                </span>
-              </div>
-              
-              <div className="cultivo-info">
-                <p><strong>Parcela:</strong> {parcela.nombre}</p>
-                <p><strong>Variedad:</strong> {parcela.variedad || 'No especificada'}</p>
-                <p><strong>Edad:</strong> {parcela.edad || 'No especificada'}</p>
-                <p><strong>Última revisión:</strong> {new Date().toLocaleDateString()}</p>
-              </div>
-              
-              <div className="cultivo-acciones">
-               <Link to={`/dashboard/agronomo/cultivos/${parcela.id}`}>
-                  <button className="btn-ver-detalle btn-primary">
-                    Ver detalles</button>
-                </Link>
-                
-                <label className="btn-analizar">
-                  <i className="fas fa-camera"></i> Analizar imagen
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => analizarImagen(e, parcela)} 
-                    style={{ display: 'none' }}
-                  />
-                </label>
-              </div>
-            </div>
-          ))}
+
+
+
+<div className="cultivos-grid">
+  {parcelas
+    .filter(p => filtroActivo === 'todos' || p.estado === filtroActivo)
+    .map(parcela => (
+      <div key={parcela.id} className={`cultivo-card estado-${parcela.estado}`}>
+        <div className="cultivo-header">
+          <h3>{parcela.cultivo_actual || 'Sin cultivo'}</h3>
+          <span className={`estado-badge ${parcela.estado}`}>
+            {parcela.estado?.replace('-', ' ')?.toUpperCase() || 'SIN CULTIVO'}
+          </span>
+        </div>
+        
+        <div className="cultivo-info">
+          {/* SOLO INFORMACIÓN ESENCIAL */}
+          <div className="info-esencial">
+            <p><strong>Parcela:</strong> {parcela.nombre}</p>
+            <p><strong>Ubicación:</strong> {parcela.ubicacion}</p>
+            
+            {/* MOSTRAR SOLO SI HAY CULTIVO */}
+            {parcela.cultivo ? (
+              <>
+                <p><strong>Variedad:</strong> {parcela.cultivo.variedad || 'No especificada'}</p>
+                <div className="edad-destacada">
+                  <p><strong>Edad:</strong> 
+                    <span className="valor-edad">
+                      {parcela.cultivo_procesado?.edad_formateada || 'Calculando...'}
+                    </span>
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="sin-cultivo-texto">
+                <i className="fas fa-info-circle"></i>
+                Sin cultivo activo
+              </p>
+            )}
+          </div>
+          
+          {/* ÚLTIMA REVISIÓN */}
+          <div className="ultima-revision">
+            <small>
+              <i className="fas fa-clock"></i>
+              Última revisión: {new Date().toLocaleDateString('es-ES')}
+            </small>
+          </div>
+        </div>
+        
+        <div className="cultivo-acciones">
+          <Link to={`/dashboard/agronomo/cultivos/${parcela.id}`}>
+            <button className="btn-ver-detalle btn-primary">
+              <i className="fas fa-eye"></i>
+              Ver detalles
+            </button>
+          </Link>
+          
+          <label className="btn-analizar">
+            <i className="fas fa-camera"></i>
+            Analizar
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => analizarImagen(e, parcela)} 
+              style={{ display: 'none' }}
+            />
+          </label>
+        </div>
       </div>
+    ))}
+</div>
+
+{/* MENSAJE CUANDO NO HAY PARCELAS */}
+{parcelas.length === 0 && (
+  <div className="sin-parcelas">
+    <div className="sin-parcelas-contenido">
+      <i className="fas fa-seedling fa-3x"></i>
+      <h3>No hay cultivos registrados</h3>
+      <p>Comienza agregando tu primera parcela con cultivo.</p>
+      <Link to="/dashboard/agronomo/parcelas">
+        <button className="btn-agregar-primera">
+          <i className="fas fa-plus"></i>
+          Agregar primera parcela
+        </button>
+      </Link>
+    </div>
+  </div>
+)}
+
+{/* MENSAJE CUANDO EL FILTRO NO ENCUENTRA RESULTADOS */}
+{parcelas.length > 0 && parcelas.filter(p => filtroActivo === 'todos' || p.estado === filtroActivo).length === 0 && (
+  <div className="sin-resultados-filtro">
+    <div className="sin-resultados-contenido">
+      <i className="fas fa-filter fa-2x"></i>
+      <h3>No hay cultivos con este estado</h3>
+      <p>Prueba cambiando el filtro o revisa el estado de tus cultivos.</p>
+      <button 
+        className="btn-limpiar-filtro"
+        onClick={() => setFiltroActivo('todos')}
+      >
+        <i className="fas fa-times"></i>
+        Mostrar todos
+      </button>
+    </div>
+  </div>
+)}
       
       {/* Modal para análisis de imagen */}
       {/* Modal para análisis de imagen */}
