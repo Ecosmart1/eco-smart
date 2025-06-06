@@ -27,7 +27,8 @@ class Usuario(db.Model):
     rol = db.Column(db.String(50), nullable=False)
     codigo_recuperacion = db.Column(db.Integer, nullable=True)
     codigo_expira = db.Column(db.DateTime, nullable=True)
-    
+# ...existing code...
+
 class Parcela(db.Model):
     __tablename__ = 'parcelas'
     id = db.Column(db.Integer, primary_key=True)
@@ -39,6 +40,15 @@ class Parcela(db.Model):
     fecha_creacion = db.Column(db.DateTime, nullable=True)
     cultivo_actual = db.Column(db.String(100), nullable=True)
     fecha_siembra = db.Column(db.Date, nullable=True)
+    
+    # AGREGAR: Relación con cultivos
+    cultivos = db.relationship('DetalleCultivo', backref='parcela', lazy=True, cascade='all, delete-orphan')
+    
+    def get_cultivo_activo(self):
+        """Obtiene el cultivo activo actual de la parcela"""
+        return DetalleCultivo.query.filter_by(parcela_id=self.id, activo=True).first()
+
+# ...existing code...
     
 class Conversacion(db.Model):
     __tablename__ = 'conversaciones'
@@ -74,3 +84,47 @@ class LogAccionUsuario(db.Model):
     entidad_id = db.Column(db.Integer, nullable=True)   # ID de la parcela/usuario/etc.
     detalles = db.Column(db.Text, nullable=True)        # JSON/string con detalles extra de la acción
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    
+# ...existing code...
+
+# ...existing code...
+
+class DetalleCultivo(db.Model):
+    __tablename__ = 'cultivos'
+    id = db.Column(db.Integer, primary_key=True)
+    parcela_id = db.Column(db.Integer, db.ForeignKey('parcelas.id'), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    variedad = db.Column(db.String(100), nullable=True)
+    edad = db.Column(db.Integer, nullable=True)
+    etapa_desarrollo = db.Column(db.String(50), nullable=True)
+    fecha_siembra = db.Column(db.DateTime, nullable=True)
+    dias_cosecha_estimados = db.Column(db.Integer, nullable=True)
+    activo = db.Column(db.Boolean, default=True)
+    fecha_cosecha = db.Column(db.DateTime, nullable=True)
+    
+    def calcular_edad_dias(self):
+        """Calcula la edad en días desde la siembra"""
+        if self.fecha_siembra:
+            from datetime import datetime, UTC
+            
+            # Asegurar que ambas fechas tengan la misma zona horaria
+            ahora = datetime.now(UTC)
+            
+            # Si fecha_siembra no tiene zona horaria, agregarla
+            if self.fecha_siembra.tzinfo is None:
+                fecha_siembra_utc = self.fecha_siembra.replace(tzinfo=UTC)
+            else:
+                fecha_siembra_utc = self.fecha_siembra
+            
+            return (ahora - fecha_siembra_utc).days
+        return 0
+    
+    def progreso_cosecha(self):
+        """Calcula el porcentaje de progreso hacia la cosecha"""
+        if self.dias_cosecha_estimados and self.fecha_siembra:
+            edad = self.calcular_edad_dias()
+            return min(100, (edad / self.dias_cosecha_estimados) * 100)
+        return 0
+
+# ...existing code...
+# ...existing code...
