@@ -31,7 +31,7 @@ CORS(app, resources={
 })  # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -903,6 +903,49 @@ def actualizar_parcela(id):
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
 
+@app.route('/api/debug/sensores/<int:parcela_id>', methods=['GET'])
+def debug_sensores_parcela(parcela_id):
+    """Endpoint de depuración para verificar datos de sensores de una parcela"""
+    try:
+        # Obtener datos de sensores
+        datos = obtener_ultimas_lecturas_sensores(parcela_id)
+        
+        # Obtener información de la parcela
+        parcela = Parcela.query.get_or_404(parcela_id)
+        
+        # Obtener lecturas recientes directamente de la base de datos
+        fecha_limite = datetime.now() - timedelta(days=7)
+        lecturas_recientes = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,
+            LecturaSensor.timestamp >= fecha_limite
+        ).order_by(LecturaSensor.timestamp.desc()).all()
+        
+        # Formatear lecturas para la respuesta
+        lecturas_formateadas = []
+        for lec in lecturas_recientes[:20]:  # Limitar a 20 para no sobrecargar
+            lecturas_formateadas.append({
+                'id': lec.id,
+                'timestamp': lec.timestamp.isoformat() if lec.timestamp else None,
+                'tipo': lec.tipo,
+                'valor': lec.valor,
+                'unidad': lec.unidad
+            })
+            
+        return jsonify({
+            'parcela': {
+                'id': parcela.id,
+                'nombre': parcela.nombre,
+                'cultivo': parcela.cultivo_actual
+            },
+            'datos_procesados': datos,
+            'lecturas_recientes': lecturas_formateadas,
+            'total_lecturas': len(lecturas_recientes)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error depurando datos de sensores: {str(e)}'}), 500
+
+
 
 # Endpoint para obtener mensajes de una conversación
 @app.route('/api/chat/<conv_id>', methods=['GET'])
@@ -1108,6 +1151,381 @@ def chat():
         print("Error general en /api/chat:", str(e))
         return jsonify({'error': str(e)}), 500
     
+# Add this endpoint near the other parcelas endpoints
+
+# Add these imports if not already present
+from datetime import datetime, timedelta, UTC
+import random
+
+# Add this endpoint near your other parcela endpoints
+@app.route('/api/parcelas/recomendaciones', methods=['GET'])
+def obtener_recomendaciones_parcelas():
+    """Devuelve recomendaciones para las parcelas basadas en los datos de los sensores"""
+    try:
+        # Get user_id from headers for logging
+        user_id = request.headers.get('X-User-Id')
+        
+        # Get optional parameters
+        parcela_id = request.args.get('parcela_id')
+        max_caracteres = request.args.get('max_caracteres', type=int, default=300)
+        
+        # Query all parcels or filter by ID
+        if parcela_id:
+            parcelas = Parcela.query.filter_by(id=parcela_id).all()
+        else:
+            parcelas = Parcela.query.all()
+            
+        if not parcelas:
+            return jsonify({"mensaje": "No hay parcelas disponibles"}), 404
+            
+        recomendaciones = []
+        
+        # For each parcela, get sensor data and generate recommendations
+        for parcela in parcelas:
+            # Get the latest sensor readings for this parcel
+            ultimas_lecturas = obtener_ultimas_lecturas_sensores(parcela.id)
+            
+            # Generate recommendations based on parcel info and sensor data
+            recomendaciones_parcela = generar_recomendaciones_parcela(
+                parcela, 
+                ultimas_lecturas, 
+                max_caracteres
+            )
+            recomendaciones.extend(recomendaciones_parcela)
+            
+        # Log this action if user_id is available
+        if user_id:
+            try:
+                registrar_accion(user_id, 'consulta_recomendaciones', 'parcela', 
+                               parcela_id if parcela_id else None)
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar acción: {e}")
+                
+        return jsonify(recomendaciones)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener recomendaciones: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def obtener_ultimas_lecturas_sensores(parcela_id):
+    """Obtiene las últimas lecturas de sensores para una parcela"""
+    try:
+        # Get readings from the last 7 days
+        fecha_limite = datetime.now() - timedelta(days=7)
+        
+        # Debug log to check parcela_id
+        current_app.logger.info(f"Buscando lecturas para parcela ID: {parcela_id}")
+        
+        # Query for readings related to this parcel - FIXED FIELD NAMES
+        lecturas = LecturaSensor.query.filter(
+            LecturaSensor.parcela == parcela_id,  # Using correct field name 'parcela'
+            LecturaSensor.timestamp >= fecha_limite  # Using correct field name 'timestamp'
+        ).order_by(LecturaSensor.timestamp.desc()).all()
+        
+        # Debug log to check results
+        current_app.logger.info(f"Se encontraron {len(lecturas)} lecturas para parcela {parcela_id}")
+        
+        if not lecturas:
+            # If no DB data, try to get from the sensor network directly
+            try:
+                # Try to get live data from the RedSensores if available
+                sensor_data = red_sensores.obtener_datos_parcela(parcela_id)
+                if sensor_data:
+                    current_app.logger.info(f"Usando datos en vivo de red_sensores para parcela {parcela_id}")
+                    return sensor_data
+            except Exception as e:
+                current_app.logger.warning(f"No se pudo obtener datos en vivo: {e}")
+            
+            # If still no data, return empty dict
+            current_app.logger.warning(f"No hay datos disponibles para parcela {parcela_id}")
+            return {}
+        
+        # Group readings by sensor type
+        lecturas_agrupadas = {}
+        for lectura in lecturas:
+            if lectura.tipo not in lecturas_agrupadas:
+                lecturas_agrupadas[lectura.tipo] = []
+            lecturas_agrupadas[lectura.tipo].append({
+                'valor': lectura.valor,
+                'fecha': lectura.timestamp  # Using correct field name 'timestamp'
+            })
+        
+        # Get the latest reading of each type
+        ultimas_lecturas = {}
+        for tipo, lecturas_tipo in lecturas_agrupadas.items():
+            # Sort by date descending and take the first one
+            lecturas_tipo.sort(key=lambda x: x['fecha'], reverse=True)
+            ultimas_lecturas[tipo] = {
+                'valor': lecturas_tipo[0]['valor'],
+                'fecha': lecturas_tipo[0]['fecha']
+            }
+            
+            # Calculate trends if more than one reading
+            if len(lecturas_tipo) > 1:
+                # Get first and last reading
+                primera = None
+                ultima = None
+                
+                # Parse values to float for comparison
+                try:
+                    ultima_str = lecturas_tipo[0]['valor']
+                    primera_str = lecturas_tipo[-1]['valor']
+                    
+                    # Handle both simple values and JSON strings
+                    try:
+                        ultima = float(ultima_str)
+                        primera = float(primera_str)
+                    except ValueError:
+                        # Try to parse as JSON
+                        try:
+                            ultima_json = json.loads(ultima_str)
+                            primera_json = json.loads(primera_str)
+                            
+                            # For nutrientes, get an average
+                            if isinstance(ultima_json, dict) and isinstance(primera_json, dict):
+                                ultima_vals = [float(v) for v in ultima_json.values() if isinstance(v, (int, float, str))]
+                                primera_vals = [float(v) for v in primera_json.values() if isinstance(v, (int, float, str))]
+                                if ultima_vals and primera_vals:
+                                    ultima = sum(ultima_vals) / len(ultima_vals)
+                                    primera = sum(primera_vals) / len(primera_vals)
+                        except (ValueError, json.JSONDecodeError):
+                            pass
+                    
+                    # Calculate change percentage
+                    if primera is not None and ultima is not None and primera != 0:
+                        cambio_porcentual = ((ultima - primera) / abs(primera)) * 100
+                        
+                        # Determine trend
+                        if cambio_porcentual > 10:
+                            tendencia = 'ascendente'
+                        elif cambio_porcentual < -10:
+                            tendencia = 'descendente'
+                        else:
+                            tendencia = 'estable'
+                            
+                        ultimas_lecturas[tipo]['tendencia'] = tendencia
+                        ultimas_lecturas[tipo]['cambio_porcentual'] = round(cambio_porcentual, 1)
+                except Exception as e:
+                    current_app.logger.warning(f"Error al calcular tendencia para {tipo}: {e}")
+        
+        # Debug log to check what's being returned
+        current_app.logger.info(f"Datos recopilados para parcela {parcela_id}: {ultimas_lecturas.keys()}")
+        return ultimas_lecturas
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener lecturas de sensores: {e}")
+        return {}
+
+def generar_recomendaciones_parcela(parcela, datos_sensor, max_caracteres=300):
+    """Genera recomendaciones para una parcela basadas en datos de sensores"""
+    # Start with an empty list of recommendations
+    recomendaciones = []
+    
+    try:
+        # Check if we got any sensor data at all
+        if not datos_sensor:
+            current_app.logger.warning(f"No hay datos de sensores para parcela {parcela.id}, generando recomendación genérica")
+            # If no sensor data found, recommend installing sensors
+            recomendacion = {
+                "id": f"rec_{parcela.id}_1",
+                "parcela": parcela.nombre,
+                "cultivo": parcela.cultivo_actual or "Sin cultivo",
+                "recomendacion": "Instale sensores en esta parcela para obtener recomendaciones personalizadas.",
+                "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            recomendaciones.append(recomendacion)
+            return recomendaciones
+        
+        # IMPORTANT: Log the sensor data we received to debug
+        current_app.logger.info(f"Datos de sensores para parcela {parcela.id}: {datos_sensor}")
+        
+        # Get the cultivo name for context-specific recommendations
+        cultivo = (parcela.cultivo_actual or "").lower()
+        
+        # Create case-insensitive lookup dictionary
+        datos_sensor_norm = {k.lower(): v for k, v in datos_sensor.items()}
+        
+        # Check humidity levels - USING CASE-INSENSITIVE KEY
+        if 'humedad' in datos_sensor_norm:
+            humedad_data = datos_sensor_norm['humedad']
+            try:
+                # Try to parse the value safely
+                valor_humedad = float(humedad_data['valor'])
+                
+                # Different thresholds based on crop type
+                umbral_bajo = 30  # default
+                umbral_alto = 70  # default
+                
+                if cultivo == 'tomate':
+                    umbral_bajo = 40
+                    umbral_alto = 80
+                elif cultivo == 'maíz' or cultivo == 'maiz':
+                    umbral_bajo = 35
+                    umbral_alto = 75
+                elif cultivo == 'trigo':
+                    umbral_bajo = 30
+                    umbral_alto = 70
+                elif cultivo == 'papaya':
+                    umbral_bajo = 45
+                    umbral_alto = 85
+                    
+                # Generate recommendation based on humidity value
+                if valor_humedad < umbral_bajo:
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_hum_bajo",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Aumente el riego. La humedad actual ({valor_humedad}%) está por debajo del nivel óptimo para {parcela.cultivo_actual}.",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+                    
+                elif valor_humedad > umbral_alto:
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_hum_alto",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Reduzca el riego. La humedad actual ({valor_humedad}%) está por encima del nivel óptimo para {parcela.cultivo_actual}.",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+                
+                # Add trend-based recommendation if available
+                if 'tendencia' in humedad_data and humedad_data['tendencia'] == 'descendente':
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_hum_trend",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Programar riego preventivo. Se detecta tendencia descendente en niveles de humedad ({humedad_data['cambio_porcentual']}%).",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error al procesar valor de humedad para parcela {parcela.id}: {e}")
+        
+        # Check temperature - USING CASE-INSENSITIVE KEY
+        if 'temperatura' in datos_sensor_norm:
+            temp_data = datos_sensor_norm['temperatura']
+            try:
+                valor_temp = float(temp_data['valor'])
+                
+                # Different thresholds based on crop type
+                umbral_bajo = 10  # default
+                umbral_alto = 30  # default
+                
+                if cultivo == 'tomate':
+                    umbral_bajo = 15
+                    umbral_alto = 30
+                elif cultivo == 'maíz' or cultivo == 'maiz':
+                    umbral_bajo = 10
+                    umbral_alto = 35
+                elif cultivo == 'trigo':
+                    umbral_bajo = 5
+                    umbral_alto = 28
+                elif cultivo == 'papaya':
+                    umbral_bajo = 20
+                    umbral_alto = 35
+                    
+                # Generate recommendation based on temperature value
+                if valor_temp > umbral_alto:
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_temp_alto",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Considerar sombreado parcial. La temperatura actual ({valor_temp}°C) está por encima del rango óptimo para {parcela.cultivo_actual}.",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+                    
+                elif valor_temp < umbral_bajo:
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_temp_bajo",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Considerar protección contra el frío. La temperatura actual ({valor_temp}°C) está por debajo del rango óptimo para {parcela.cultivo_actual}.",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error al procesar valor de temperatura para parcela {parcela.id}: {e}")
+        
+        # Check pH levels - USING CASE-INSENSITIVE KEY
+        if 'ph' in datos_sensor_norm:
+            ph_data = datos_sensor_norm['ph']
+            try:
+                valor_ph = float(ph_data['valor'])
+                
+                # Different thresholds based on crop type
+                umbral_bajo = 5.5  # default
+                umbral_alto = 7.5  # default
+                
+                if cultivo == 'tomate':
+                    umbral_bajo = 5.5
+                    umbral_alto = 7.0
+                elif cultivo == 'maíz' or cultivo == 'maiz':
+                    umbral_bajo = 5.5
+                    umbral_alto = 7.0
+                elif cultivo == 'trigo':
+                    umbral_bajo = 5.5
+                    umbral_alto = 7.0
+                elif cultivo == 'papaya':
+                    umbral_bajo = 5.5
+                    umbral_alto = 6.5
+                    
+                # Generate recommendation based on pH value
+                if valor_ph < umbral_bajo:
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_ph_bajo",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Aplicar cal agrícola para elevar el pH del suelo (actual: {valor_ph}).",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+                    
+                elif valor_ph > umbral_alto:
+                    recomendacion = {
+                        "id": f"rec_{parcela.id}_ph_alto",
+                        "parcela": parcela.nombre,
+                        "cultivo": parcela.cultivo_actual,
+                        "recomendacion": f"Aplicar azufre o sulfato de amonio para reducir el pH del suelo (actual: {valor_ph}).",
+                        "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    recomendaciones.append(recomendacion)
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error al procesar valor de pH para parcela {parcela.id}: {e}")
+        
+        # If no specific recommendations were generated, add a default one
+        if not recomendaciones:
+            recomendacion = {
+                "id": f"rec_{parcela.id}_default",
+                "parcela": parcela.nombre,
+                "cultivo": parcela.cultivo_actual,
+                "recomendacion": f"Mantenga las condiciones actuales de cultivo. Los parámetros monitoreados están dentro de rangos normales para {parcela.cultivo_actual}.",
+                "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            recomendaciones.append(recomendacion)
+            
+        # Truncate recommendations if needed
+        if max_caracteres > 0:
+            for rec in recomendaciones:
+                if len(rec['recomendacion']) > max_caracteres:
+                    rec['recomendacion'] = rec['recomendacion'][:max_caracteres-3] + '...'
+    
+        return recomendaciones
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generando recomendaciones: {e}")
+        # Return a fallback recommendation
+        return [{
+            "id": f"rec_{parcela.id}_error",
+            "parcela": parcela.nombre,
+            "cultivo": parcela.cultivo_actual or "Sin cultivo",
+            "recomendacion": "No se pudieron generar recomendaciones específicas. Verifique el estado de los sensores.",
+            "fecha": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }]
+
+
 # Añadir esta función para obtener datos recientes de sensores
 
 
