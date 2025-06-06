@@ -290,21 +290,21 @@ parametros_configurables = {
     "nutrientes": {
         "nitrogeno": {"min": 100, 
                       "max": 300,
-                    "alerta_baja": 110,
-                    "alerta_alta": 290,   
-                    "critico_bajo": 90,   
-                    "critico_alto": 320  }, 
+                    "alerta_baja": 130,
+                    "alerta_alta": 270,   
+                    "critico_bajo": 110,   
+                    "critico_alto": 290  }, 
         "fosforo": {"min": 20, "max": 80,
-                    "alerta_baja": 22,    
-                    "alerta_alta": 78,    
-                    "critico_bajo": 15,   
-                    "critico_alto": 85   },
+                    "alerta_baja": 25,    
+                    "alerta_alta": 70,    
+                    "critico_bajo": 22,   
+                    "critico_alto": 78   },
         "potasio": {"min": 100, 
                     "max": 250,
-                    "alerta_baja": 22,    
-                    "alerta_alta": 78,    
-                    "critico_bajo": 15,   
-                    "critico_alto": 85    
+                    "alerta_baja": 120,    
+                    "alerta_alta": 230,    
+                    "critico_bajo": 110,   
+                    "critico_alto": 240    
                     }
     },
     "simulacion": {
@@ -704,8 +704,8 @@ def simulacion_continua_parcela():
 
 def guardar_alertas_finales(parcela_id, datos, parametros):
     """
-    Guarda alertas críticas en la base de datos al finalizar la simulación,
-    según los valores críticos definidos en los parámetros configurables.
+    Guarda alertas críticas y moderadas en la base de datos al finalizar la simulación,
+    según los valores críticos y de alerta definidos en los parámetros configurables.
     """
     try:
         if not parcela_id or not datos:
@@ -716,26 +716,29 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
         # Temperatura
         temp = datos.get(1, {}).get("valor")
         if temp is not None:
-            if temp < parametros["temperatura"]["critico_bajo"]:
-                alerta = AlertaSensor(
-                    parcela=parcela_id,
-                    sensor_id=1,
-                    tipo="Temperatura",
-                    valor=float(temp),
-                    severidad="critico",
-                    mensaje=f"Temperatura extremadamente baja: {temp}°C",
-                    timestamp=now,
-                    activa=True
-                )
-                db.session.add(alerta)
+            if temp <= parametros["temperatura"]["critico_bajo"]:
+                severidad = "critico"
+                mensaje = f"Temperatura extremadamente baja: {temp}°C"
+            elif temp < parametros["temperatura"]["alerta_baja"]:
+                severidad = "moderado"
+                mensaje = f"Temperatura baja: {temp}°C"
             elif temp > parametros["temperatura"]["critico_alto"]:
+                severidad = "critico"
+                mensaje = f"Temperatura extremadamente alta: {temp}°C"
+            elif temp > parametros["temperatura"]["alerta_alta"]:
+                severidad = "moderado"
+                mensaje = f"Temperatura alta: {temp}°C"
+            else:
+                severidad = None
+
+            if severidad:
                 alerta = AlertaSensor(
                     parcela=parcela_id,
                     sensor_id=1,
                     tipo="Temperatura",
                     valor=float(temp),
-                    severidad="critico",
-                    mensaje=f"Temperatura extremadamente alta: {temp}°C",
+                    severidad=severidad,
+                    mensaje=mensaje,
                     timestamp=now,
                     activa=True
                 )
@@ -745,25 +748,28 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
         humedad = datos.get(2, {}).get("valor")
         if humedad is not None:
             if humedad < parametros["humedadSuelo"]["critico_bajo"]:
-                alerta = AlertaSensor(
-                    parcela=parcela_id,
-                    sensor_id=2,
-                    tipo="Humedad",
-                    valor=float(humedad),
-                    severidad="critico",
-                    mensaje=f"Humedad del suelo extremadamente baja: {humedad}%",
-                    timestamp=now,
-                    activa=True
-                )
-                db.session.add(alerta)
+                severidad = "critico"
+                mensaje = f"Humedad del suelo extremadamente baja: {humedad}%"
+            elif humedad < parametros["humedadSuelo"]["alerta_baja"]:
+                severidad = "moderado"
+                mensaje = f"Humedad del suelo baja: {humedad}%"
             elif humedad > parametros["humedadSuelo"]["critico_alto"]:
+                severidad = "critico"
+                mensaje = f"Humedad del suelo extremadamente alta: {humedad}%"
+            elif humedad > parametros["humedadSuelo"]["alerta_alta"]:
+                severidad = "moderado"
+                mensaje = f"Humedad del suelo alta: {humedad}%"
+            else:
+                severidad = None
+
+            if severidad:
                 alerta = AlertaSensor(
                     parcela=parcela_id,
                     sensor_id=2,
                     tipo="Humedad",
                     valor=float(humedad),
-                    severidad="critico",
-                    mensaje=f"Humedad del suelo extremadamente alta: {humedad}%",
+                    severidad=severidad,
+                    mensaje=mensaje,
                     timestamp=now,
                     activa=True
                 )
@@ -773,25 +779,28 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
         ph = datos.get(3, {}).get("valor")
         if ph is not None:
             if ph < parametros["phSuelo"]["critico_bajo"]:
-                alerta = AlertaSensor(
-                    parcela=parcela_id,
-                    sensor_id=3,
-                    tipo="pH del suelo",
-                    valor=float(ph),
-                    severidad="critico",
-                    mensaje=f"pH del suelo demasiado bajo: {ph}",
-                    timestamp=now,
-                    activa=True
-                )
-                db.session.add(alerta)
+                severidad = "critico"
+                mensaje = f"pH del suelo demasiado bajo: {ph}"
+            elif ph < parametros["phSuelo"]["alerta_baja"]:
+                severidad = "moderado"
+                mensaje = f"pH del suelo bajo: {ph}"
             elif ph > parametros["phSuelo"]["critico_alto"]:
+                severidad = "critico"
+                mensaje = f"pH del suelo demasiado alto: {ph}"
+            elif ph > parametros["phSuelo"]["alerta_alta"]:
+                severidad = "moderado"
+                mensaje = f"pH del suelo alto: {ph}"
+            else:
+                severidad = None
+
+            if severidad:
                 alerta = AlertaSensor(
                     parcela=parcela_id,
                     sensor_id=3,
                     tipo="pH del suelo",
                     valor=float(ph),
-                    severidad="critico",
-                    mensaje=f"pH del suelo demasiado alto: {ph}",
+                    severidad=severidad,
+                    mensaje=mensaje,
                     timestamp=now,
                     activa=True
                 )
@@ -802,28 +811,34 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
         if isinstance(nutrientes, dict):
             for nutriente, valor in nutrientes.items():
                 critico_bajo = parametros["nutrientes"].get(nutriente, {}).get("critico_bajo")
+                alerta_baja = parametros["nutrientes"].get(nutriente, {}).get("alerta_baja")
+                alerta_alta = parametros["nutrientes"].get(nutriente, {}).get("alerta_alta")
                 critico_alto = parametros["nutrientes"].get(nutriente, {}).get("critico_alto")
                 sensor_id = 4
+
+                severidad = None
+                mensaje = ""
                 if critico_bajo is not None and valor < critico_bajo:
-                    alerta = AlertaSensor(
-                        parcela=parcela_id,
-                        sensor_id=sensor_id,
-                        tipo=f"Nutriente {nutriente}",
-                        valor=float(valor),
-                        severidad="critico",
-                        mensaje=f"{nutriente.capitalize()} muy bajo: {valor} mg/L",
-                        timestamp=now,
-                        activa=True
-                    )
-                    db.session.add(alerta)
+                    severidad = "critico"
+                    mensaje = f"{nutriente.capitalize()} muy bajo: {valor} mg/L"
+                elif alerta_baja is not None and valor < alerta_baja:
+                    severidad = "moderado"
+                    mensaje = f"{nutriente.capitalize()} bajo: {valor} mg/L"
                 elif critico_alto is not None and valor > critico_alto:
+                    severidad = "critico"
+                    mensaje = f"{nutriente.capitalize()} muy alto: {valor} mg/L"
+                elif alerta_alta is not None and valor > alerta_alta:
+                    severidad = "moderado"
+                    mensaje = f"{nutriente.capitalize()} alto: {valor} mg/L"
+
+                if severidad:
                     alerta = AlertaSensor(
                         parcela=parcela_id,
                         sensor_id=sensor_id,
                         tipo=f"Nutriente {nutriente}",
                         valor=float(valor),
-                        severidad="critico",
-                        mensaje=f"{nutriente.capitalize()} muy alto: {valor} mg/L",
+                        severidad=severidad,
+                        mensaje=mensaje,
                         timestamp=now,
                         activa=True
                     )
