@@ -11,10 +11,13 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [error, setError] = useState(null);
   const [simulacionActiva, setSimulacionActiva] = useState(false);
   const [parametros, setParametros] = useState(null);
-  // NUEVO: Estados para parcelas
   const [parcelas, setParcelas] = useState([]);
   const [parcelaSeleccionada, setParcelaSeleccionada] = useState(null);
   const [cargandoParcelas, setCargandoParcelas] = useState(true);
+
+  // NUEVO: Estado para condición seleccionada y popup de simulación terminada
+  const [condicionSeleccionada, setCondicionSeleccionada] = useState(null);
+  const [popupMensaje, setPopupMensaje] = useState('');
 
   // Obtener información del usuario almacenada al iniciar sesión
   const [user, setUser] = useState(() => {
@@ -111,6 +114,11 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   useEffect(() => {
     if (!simulacionActiva) {
       fetchDatosSensores();
+      // Mostrar popup cuando termina la simulación
+      if (condicionSeleccionada) {
+        setPopupMensaje('¡La simulación ha terminado!');
+        setTimeout(() => setPopupMensaje(''), 3000);
+      }
     }
   }, [simulacionActiva]);
 
@@ -181,8 +189,10 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
     } 
   };
 
+  // MODIFICADO: simularCondicion ahora marca la condición seleccionada
   const simularCondicion = async (condicion) => {
     try {
+      setCondicionSeleccionada(condicion);
       const response = await fetch(`${API_URL}/condiciones/${condicion}`, {
         method: 'POST'
       });
@@ -198,13 +208,24 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
         } else if (SensorService && typeof SensorService.guardarParametros === 'function') {
           await SensorService.guardarParametros(data.parametros);
         }
-      }
+      } 
       
       alert(data.mensaje);
     } catch (err) {
       setError(err.message);
     }
   };
+
+  // Botón de condición con color destacado si está seleccionada
+  const botonCondicion = (cond, label) => (
+    <button
+      onClick={() => simularCondicion(cond)}
+      className={condicionSeleccionada === cond ? 'condicion-activa' : ''}
+      style={condicionSeleccionada === cond ? { backgroundColor: '#f44336', color: '#fff' } : {}}
+    >
+      {label}
+    </button>
+  );
 
   if (loading) {
     return <div className="loading">Cargando sensores...</div>;
@@ -216,129 +237,148 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
 
   return (
     <div className="app-container">
-      <h1>EcoSmart - Sistema de Sensores Agrícolas</h1>
-      
-      <div className="control-panel">
-        <h2>Panel de Control</h2>
-        
-        {/* NUEVO: Selector de parcelas */}
-        <div className="parcela-selector">
-          <h3>Asignar Datos a Parcela:</h3>
-          <div className="selector-container">
-            <select 
-              value={parcelaSeleccionada || ''}
-              onChange={(e) => setParcelaSeleccionada(e.target.value ? Number(e.target.value) : null)}
-              disabled={simulacionActiva || cargandoParcelas}
-            >
-              <option value="">Seleccione una parcela</option>
-              {parcelas.map(parcela => (
-                <option key={parcela.id} value={parcela.id}>
-                  {parcela.nombre} ({parcela.cultivo_actual || 'Sin cultivo'})
-                </option>
-              ))}
-            </select>
-            {parcelaSeleccionada && (
-              <div className="parcela-seleccionada">
-                <p>Los datos se asignarán a: <strong>{
-                  parcelas.find(p => p.id === Number(parcelaSeleccionada))?.nombre || 'Parcela seleccionada'
-                }</strong></p>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="buttons">
-          <button 
-            onClick={iniciarSimulacion} 
-            disabled={simulacionActiva}
-          >
-            {parcelaSeleccionada 
-              ? `Iniciar Simulación en Parcela` 
-              : 'Iniciar Simulación General'}
-          </button>
-          <div className="buttons-terminar">
-            <button onClick={detenerSimulacion} disabled={!simulacionActiva}>
-              Detener Simulación
-            </button>
-          </div>
-          <div className="buttons-exportar">
-            <button onClick={exportar_csv}>Exportar Datos</button>
-          </div>
-          <div className="buttons-ajustes">
-            <Link to="/dashboard/tecnico/ajustes" className="button-link">Ajustar Parámetros</Link>
-          </div>
-        </div>
-        
-        <div className="conditions">
-          <h3>Condiciones:</h3>
-          <button onClick={() => simularCondicion('normal')}>Normal</button>
-          <button onClick={() => simularCondicion('heladas')}>Heladas</button>
-          <button onClick={() => simularCondicion('sequia')}>Sequía</button>
-          <button onClick={() => simularCondicion('lluvia')}>Lluvia Intensa</button>
-        </div>
-        
-        {parametros && (
-          <div className="parametros-activos">
-            <h3>Parámetros Activos:</h3>
-            <p>Temperatura: {parametros.temperatura.min}°C - {parametros.temperatura.max}°C</p>
-            <p>Humedad: {parametros.humedadSuelo.min}% - {parametros.humedadSuelo.max}%</p>
-            <p>pH: {parametros.phSuelo.min} - {parametros.phSuelo.max}</p>
-          </div>
-        )}
+      {/* Título general arriba de ambas secciones */}
+      <div className="titulo-ecosmart">
+        <h1>EcoSmart - Sistema de Sensores Agrícolas</h1>
       </div>
-      
-      <div className="sensors-container">
-        <h2>Sensores</h2>
-        <div className="sensors-grid">
-          {sensores.map(sensor => (
-            <div className="sensor-card" key={sensor.id}>
-              <h3>{sensor.tipo} ({sensor.id})</h3>
-              <div className="sensor-info">
-                <p>Unidad: {sensor.unidad}</p>
-                {sensor.id !== 4 && (
-                  <p>Rango: {sensor.valor_minimo} - {sensor.valor_maximo}</p>
-                )}
-                <p>Frecuencia: {sensor.frecuencia}s</p>
-              </div>
-              <div className="sensor-reading">
-                {datos[sensor.id] ? (
-                  <>
-                    <h4>Última lectura</h4>
-                    {sensor.id === 4 ? (
-                      // Vista especial para nutrientes
-                      <div className="nutrientes-container">
-                        <div className="nutriente-item">
-                          <span className="nutriente-label">Nitrógeno:</span>
-                          <span className="nutriente-value">
-                            {datos[sensor.id].valor.nitrogeno} {sensor.unidad}
-                          </span>
-                        </div>
-                        <div className="nutriente-item">
-                          <span className="nutriente-label">Fósforo:</span>
-                          <span className="nutriente-value">
-                            {datos[sensor.id].valor.fosforo} {sensor.unidad}
-                          </span>
-                        </div>
-                        <div className="nutriente-item">
-                          <span className="nutriente-label">Potasio:</span>
-                          <span className="nutriente-value">
-                            {datos[sensor.id].valor.potasio} {sensor.unidad}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      // Vista normal para otros sensores
-                      <p className="reading-value">
-                        {datos[sensor.id].valor} {sensor.unidad}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p>Sin lecturas</p>
+      <div className="sensores-layout">
+        <div className="panel-izquierdo">
+          <div className="control-panel">
+            <h2>Panel de Control</h2>
+
+            {/* NUEVO: Selector de parcelas */}
+            <div className="parcela-selector">
+              <h3>Asignar Datos a Parcela:</h3>
+              <div className="selector-container">
+                <select
+                  value={parcelaSeleccionada || ''}
+                  onChange={(e) => setParcelaSeleccionada(e.target.value ? Number(e.target.value) : null)}
+                  disabled={simulacionActiva || cargandoParcelas}
+                >
+                  <option value="">Seleccione una parcela</option>
+                  {parcelas.map(parcela => (
+                    <option key={parcela.id} value={parcela.id}>
+                      {parcela.nombre} ({parcela.cultivo_actual || 'Sin cultivo'})
+                    </option>
+                  ))}
+                </select>
+                {parcelaSeleccionada && (
+                  <div className="parcela-seleccionada">
+                    <p>Los datos se asignarán a: <strong>{
+                      parcelas.find(p => p.id === Number(parcelaSeleccionada))?.nombre || 'Parcela seleccionada'
+                    }</strong></p>
+                  </div>
                 )}
               </div>
             </div>
-          ))}
+
+            <div className="buttons">
+              <button
+                onClick={iniciarSimulacion}
+                disabled={simulacionActiva}
+              >
+                {parcelaSeleccionada
+                  ? `Iniciar Simulación en Parcela`
+                  : 'Iniciar Simulación General'}
+              </button>
+              <div className="buttons-terminar">
+                <button onClick={detenerSimulacion} disabled={!simulacionActiva}>
+                  Detener Simulación
+                </button>
+              </div>
+              <div className="buttons-exportar">
+                <button onClick={exportar_csv}>Exportar Datos</button>
+              </div>
+              <div className="buttons-ajustes">
+                <Link to="/dashboard/tecnico/ajustes" className="button-link">Ajustar Parámetros</Link>
+              </div>
+            </div>
+
+            <div className="conditions">
+              <h3>Condiciones:</h3>
+              {botonCondicion('normal', 'Normal')}
+              {botonCondicion('heladas', 'Heladas')}
+              {botonCondicion('sequia', 'Sequía')}
+              {botonCondicion('lluvia', 'Lluvia Intensa')}
+            </div>
+
+            {/* Mostrar parámetros actuales de la simulación */}
+            {parametros && (
+              <div className="parametros-activos">
+                <h3>Parámetros Activos de Simulación:</h3>
+                <p>Temperatura: {parametros.temperatura?.min}°C - {parametros.temperatura?.max}°C</p>
+                <p>Humedad: {parametros.humedadSuelo?.min}% - {parametros.humedadSuelo?.max}%</p>
+                <p>pH: {parametros.phSuelo?.min} - {parametros.phSuelo?.max}</p>
+                {parametros.simulacion && (
+                  <>
+                    <p>Frecuencia de simulación: {parametros.simulacion.intervalo} segundos</p>
+                    <p>Duración de simulación: {parametros.simulacion.duracion} minutos</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          {popupMensaje && (
+            <div className="popup-simulacion-terminada">
+              {popupMensaje}
+            </div>
+          )}
+        </div>
+        <div className="panel-derecho">
+          <div className="sensors-container">
+            <h2>Sensores</h2>
+            <div className="sensors-grid">
+              {sensores.map(sensor => (
+                <div className="sensor-card" key={sensor.id}>
+                  <h3>{sensor.tipo} ({sensor.id})</h3>
+                  <div className="sensor-info">
+                    <p>Unidad: {sensor.unidad}</p>
+                    {sensor.id !== 4 && (
+                      <p>Rango: {sensor.valor_minimo} - {sensor.valor_maximo}</p>
+                    )}
+                    <p>Frecuencia: {sensor.frecuencia}s</p>
+                  </div>
+                  <div className="sensor-reading">
+                    {datos[sensor.id] ? (
+                      <>
+                        <h4>Última lectura</h4>
+                        {sensor.id === 4 ? (
+                          // Vista especial para nutrientes
+                          <div className="nutrientes-container">
+                            <div className="nutriente-item">
+                              <span className="nutriente-label">Nitrógeno:</span>
+                              <span className="nutriente-value">
+                                {datos[sensor.id].valor.nitrogeno} {sensor.unidad}
+                              </span>
+                            </div>
+                            <div className="nutriente-item">
+                              <span className="nutriente-label">Fósforo:</span>
+                              <span className="nutriente-value">
+                                {datos[sensor.id].valor.fosforo} {sensor.unidad}
+                              </span>
+                            </div>
+                            <div className="nutriente-item">
+                              <span className="nutriente-label">Potasio:</span>
+                              <span className="nutriente-value">
+                                {datos[sensor.id].valor.potasio} {sensor.unidad}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          // Vista normal para otros sensores
+                          <p className="reading-value">
+                            {datos[sensor.id].valor} {sensor.unidad}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p>Sin lecturas</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -346,3 +386,5 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
 }
 
 export default SensoresPanel;
+
+// --- Agrega esto a tu sensores.css ---
