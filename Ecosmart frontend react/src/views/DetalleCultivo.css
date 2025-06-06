@@ -906,3 +906,217 @@
 .modal-body::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+/* Estilos para fase actual */
+.fase-actual-info {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #28a745;
+}
+
+.fase-actual-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #28a745;
+}
+
+.fase-actual-badge i {
+  font-size: 18px;
+}
+
+.fase-detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.fase-detalles .alerta {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+/* Mejorar timeline */
+.fases-timeline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  margin: 20px 0;
+  padding: 0 10px;
+}
+
+.fases-timeline::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: #e9ecef;
+  z-index: 1;
+}
+
+.fase-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+
+.fase-punto {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e9ecef;
+  border: 3px solid #fff;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 3;
+}
+
+.fase-item.completada .fase-punto {
+  background: #28a745;
+}
+
+.fase-item.activa .fase-punto {
+  background: #007bff;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+  }
+}
+
+.fase-item span {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.fase-item.activa span {
+  color: #007bff;
+  font-weight: 600;
+}
+
+.fase-item.completada span {
+  color: #28a745;
+}
+/* Estilo para información general */
+.fase-detalles .info {
+  color: #17a2b8;
+  font-weight: 500;
+}
+
+.fase-detalles .alerta {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+/* Mejorar espaciado */
+.fase-detalles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.fase-detalles span:first-child {
+  font-weight: 600;
+  color: #495057;
+}
+/* Estilos para botones de acción */
+.actividad-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-left: 10px;
+}
+
+.btn-eliminar {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.3s;
+}
+
+.btn-eliminar:hover {
+  background: #c82333;
+}
+
+.btn-eliminar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-reintentar {
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.3s;
+}
+
+.btn-reintentar:hover {
+  background: #e0a800;
+}
+
+.actividad-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  transition: background 0.3s;
+}
+
+.actividad-item:hover {
+  background: #f8f9fa;
+}
+
+.actividad-item:hover .actividad-acciones {
+  opacity: 1;
+}
+
+.actividad-acciones {
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .actividad-acciones {
+    flex-direction: row;
+    gap: 8px;
+  }
+  
+  .btn-eliminar,
+  .btn-reintentar {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}

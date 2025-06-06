@@ -10,7 +10,7 @@ import threading
 import pandas as pd
 import json
 from json import JSONDecodeError
-from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, AlertaSensor
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo, AlertaSensor
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
@@ -23,18 +23,67 @@ import re
 
 
 app = Flask(__name__)
+# ...existing code...
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5175", "http://127.0.0.1:5175"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "X-User-Id", "X-User-Rol", "Authorization"]
     }
-})  # Permite solicitudes CORS para la API
+})
+
+# ...existing code... # Permite solicitudes CORS para la API
 
 #base de datos
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+
+# ...existing code...
+
+# Agregar este endpoint antes de la línea "if __name__ == '__main__':"
+
+@app.route('/api/debug/database', methods=['GET'])
+def debug_database():
+    """Endpoint para verificar estado de la base de datos"""
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        # Verificar modelo DetalleCultivo
+        cultivo_info = {}
+        if 'cultivos' in tables:
+            columns = [col['name'] for col in inspector.get_columns('cultivos')]
+            cultivo_info = {
+                'tabla_existe': True,
+                'columnas': columns
+            }
+        else:
+            cultivo_info = {'tabla_existe': False}
+        
+        return jsonify({
+            'status': 'ok',
+            'database_connected': True,
+            'tables': tables,
+            'cultivos_info': cultivo_info,
+            'models_imported': {
+                'DetalleCultivo': 'DetalleCultivo' in globals(),
+                'Parcela': 'Parcela' in globals()
+            }
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'database_connected': False
+        }), 500
+
+# ...existing code...
+
 
 
 # ...existing code...
@@ -689,7 +738,72 @@ def exportar_csv():
     
     return send_file(ruta_csv, as_attachment=True)
 
+# ...existing code...
 
+@app.route('/api/parcelas', methods=['GET'])
+def listar_parcelas():
+    """Listar todas las parcelas con su cultivo único"""
+    try:
+        parcelas = Parcela.query.all()
+        parcelas_data = []
+        
+        for parcela in parcelas:
+            # Obtener el cultivo único de la parcela
+            cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+            
+            parcela_info = {
+                'id': parcela.id,
+                'nombre': parcela.nombre,
+                'ubicacion': parcela.ubicacion,
+                'hectareas': parcela.hectareas,
+                'latitud': parcela.latitud,
+                'longitud': parcela.longitud,
+                'fecha_creacion': parcela.fecha_creacion,
+                'cultivo_actual': parcela.cultivo_actual,
+                'fecha_siembra': parcela.fecha_siembra,
+                
+                # NUEVO: Información detallada del cultivo único
+                'cultivo': None
+            }
+            
+            # Agregar detalles del cultivo si existe
+            if cultivo:
+                parcela_info['cultivo'] = {
+                    'id': cultivo.id,
+                    'nombre': cultivo.nombre,
+                    'variedad': cultivo.variedad,
+                    'etapa_desarrollo': cultivo.etapa_desarrollo,
+                    'fecha_siembra': cultivo.fecha_siembra,
+                    'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+                    'edad_dias': cultivo.calcular_edad_dias(),
+                    'progreso_cosecha': round(cultivo.progreso_cosecha(), 1),
+                    'activo': cultivo.activo,
+                    'fecha_cosecha': cultivo.fecha_cosecha
+                }
+                
+                # Actualizar datos de la parcela con info del cultivo
+                if not parcela.cultivo_actual and cultivo.nombre:
+                    parcela_info['cultivo_actual'] = cultivo.nombre
+                if not parcela.fecha_siembra and cultivo.fecha_siembra:
+                    parcela_info['fecha_siembra'] = cultivo.fecha_siembra.date()
+            
+            parcelas_data.append(parcela_info)
+        
+        # Registrar log
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'listar_parcelas', 'parcela', None)
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        return jsonify(parcelas_data)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al listar parcelas: {str(e)}")
+        return jsonify({'error': f"Error al obtener parcelas: {str(e)}"}), 500
+
+# ...existing code...
 # Endpoint para obtener los datos de los sensores
 @app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
@@ -1293,67 +1407,112 @@ def eliminar_usuario(id):
     db.session.commit()
     return jsonify({'mensaje': 'Usuario eliminado correctamente'})
 
+# ...existing code...
+
+# ...existing code...
+
 @app.route('/api/parcelas', methods=['POST'])
-@registrar_accion('crear_parcela', 'parcela', lambda resultado, *args, **kwargs: resultado.get('id'))
 def agregar_parcela():
+    """Agregar una nueva parcela con su cultivo único"""
     try:
         data = request.json
-        parcela = Parcela(
+        
+        # Crear parcela
+        nueva_parcela = Parcela(
             nombre=data['nombre'],
             ubicacion=data.get('ubicacion'),
             hectareas=data.get('hectareas'),
             latitud=data.get('latitud'),
             longitud=data.get('longitud'),
-            fecha_creacion=datetime.utcnow(),
-            cultivo_actual=data.get('cultivo_actual'),
-            fecha_siembra=data.get('fecha_siembra')
+            fecha_creacion=datetime.now(UTC)
         )
-        db.session.add(parcela)
+        
+        db.session.add(nueva_parcela)
+        db.session.flush()  # Para obtener el ID de la parcela
+        
+        # Crear cultivo único si se proporcionan datos
+        cultivo_creado = None
+        if 'cultivo' in data and data['cultivo']:
+            cultivo_data = data['cultivo']
+            
+            # IMPORTANTE: Asegurar que solo hay un cultivo activo por parcela
+            # Desactivar cualquier cultivo previo (por si acaso)
+            DetalleCultivo.query.filter_by(parcela_id=nueva_parcela.id).update({'activo': False})
+            
+            # CORREGIR: Manejar la fecha de siembra con timezone
+            fecha_siembra = None
+            if cultivo_data.get('fecha_siembra'):
+                try:
+                    # Parsear la fecha y asegurar que tenga timezone UTC
+                    fecha_siembra = datetime.fromisoformat(cultivo_data['fecha_siembra'])
+                    if fecha_siembra.tzinfo is None:
+                        fecha_siembra = fecha_siembra.replace(tzinfo=UTC)
+                except ValueError:
+                    fecha_siembra = datetime.now(UTC)
+            else:
+                fecha_siembra = datetime.now(UTC)
+            
+            # Crear el cultivo único
+            nuevo_cultivo = DetalleCultivo(
+                parcela_id=nueva_parcela.id,
+                nombre=cultivo_data['nombre'],
+                variedad=cultivo_data.get('variedad'),
+                etapa_desarrollo=cultivo_data.get('etapa_desarrollo', 'siembra'),
+                fecha_siembra=fecha_siembra,
+                dias_cosecha_estimados=cultivo_data.get('dias_cosecha_estimados'),
+                activo=True  # Este es el único cultivo activo
+            )
+            
+            db.session.add(nuevo_cultivo)
+            db.session.flush()  # Para calcular la edad
+            
+            # Calcular edad DESPUÉS de hacer flush
+            nuevo_cultivo.edad = nuevo_cultivo.calcular_edad_dias()
+            
+            # Actualizar parcela con datos del cultivo
+            nueva_parcela.cultivo_actual = nuevo_cultivo.nombre
+            if nuevo_cultivo.fecha_siembra:
+                nueva_parcela.fecha_siembra = nuevo_cultivo.fecha_siembra.date()
+            
+            cultivo_creado = {
+                'id': nuevo_cultivo.id,
+                'nombre': nuevo_cultivo.nombre,
+                'variedad': nuevo_cultivo.variedad,
+                'etapa_desarrollo': nuevo_cultivo.etapa_desarrollo,
+                'edad_dias': nuevo_cultivo.calcular_edad_dias(),
+                'progreso_cosecha': round(nuevo_cultivo.progreso_cosecha(), 1)
+            }
+        
         db.session.commit()
         
-        # Registrar log solo si existe el ID de usuario
+        # Registrar log
         user_id = request.headers.get('X-User-Id')
         if user_id:
-            try:
-                registrar_log(user_id, 'crear_parcela', 'parcela', parcela.id,
-                          detalles=str(data))
-            except Exception as e:
-                current_app.logger.error(f"Error al registrar log: {e}")
-                # No detener la ejecución por errores de log
-       
-        return jsonify({'mensaje': 'Parcela agregada correctamente', 'id': parcela.id})
+            detalles = {
+                'parcela': data,
+                'cultivo_creado': bool(cultivo_creado)
+            }
+            registrar_log(user_id, 'crear_parcela', 'parcela', nueva_parcela.id, detalles=str(detalles))
+        
+        return jsonify({
+            'mensaje': 'Parcela creada correctamente',
+            'parcela': {
+                'id': nueva_parcela.id,
+                'nombre': nueva_parcela.nombre,
+                'ubicacion': nueva_parcela.ubicacion,
+                'hectareas': nueva_parcela.hectareas,
+                'cultivo_actual': nueva_parcela.cultivo_actual
+            },
+            'cultivo': cultivo_creado
+        })
     
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error al agregar parcela: {str(e)}")
+        current_app.logger.error(f"Error al crear parcela: {str(e)}")
         return jsonify({'error': f"Error al crear parcela: {str(e)}"}), 500
 
-@app.route('/api/parcelas', methods=['GET'])
-def listar_parcelas():
-    parcelas = Parcela.query.all()
-    user_id = request.headers.get('X-User-Id')
-    if user_id:  # <-- CAMBIO CLAVE: verificar que existe
-        try:
-            registrar_log(user_id, 'listar_parcelas', 'parcela', None)
-        except Exception as e:
-            current_app.logger.error(f"Error al registrar log: {e}")
-            # No detener la ejecución por errores de log
-
-    resultado = []
-    for p in parcelas:
-        resultado.append({
-            "id": p.id,
-            "nombre": p.nombre,
-            "ubicacion": p.ubicacion,
-            "hectareas": p.hectareas,
-            "latitud": p.latitud,
-            "longitud": p.longitud,
-            "fecha_creacion": p.fecha_creacion.isoformat() if p.fecha_creacion else None,
-            "cultivo_actual": p.cultivo_actual,
-            "fecha_siembra": p.fecha_siembra.isoformat() if p.fecha_siembra else None
-        })
-    return jsonify(resultado)
-
+# ...existing code...
+# ...existing code...
 #endoints para la API de conversaciones
 # Endpoint para listar todas las conversaciones de un usuario
 # Endpoint para obtener conversaciones de un usuario
@@ -1481,7 +1640,6 @@ def actualizar_parcela(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
-
 
 # Endpoint para obtener mensajes de una conversación
 @app.route('/api/chat/<conv_id>', methods=['GET'])
@@ -2312,6 +2470,114 @@ def debug_routes():
         "total_routes": len(routes),
         "routes": routes
     })
+    
+    
+    # ...existing code...
+
+@app.route('/api/cultivos', methods=['GET'])
+def listar_cultivos():
+    """Listar todos los cultivos disponibles"""
+    try:
+        # Verificar autorización
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Token requerido'}), 401
+        
+        # Consultar todos los cultivos
+        cultivos = DetalleCultivo.query.all()
+        
+        cultivos_data = []
+        for cultivo in cultivos:
+            cultivos_data.append({
+                'id': cultivo.id,
+                'parcela_id': cultivo.parcela_id,
+                'nombre': cultivo.nombre,
+                'variedad': cultivo.variedad,
+                'etapa_desarrollo': cultivo.etapa_desarrollo,
+                'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
+                'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+                'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
+                'progreso_cosecha': round(cultivo.progreso_cosecha(), 1) if hasattr(cultivo, 'progreso_cosecha') else None,
+                'activo': cultivo.activo,
+                'fecha_cosecha': cultivo.fecha_cosecha.isoformat() if cultivo.fecha_cosecha else None
+            })
+        
+        return jsonify(cultivos_data)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al listar cultivos: {str(e)}")
+        return jsonify({'error': f"Error al obtener cultivos: {str(e)}"}), 500
+
+@app.route('/api/cultivos/<int:cultivo_id>', methods=['GET'])
+def obtener_cultivo(cultivo_id):
+    """Obtener un cultivo específico por ID"""
+    try:
+        cultivo = DetalleCultivo.query.get(cultivo_id)
+        if not cultivo:
+            return jsonify({'error': 'Cultivo no encontrado'}), 404
+        
+        cultivo_data = {
+            'id': cultivo.id,
+            'parcela_id': cultivo.parcela_id,
+            'nombre': cultivo.nombre,
+            'variedad': cultivo.variedad,
+            'etapa_desarrollo': cultivo.etapa_desarrollo,
+            'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
+            'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+            'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
+            'progreso_cosecha': round(cultivo.progreso_cosecha(), 1) if hasattr(cultivo, 'progreso_cosecha') else None,
+            'activo': cultivo.activo,
+            'fecha_cosecha': cultivo.fecha_cosecha.isoformat() if cultivo.fecha_cosecha else None
+        }
+        
+        return jsonify(cultivo_data)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener cultivo: {str(e)}")
+        return jsonify({'error': f"Error al obtener cultivo: {str(e)}"}), 500
+
+@app.route('/api/parcelas/<int:parcela_id>/cultivo', methods=['GET'])
+def obtener_cultivo_por_parcela(parcela_id):
+    """Obtener el cultivo activo de una parcela específica"""
+    try:
+        # Buscar el cultivo activo de la parcela
+        cultivo = DetalleCultivo.query.filter_by(
+            parcela_id=parcela_id, 
+            activo=True
+        ).first()
+        
+        if not cultivo:
+            return jsonify({'error': 'No hay cultivo activo en esta parcela'}), 404
+        
+        cultivo_data = {
+            'id': cultivo.id,
+            'parcela_id': cultivo.parcela_id,
+            'nombre': cultivo.nombre,
+            'variedad': cultivo.variedad,
+            'etapa_desarrollo': cultivo.etapa_desarrollo,
+            'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
+            'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+            'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
+            'progreso_cosecha': round(cultivo.progreso_cosecha(), 1) if hasattr(cultivo, 'progreso_cosecha') else None,
+            'activo': cultivo.activo,
+            'fecha_cosecha': cultivo.fecha_cosecha.isoformat() if cultivo.fecha_cosecha else None
+        }
+        
+        return jsonify(cultivo_data)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener cultivo de parcela: {str(e)}")
+        return jsonify({'error': f"Error al obtener cultivo: {str(e)}"}), 500
+
+# ...existing code...
+    
+    
+    
+    
+    
+    
+    
+    
 
 # ...existing code...
 
