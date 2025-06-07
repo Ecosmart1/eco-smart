@@ -179,7 +179,7 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
         method: 'POST'
       });
       const data = await response.json();
-      alert(data.mensaje);
+      alert(data.mensaje); // Solo alert, NO setPopupMensaje aquí
       setSimulacionActiva(false);
       return true;
     } catch (err) {
@@ -297,7 +297,18 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
                 <button onClick={exportar_csv}>Exportar Datos</button>
               </div>
               <div className="buttons-ajustes">
-                <Link to="/dashboard/tecnico/ajustes" className="button-link">Ajustar Parámetros</Link>
+                <Link
+                  to={
+                    user?.rol === 'agricultor'
+                      ? '/dashboard/agricultor/ajustes'
+                      : user?.rol === 'agronomo'
+                      ? '/dashboard/agronomo/ajustes'
+                      : '/dashboard/tecnico/ajustes'
+                  }
+                  className="button-link"
+                >
+                  Ajustar Parámetros
+                </Link>
               </div>
             </div>
 

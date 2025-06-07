@@ -36,7 +36,7 @@ CORS(app, resources={
 # ...existing code... # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 

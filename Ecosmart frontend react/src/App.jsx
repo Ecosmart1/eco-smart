@@ -94,6 +94,7 @@ function App() {
           </div>
         } />
         
+        
         <Route path="/dashboard/tecnico/alertas" element={
           <div className="app-container">
             <HeaderTecnico />
@@ -119,7 +120,12 @@ function App() {
             <DashboardAgricultor />
           </div>
         } />
-        
+        <Route path="/dashboard/agricultor/ajustes" element={
+          <div className="app-container">
+            <HeaderAgricultor />
+            <AjusteParametros />
+          </div>
+        } />
         <Route path="/dashboard/agricultor/sensores" element={
           <div className="app-container">
             <HeaderAgricultor />
@@ -206,7 +212,12 @@ function App() {
     </div>
   </div>
 } />
-
+<Route path="/dashboard/agronomo/ajustes" element={
+          <div className="app-container">
+            <HeaderAgronomo />
+            <AjusteParametros />
+          </div>
+        } />
 <Route path="/dashboard/agronomo/chat" element={
   <div className="app-container">
     <HeaderAgronomo />

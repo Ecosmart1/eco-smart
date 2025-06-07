@@ -74,8 +74,9 @@
 }
 
 .alerta-severidad-badge.critico { background: #d32f2f; }
-.alerta-severidad-badge.alerta { background: #fbc02d; color: #333; }
+.alerta-severidad-badge.moderado { background: #fbc02d;  }
 .alerta-severidad-badge.normal { background: #22963e; }
+.alerta-severidad-badge.moderado { background: #fbc02d;  }
 
 .alerta-tipo {
   font-size: 0.95em;
