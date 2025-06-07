@@ -34,6 +34,7 @@ import DashboardAgronomo from './views/DashboardAgronomo';
 import EstadoCultivos from './views/EstadoCultivos';
 import DetalleCultivo from './views/DetalleCultivo';
 import AlertasAgricultor from './views/AlertasAgricultor';
+import AlertasAgronomo from './views/AlertasAgricultor';
 
 
 
@@ -239,11 +240,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      {/* Página de alertas que se implementará después */}
-      <div style={{textAlign: 'center', padding: '50px'}}>
-        <h2>Panel de Alertas</h2>
-        <p>Esta funcionalidad estará disponible próximamente</p>
-      </div>
+      <AlertasAgronomo />
     </div>
   </div>
 } />

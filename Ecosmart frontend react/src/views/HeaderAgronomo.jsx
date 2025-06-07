@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAlertas } from '../context/AlertasContext';
 import './HeaderAgronomo.css';
 
 const HeaderAgronomo = ({ activeItem }) => {
@@ -10,7 +11,7 @@ const HeaderAgronomo = ({ activeItem }) => {
 
   const menuRef = useRef();
   const alertasRef = useRef();
-  const [alertas, setAlertas] = useState([]);
+  const { alertasActivas, fetchAlertasActivas } = useAlertas();
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -26,20 +27,16 @@ const HeaderAgronomo = ({ activeItem }) => {
     setUsuario(usuarioObj);
   }, [navigate]);
 
+  useEffect(() => {
+    if (usuario) fetchAlertasActivas(usuario.id);
+  }, [usuario, fetchAlertasActivas]);
+
   const cerrarSesion = () => {
     localStorage.removeItem('ecosmart_user');
     localStorage.removeItem('ecosmart_token');
     window.dispatchEvent(new CustomEvent('session_cleared'));
     navigate('/login');
   };
-
-  // Cargar alertas
-  useEffect(() => {
-    fetch('http://localhost:5000/api/alertas')
-      .then(res => res.json())
-      .then(data => setAlertas(Array.isArray(data) ? data : []))
-      .catch(() => setAlertas([]));
-  }, []);
 
   // Cierra ambos menús si se hace click fuera
   useEffect(() => {
@@ -61,9 +58,10 @@ const HeaderAgronomo = ({ activeItem }) => {
     setMenuAbierto(!menuAbierto);
     if (!menuAbierto) setAlertasAbierto(false);
   };
-  const toggleAlertas = () => {
-    setAlertasAbierto(!alertasAbierto);
-    if (!alertasAbierto) setMenuAbierto(false);
+
+  // CAMBIO: Al hacer click en la campana, navega a la página de alertas
+  const handleCampanaClick = () => {
+    navigate('/dashboard/agronomo/alertas');
   };
 
   return (
@@ -98,35 +96,17 @@ const HeaderAgronomo = ({ activeItem }) => {
         <div className="notificaciones-wrapper" ref={alertasRef}>
           <button
             className="icono-campana"
-            onClick={toggleAlertas}
+            onClick={handleCampanaClick}
             aria-label="Ver alertas"
+            style={{ position: 'relative' }}
           >
-            <i className="fas fa-bell"></i>
-            {alertas.length > 0 && (
-              <span className="badge-alerta">{alertas.length}</span>
-            )}
-          </button>
-          {alertasAbierto && (
-            <div className="menu-alertas">
-              <h4>Alertas recientes</h4>
-              {alertas.length === 0 ? (
-                <div className="alerta-vacia">Sin alertas</div>
-              ) : (
-                <ul>
-                  {alertas.map(alerta => (
-                    <li key={alerta.id} className={`alerta-item ${alerta.severidad}`}>
-                      <div>
-                        <strong>{alerta.mensaje}</strong>
-                        <div className="alerta-detalle">
-                          <span>{alerta.fecha}</span> | <span>{alerta.parcela}</span>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+            <div className="notification-container">
+              <i className="fas fa-bell"></i>
+              {alertasActivas > 0 && (
+                <span className="notification-counter">{alertasActivas}</span>
               )}
             </div>
-          )}
+          </button>
         </div>
         <div className="user-profile" onClick={toggleMenu} ref={menuRef}>
           <div className="user-avatar agronomo">
