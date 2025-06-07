@@ -53,7 +53,6 @@ const DashboardAgricultor = () => {
   };
 
   // Abrir/cerrar formulario de nueva parcela
-  const abrirFormulario = () => setMostrarFormulario(true);
   const cerrarFormulario = () => setMostrarFormulario(false);
   
 
@@ -356,7 +355,6 @@ const fetchDatosSensores = async () => {
 
   return (
     <div className="dashboard-agricultor">
-
       {/* Contenido principal */}
       <div className="dashboard-content">
         {/* Bienvenida y fecha */}
@@ -365,7 +363,12 @@ const fetchDatosSensores = async () => {
             <h2>Bienvenido, {usuario?.nombre}</h2>
             <p className="current-date">{new Date().toLocaleDateString('es-CL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
-          <button className="btn-add-parcela" onClick={abrirFormulario}>+ Nueva Parcela</button>
+          <button
+            className="btn-add-parcela"
+            onClick={() => navigate('/dashboard/agricultor/parcelas/nueva')}
+          >
+            + Nueva Parcela
+          </button>
         </div>
 
         {/* Sección 1: Resumen de parcelas y mapa */}

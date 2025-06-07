@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { AlertasProvider } from './context/AlertasContext';
 
 // ===== VISTAS PÚBLICAS =====
 import LandingPage from './views/LandingPage';
@@ -50,6 +51,7 @@ function App() {
   };
 
   return (
+    <AlertasProvider>
     <Router>
       <Routes>
         {/* ===== RUTAS PÚBLICAS ===== */}
@@ -120,9 +122,7 @@ function App() {
         <Route path="/dashboard/agricultor/sensores" element={
           <div className="app-container">
             <HeaderAgricultor />
-            <div className="content-container">
-              <SensoresPanel API_URL={API_URL} />
-            </div>
+            <SensoresPanel API_URL={API_URL} />
           </div>
         } />
 
@@ -311,6 +311,7 @@ function App() {
         } />
       </Routes>
     </Router>
+    </AlertasProvider>
   );
 }
 

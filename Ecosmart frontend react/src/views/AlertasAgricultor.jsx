@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import HeaderAgricultor from './headeragricultor';
 import './AlertasAgricultor.css';
+import { useAlertas } from '../context/AlertasContext';
 
 const TickIcon = () => (
   <svg className="tick-icon" width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -13,6 +14,7 @@ const AlertasUsuario = () => {
   const [alertas, setAlertas] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [usuario, setUsuario] = useState(null);
+  const { fetchAlertasActivas } = useAlertas();
 
   useEffect(() => {
     // Obtener usuario desde localStorage
@@ -42,6 +44,7 @@ const AlertasUsuario = () => {
       .then(res => {
         if (res.ok) {
           setAlertas(alertas.filter(a => a.id !== alertaId));
+          fetchAlertasActivas(); // Actualiza el número en el header
           // Opcional: recargar historial
           fetch(`http://localhost:5000/api/alertas?inactivas=1`)
             .then(res => res.json())
@@ -59,6 +62,7 @@ const AlertasUsuario = () => {
         if (res.ok) {
           setAlertas(alertas.filter(a => a.id !== alertaId));
           setHistorial(historial.filter(a => a.id !== alertaId));
+          fetchAlertasActivas(); // Actualiza el número en el header
         }
       });
   };

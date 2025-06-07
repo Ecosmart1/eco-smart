@@ -130,6 +130,13 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
       }
       const data = await response.json();
       setDatos(data);
+
+      // Detectar si la simulación terminó
+      if (data.simulacion_activa === false && simulacionActiva) {
+        setSimulacionActiva(false);
+        setPopupMensaje('¡La simulación ha terminado!');
+        setTimeout(() => setPopupMensaje(''), 3000);
+      }
     } catch (err) {
       setError(err.message);
     }

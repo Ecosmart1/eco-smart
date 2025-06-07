@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAlertas } from '../context/AlertasContext';
 import './HeaderAgricultor.css';
 
 const HeaderAgricultor = ({ activeItem }) => {
@@ -7,6 +8,7 @@ const HeaderAgricultor = ({ activeItem }) => {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [alertasAbierto, setAlertasAbierto] = useState(false);
   const [alertas, setAlertas] = useState([]);
+  const { alertasActivas, fetchAlertasActivas } = useAlertas();
   const navigate = useNavigate();
   const menuRef = useRef(null);
   const alertasRef = useRef(null);
@@ -30,15 +32,19 @@ const HeaderAgricultor = ({ activeItem }) => {
     navigate('/login');
   };
 
-   // Cargar alertas
-   useEffect(() => {
-    if (!usuario) return; // Espera a que usuario esté definido
+  // Cargar alertas
+  useEffect(() => {
+    if (!usuario) return;
+    // Trae todas las alertas para el menú desplegable
     fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
       .then(res => res.json())
       .then(data => setAlertas(Array.isArray(data) ? data : []))
       .catch(() => setAlertas([]));
-  }, [usuario]);
-  
+
+    // Ya no es necesario traer la cantidad de alertas activas, se usa el contexto
+    fetchAlertasActivas(usuario.id);
+  }, [usuario, fetchAlertasActivas]);
+
   // Cierra ambos menús si se hace click fuera
   useEffect(() => {
     function handleClickOutside(event) {
@@ -53,7 +59,7 @@ const HeaderAgricultor = ({ activeItem }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  
+
   // Al abrir un menú, cierra el otro
   const toggleMenu = () => {
     setMenuAbierto(!menuAbierto);
@@ -63,7 +69,6 @@ const HeaderAgricultor = ({ activeItem }) => {
     setAlertasAbierto(!alertasAbierto);
     if (!alertasAbierto) setMenuAbierto(false);
   };
-  
 
   return (
     <div className="dashboard-header">
@@ -90,12 +95,12 @@ const HeaderAgricultor = ({ activeItem }) => {
         >
           Sensores
         </Link>
-       {/* <Link 
+        {/* <Link 
           to="/dashboard/agricultor/alertas" 
           className={`nav-item ${activeItem === 'alertas' ? 'active' : ''}`}
         >
           Alertas
-        </Link>-*/}
+        </Link> */}
         <Link 
           to="/dashboard/agricultor/chat" 
           className={`nav-item ${activeItem === 'chat' ? 'active' : ''}`}
@@ -109,11 +114,14 @@ const HeaderAgricultor = ({ activeItem }) => {
             className="icono-campana"
             onClick={() => navigate('/dashboard/agricultor/alertas')}
             aria-label="Ver alertas"
+            style={{ position: 'relative' }}
           >
-            <i className="fas fa-bell"></i>
-            {alertas.length > 0 && (
-              <span className="badge-alerta">{alertas.length}</span>
-            )}
+            <div className="notification-container">
+              <i className="fas fa-bell"></i>
+              {alertasActivas > 0 && (
+                <span className="notification-counter">{alertasActivas}</span>
+              )}
+            </div>
           </button>
           {alertasAbierto && (
             <div className="menu-alertas">
@@ -159,7 +167,6 @@ const HeaderAgricultor = ({ activeItem }) => {
           <div className="user-menu-icon">▼</div>
           {menuAbierto && (
             <div className="user-dropdown-menu">
-              {/* Al pulsar en configuración debe llevar a configuración de contraseña */}
               <Link to="/configuracion" className="dropdown-item">Configuración</Link>
               <div className="dropdown-divider"></div>
               <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>

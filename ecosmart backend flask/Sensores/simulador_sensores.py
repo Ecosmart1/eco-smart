@@ -163,12 +163,14 @@ def obtener_sensores():
 
 @app.route('/api/datos', methods=['GET'])
 def obtener_datos():
-    global ultimos_datos
-    # Solo devuelve el último dato, nunca genera uno nuevo aquí
+    global ultimos_datos, simulacion_activa
     if ultimos_datos:
-        return jsonify(ultimos_datos)
+        # Si ya es un diccionario, lo copiamos y agregamos el flag
+        datos = dict(ultimos_datos)
+        datos['simulacion_activa'] = simulacion_activa
+        return jsonify(datos)
     else:
-        return jsonify({"error": "No hay datos disponibles"}), 404
+        return jsonify({"error": "No hay datos disponibles", "simulacion_activa": simulacion_activa}), 404
 
 @app.route('/api/parametros', methods=['GET'])
 def obtener_parametros_config():
