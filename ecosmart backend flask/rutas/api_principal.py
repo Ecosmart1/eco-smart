@@ -10,7 +10,8 @@ import threading
 import pandas as pd
 import json
 from json import JSONDecodeError
-from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo,Notificacion
+from servicios.notificaciones import crear_notificacion, notificar_por_rol
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
@@ -23,7 +24,7 @@ import re
 
 
 app = Flask(__name__)
-# ...existing code...
+
 
 CORS(app, resources={
     r"/api/*": {
@@ -2778,7 +2779,121 @@ def obtener_cultivo_por_parcela(parcela_id):
 
 # ...existing code...
     
-    
+
+ # Importar el servicio de notificaciones
+
+
+# Endpoints para Notificaciones
+@app.route('/api/notificaciones', methods=['GET'])
+def obtener_notificaciones():
+    try:
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado'}), 401
+        
+        # Obtener parámetros de consulta
+        solo_no_leidas = request.args.get('no_leidas', 'false').lower() == 'true'
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 10, type=int), 50)
+        
+        # Construir la consulta
+        query = Notificacion.query.filter_by(usuario_id=user_id)
+        if solo_no_leidas:
+            query = query.filter_by(leida=False)
+            
+        # Ordenar por fecha descendente (más recientes primero)
+        query = query.order_by(Notificacion.fecha_creacion.desc())
+        
+        # Paginación
+        paginacion = query.paginate(page=page, per_page=per_page)
+        
+        # Contar no leídas (para el badge)
+        total_no_leidas = Notificacion.query.filter_by(usuario_id=user_id, leida=False).count()
+        
+        return jsonify({
+            'notificaciones': [n.to_dict() for n in paginacion.items],
+            'total': paginacion.total,
+            'total_no_leidas': total_no_leidas,
+            'pagina_actual': page,
+            'total_paginas': paginacion.pages
+        })
+        
+    except Exception as e:
+        print(f"Error al obtener notificaciones: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Marcar como leída
+@app.route('/api/notificaciones/<int:id>/leer', methods=['PUT'])
+def marcar_notificacion_leida(id):
+    try:
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado'}), 401
+        
+        notif = Notificacion.query.filter_by(id=id, usuario_id=user_id).first_or_404()
+        notif.leida = True
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': id})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al marcar notificación: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Marcar todas como leídas
+@app.route('/api/notificaciones/leer-todas', methods=['PUT'])
+def marcar_todas_notificaciones_leidas():
+    try:
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado'}), 401
+        
+        # Actualizar todas las no leídas del usuario
+        Notificacion.query.filter_by(usuario_id=user_id, leida=False).update({'leida': True})
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al marcar notificaciones: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Endpoint para pruebas (solo en desarrollo)
+@app.route('/api/notificaciones/test', methods=['POST'])
+def crear_notificacion_test():
+    try:
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado'}), 401
+            
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Se requieren datos'}), 400
+            
+        titulo = data.get('titulo', 'Notificación de prueba')
+        mensaje = data.get('mensaje', 'Esta es una notificación de prueba')
+        tipo = data.get('tipo', 'info')
+        
+        success, notif_id = crear_notificacion(
+            usuario_id=user_id,
+            titulo=titulo,
+            mensaje=mensaje,
+            tipo=tipo,
+            entidad_tipo=data.get('entidad_tipo'),
+            entidad_id=data.get('entidad_id'),
+            accion=data.get('accion')
+        )
+        
+        if success:
+            return jsonify({'success': True, 'id': notif_id}), 201
+        else:
+            return jsonify({'error': 'Error al crear notificación'}), 500
+            
+    except Exception as e:
+        print(f"Error creando notificación de prueba: {e}")
+        return jsonify({'error': str(e)}), 500   
     
     
     

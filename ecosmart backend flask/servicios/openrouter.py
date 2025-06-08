@@ -4,7 +4,7 @@ import hashlib
 import json
 from functools import lru_cache
 # Definir la clave API y la URL base - CORREGIR LA URL
-OPENROUTER_KEY = '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'
+OPENROUTER_KEY = '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'
 API_URL = 'https://openrouter.ai/api/v1/chat/completions'  # URL CORREGIDA
 
 # Caché para respuestas (usar lru_cache para limitar tamaño)

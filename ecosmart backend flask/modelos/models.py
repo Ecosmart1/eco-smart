@@ -128,3 +128,37 @@ class DetalleCultivo(db.Model):
 
 # ...existing code...
 # ...existing code...
+
+class Notificacion(db.Model):
+    __tablename__ = 'notificaciones'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    titulo = db.Column(db.String(200), nullable=False)
+    mensaje = db.Column(db.Text, nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)  # 'info', 'warning', 'error', 'success'
+    leida = db.Column(db.Boolean, default=False)
+    fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    
+    # Campos para conexión con el futuro sistema de alertas
+    alerta_id = db.Column(db.Integer, nullable=True)  # ID de la alerta que generó esta notificación
+    entidad_tipo = db.Column(db.String(50), nullable=True)  # 'parcela', 'cultivo', 'sensor', etc.
+    entidad_id = db.Column(db.Integer, nullable=True)  # ID de la entidad relacionada
+    accion = db.Column(db.String(100), nullable=True)  # 'ver_parcela', 'ajustar_riego', etc.
+    metadatos = db.Column(db.Text, nullable=True)  # JSON con datos adicionales para el sistema de alertas
+    
+    # Relación con el usuario
+    usuario = db.relationship('Usuario', backref='notificaciones')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'titulo': self.titulo,
+            'mensaje': self.mensaje,
+            'tipo': self.tipo,
+            'leida': self.leida,
+            'fecha': self.fecha_creacion.isoformat(),
+            'entidad_tipo': self.entidad_tipo,
+            'entidad_id': self.entidad_id,
+            'accion': self.accion,
+            'alerta_id': self.alerta_id
+        }
