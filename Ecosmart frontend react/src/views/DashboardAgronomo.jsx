@@ -45,13 +45,17 @@ const DashboardAgronomo = () => {
   const [errorConexion, setErrorConexion] = useState(false);
   const [estadoIA, setEstadoIA] = useState('conectado');
   
-  // Nuevos estados para recomendaciones
+  // Estados para recomendaciones
   const [recomendaciones, setRecomendaciones] = useState([]);
   const [cargandoRecomendaciones, setCargandoRecomendaciones] = useState(false);
   
+  // Estados para alertas
+  const [alertas, setAlertas] = useState([]);
+  const [cargandoAlertas, setCargandoAlertas] = useState(false);
+
   const navigate = useNavigate();
 
-  // Verificar usuario al montar el componente - MODIFICADO PARA MANEJAR TOKEN FALTANTE
+  // Verificar usuario al montar el componente
   useEffect(() => {
     console.log('=== VERIFICANDO AUTENTICACIÓN ===');
     
@@ -62,14 +66,12 @@ const DashboardAgronomo = () => {
     console.log('Usuario en localStorage:', usuarioGuardado);
     console.log('Token en localStorage:', tokenGuardado ? 'Existe' : 'No existe');
     
-    // MODIFICADO: Solo verificar usuario para desarrollo
     if (!usuarioGuardado) {
       console.log('No hay datos de usuario, redirigiendo al login');
       navigate('/login');
       return;
     }
     
-    // AGREGADO: Si no hay token, crear uno temporal para desarrollo
     if (!tokenGuardado) {
       console.log('⚠️  Token faltante, creando token temporal para desarrollo');
       localStorage.setItem('ecosmart_token', 'temp_token_development');
@@ -102,7 +104,7 @@ const DashboardAgronomo = () => {
       // Cargar datos
       fetchParcelas();
       inicializarChat(usuarioObj.id);
-      // Cargar recomendaciones iniciales
+      fetchAlertas();
       cargarRecomendaciones();
       
     } catch (error) {
@@ -133,7 +135,7 @@ const DashboardAgronomo = () => {
     await enviarMensaje();
   };
 
-  // Función para verificar y renovar token si es necesario - MODIFICADA
+  // Función para verificar y renovar token si es necesario
   const verificarAutenticacion = async () => {
     const token = localStorage.getItem('ecosmart_token');
     const usuario = localStorage.getItem('ecosmart_user');
@@ -148,20 +150,17 @@ const DashboardAgronomo = () => {
       return false;
     }
     
-    // AGREGADO: Si no hay token, crear uno temporal
     if (!token) {
       console.log('Token faltante, creando temporal');
       localStorage.setItem('ecosmart_token', 'temp_token_development');
     }
     
     try {
-      // AGREGADO: Para desarrollo, saltear verificación de token con servidor
       if (token === 'temp_token_development' || !token) {
         console.log('🚧 Modo desarrollo: saltando verificación de token');
         return true;
       }
       
-      // Verificar que el token sea válido haciendo una llamada de prueba
       const response = await fetch(`${API_URL}/auth/verify`, {
         method: 'GET',
         headers: getAuthHeaders()
@@ -177,7 +176,6 @@ const DashboardAgronomo = () => {
       return true;
     } catch (error) {
       console.warn('Error al verificar token:', error);
-      // En caso de error de red, asumir que está bien para desarrollo
       return true;
     }
   };
@@ -228,15 +226,13 @@ const DashboardAgronomo = () => {
     }
   };
 
-  // NUEVAS FUNCIONES PARA MANEJO DE CONVERSACIONES
   // Función para cambiar de conversación
   const cambiarConversacion = async (conversacionId) => {
     try {
       console.log('Cambiando a conversación:', conversacionId);
       setConversacionActual(conversacionId);
-      setHistorialChat([]); // Limpiar chat actual
+      setHistorialChat([]); 
       
-      // Cargar historial de la conversación seleccionada
       await cargarHistorialChat(conversacionId, usuarioId);
       
     } catch (error) {
@@ -252,7 +248,6 @@ const DashboardAgronomo = () => {
       const response = await nuevaConversacion(usuarioId);
       const nuevaConv = response.data;
       
-      // Actualizar lista de conversaciones
       setConversaciones(prev => [nuevaConv, ...prev]);
       setConversacionActual(nuevaConv.id);
       setHistorialChat([]);
@@ -261,7 +256,6 @@ const DashboardAgronomo = () => {
       
     } catch (error) {
       console.error('Error al crear nueva conversación:', error);
-      // Crear conversación temporal local
       const conversacionTemporal = {
         id: `temp_${Date.now()}`,
         title: `Chat ${new Date().toLocaleString()}`,
@@ -284,10 +278,8 @@ const DashboardAgronomo = () => {
     try {
       await eliminarConversacion(conversacionId, usuarioId);
       
-      // Remover de la lista local
       setConversaciones(prev => prev.filter(conv => conv.id !== conversacionId));
       
-      // Si era la conversación actual, crear una nueva
       if (conversacionActual === conversacionId) {
         setConversacionActual(null);
         setHistorialChat([]);
@@ -296,7 +288,6 @@ const DashboardAgronomo = () => {
       
     } catch (error) {
       console.error('Error al eliminar conversación:', error);
-      // Remover localmente aunque falle el backend
       setConversaciones(prev => prev.filter(conv => conv.id !== conversacionId));
       
       if (conversacionActual === conversacionId) {
@@ -352,7 +343,7 @@ const DashboardAgronomo = () => {
     }
   };
 
-  // Obtener parcelas desde backend - MEJORADO
+  // Obtener parcelas desde backend
   const fetchParcelas = async () => {
     setCargando(true);
     console.log('Obteniendo parcelas...');
@@ -367,7 +358,6 @@ const DashboardAgronomo = () => {
       if (res.status === 401) {
         console.warn("Token expirado, usando datos de ejemplo");
         setErrorConexion(true);
-        // No redirigir, usar datos de ejemplo
       } else if (res.ok) {
         const data = await res.json();
         console.log('Parcelas obtenidas:', data.length);
@@ -378,7 +368,6 @@ const DashboardAgronomo = () => {
         setParcelas(parcelasConEstado);
         setErrorConexion(false);
         
-        // También actualizar las recomendaciones después de obtener las parcelas
         await cargarRecomendaciones();
         
         setCargando(false);
@@ -440,10 +429,99 @@ const DashboardAgronomo = () => {
     ];
     setParcelas(parcelasEjemplo);
     
-    // Cargar recomendaciones con datos de ejemplo
     await cargarRecomendaciones();
     
     setCargando(false);
+  };
+
+  // Función para obtener alertas desde el backend
+  const fetchAlertas = async () => {
+    try {
+      setCargandoAlertas(true);
+      const response = await fetch(`${API_URL}/alertas`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Alertas obtenidas de la BD:', data.length);
+        setAlertas(data);
+        setErrorConexion(false);
+      } else if (response.status === 401) {
+        console.warn("Token expirado al obtener alertas");
+        setErrorConexion(true);
+        // Usar datos de ejemplo si no se pueden obtener alertas reales
+        generarAlertasEjemplo();
+      } else {
+        throw new Error(`Error del servidor: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error al obtener alertas:', error);
+      setErrorConexion(true);
+      // Generar datos de ejemplo en caso de error
+      generarAlertasEjemplo();
+    } finally {
+      setCargandoAlertas(false);
+    }
+  };
+  
+  // Generar alertas de ejemplo cuando hay error
+  const generarAlertasEjemplo = () => {
+    const alertasEjemplo = [
+      {
+        id: 1,
+        parcela: 2,
+        sensor_id: 234,
+        tipo: "Humedad de suelo",
+        valor: 12.5,
+        severidad: "critico",
+        mensaje: "Humedad de suelo criticamente baja",
+        timestamp: new Date().toISOString(),
+        activa: true
+      },
+      {
+        id: 2,
+        parcela: 3,
+        sensor_id: 118,
+        tipo: "Temperatura",
+        valor: 39.7,
+        severidad: "alerta",
+        mensaje: "Temperatura elevada",
+        timestamp: new Date().toISOString(),
+        activa: true
+      },
+      {
+        id: 3,
+        parcela: 2,
+        sensor_id: 156,
+        tipo: "pH del suelo",
+        valor: 4.2,
+        severidad: "critico",
+        mensaje: "pH del suelo demasiado ácido",
+        timestamp: new Date().toISOString(),
+        activa: true
+      }
+    ];
+    setAlertas(alertasEjemplo);
+  };
+
+  // Función para marcar una alerta como revisada
+  const marcarAlertaComoRevisada = async (alertaId) => {
+    try {
+      const res = await fetch(`${API_URL}/alertas/${alertaId}/revisada`, {
+        method: 'PUT',
+        headers: getAuthHeaders()
+      });
+      
+      if (res.ok) {
+        // Actualizar lista de alertas al eliminar la revisada
+        setAlertas(alertas.filter(a => a.id !== alertaId));
+      } else {
+        console.error('Error al marcar alerta como revisada');
+      }
+    } catch (error) {
+      console.error('Error de conexión:', error);
+    }
   };
 
   // Función para reintentar conexión con IA
@@ -481,7 +559,6 @@ const DashboardAgronomo = () => {
         await inicializarChat(usuarioId);
       }
 
-      // MODIFICADO: Preparar contexto para incluir datos del servicio de recomendaciones
       const contextoDatos = await servicioRecomendaciones.prepararContextoParaAsistente();
       
       const contextData = {
@@ -508,8 +585,10 @@ const DashboardAgronomo = () => {
           ultima_actualizacion: new Date().toISOString(),
           modo_operacion: errorConexion ? 'offline' : 'online'
         },
-        // Incluir datos agrícolas del servicio de recomendaciones
-        datos_agricolas: contextoDatos
+        datos_agricolas: contextoDatos,
+        alertas_activas: alertas.length,
+        alertas_criticas: alertas.filter(a => a.severidad === 'critico').length,
+        alertas_moderadas: alertas.filter(a => a.severidad === 'alerta').length
       };
 
       const response = await enviarMensajeAPI(usuarioId, mensajeEnviado, convId, contextData);
@@ -615,7 +694,6 @@ const DashboardAgronomo = () => {
     window.addEventListener('offline', actualizarEstadoConexion);
     window.addEventListener('online', actualizarEstadoConexion);
 
-    // Verifica al montar
     actualizarEstadoConexion();
 
     return () => {
@@ -670,15 +748,17 @@ const DashboardAgronomo = () => {
     );
   }
 
-  // Calcular estadísticas
+  // Calcular estadísticas basadas en alertas reales de la BD
   const totalParcelas = parcelas.length;
-  const parcelasOptimas = parcelas.filter(p => p.estado === 'óptimo').length;
-  const parcelasAlerta = parcelas.filter(p => p.estado === 'alerta').length;
-  const parcelasCriticas = parcelas.filter(p => p.estado === 'crítico').length;
+  const totalAlertas = alertas.length;
+  const alertasCriticas = alertas.filter(a => a.severidad === 'critico').length;
+  const alertasModerate = alertas.filter(a => a.severidad === 'moderado').length;
+  const parcelasConAlertas = alertas.length > 0 ? [...new Set(alertas.map(a => a.parcela))].length : 0;
+  const parcelasOptimas = totalParcelas - parcelasConAlertas;
 
   const datosPieChart = [
-    { name: 'Críticas', value: parcelasCriticas || 0, color: '#F44336' },
-    { name: 'Moderadas', value: parcelasAlerta || 0, color: '#FFC107' },
+    { name: 'Críticas', value: alertasCriticas || 0, color: '#F44336' },
+    { name: 'Moderadas', value: alertasModerate || 0, color: '#FFC107' },
     { name: 'Óptimo', value: parcelasOptimas || 0, color: '#4CAF50' }
   ];
 
@@ -702,6 +782,22 @@ const DashboardAgronomo = () => {
     }
   };
 
+  // Función para encontrar el nombre de la parcela basado en ID
+  const obtenerNombreParcela = (parcelaId) => {
+    const parcela = parcelas.find(p => p.id === parcelaId);
+    return parcela ? parcela.nombre : `Parcela ${parcelaId}`;
+  };
+
+  // Formatea la fecha para mostrarla amigable
+  const formatearFecha = (fechaStr) => {
+    try {
+      const fecha = new Date(fechaStr);
+      return fecha.toLocaleString();
+    } catch (error) {
+      return fechaStr;
+    }
+  };
+
   return (
     <div className="ecosmart-dashboard">
 
@@ -710,7 +806,7 @@ const DashboardAgronomo = () => {
           <div className="alerta-conexion-content">
             <i className="fas fa-exclamation-triangle"></i>
             <span>Problemas de conectividad detectados. Trabajando en modo offline con datos de ejemplo.</span>
-            <button onClick={() => { fetchParcelas(); reintentarConexionIA(); }}>
+            <button onClick={() => { fetchParcelas(); fetchAlertas(); reintentarConexionIA(); }}>
               <i className="fas fa-sync-alt"></i> Reintentar
             </button>
           </div>
@@ -722,7 +818,17 @@ const DashboardAgronomo = () => {
         {/* PRIMER TERCIO: ALERTAS Y ESTADO DE CULTIVOS */}
         <div className="dashboard-section primer-tercio">
           <div className="ecosmart-panel alertas-activas-panel">
-            <h2 className="panel-title">ALERTAS ACTIVAS</h2>
+            <div className="panel-header">
+              <h2 className="panel-title">ALERTAS ACTIVAS</h2>
+              <button 
+                onClick={fetchAlertas} 
+                className={`btn-actualizar-alertas ${cargandoAlertas ? 'loading' : ''}`}
+                disabled={cargandoAlertas}
+              >
+                <i className={`fas ${cargandoAlertas ? 'fa-spinner fa-spin' : 'fa-sync'}`}></i>
+                {cargandoAlertas ? ' Actualizando...' : ' Actualizar'}
+              </button>
+            </div>
             
             <div className="alertas-content">
               <div className="alertas-chart">
@@ -744,51 +850,59 @@ const DashboardAgronomo = () => {
                 <div className="alertas-legend">
                   <div className="alertas-legend-item">
                     <span className="legend-color-box" style={{ backgroundColor: '#F44336' }}></span>
-                    <span>Alertas críticas: {parcelasCriticas}</span>
+                    <span>Alertas críticas: {alertasCriticas}</span>
                   </div>
                   <div className="alertas-legend-item">
                     <span className="legend-color-box" style={{ backgroundColor: '#FFC107' }}></span>
-                    <span>Alertas moderadas: {parcelasAlerta}</span>
+                    <span>Alertas moderadas: {alertasModerate}</span>
                   </div>
                   <div className="alertas-legend-item">
                     <span className="legend-color-box" style={{ backgroundColor: '#4CAF50' }}></span>
-                    <span>Óptimo: {parcelasOptimas}</span>
+                    <span>Parcelas óptimas: {parcelasOptimas}</span>
                   </div>
                 </div>
               </div>
               
               <div className="alertas-cards">
-                {parcelas.filter(p => p.estado === 'crítico' || p.estado === 'alerta').slice(0, 4).map(parcela => (
-                  <div key={parcela.id} className="alerta-card">
-                    <div className="alerta-card-icon">
-                      <i className="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div className="alerta-card-info">
-                      <h3>Plantación: {parcela.cultivo_actual}</h3>
-                      <p>Variedad: {parcela.variedad}</p>
-                      <p>Edad: {parcela.edad}</p>
-                      <p>Ubicación: {parcela.ubicacion}</p>
-                      <span className={`alerta-status ${parcela.estado === 'crítico' ? 'critico' : 'moderado'}`}>
-                        {parcela.estado === 'crítico' ? 'Alertas críticas' : 'Alertas moderadas'}
-                      </span>
-                    </div>
+                {cargandoAlertas ? (
+                  <div className="alertas-cargando">
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <span>Cargando alertas...</span>
                   </div>
-                ))}
-                
-                {parcelas.filter(p => p.estado === 'óptimo').slice(0, 2).map(parcela => (
-                  <div key={parcela.id} className="alerta-card">
-                    <div className="alerta-card-icon optimal">
-                      <i className="fas fa-check-circle"></i>
+                ) : alertas.length > 0 ? (
+                  alertas.slice(0, 4).map(alerta => (
+                    <div key={alerta.id} className="alerta-card">
+                      <div className="alerta-card-icon">
+                        <i className={`fas fa-${alerta.tipo.toLowerCase().includes('temperatura') ? 'thermometer-half' : 
+                                           alerta.tipo.toLowerCase().includes('humedad') ? 'tint' : 
+                                           alerta.tipo.toLowerCase().includes('ph') ? 'flask' : 
+                                           'exclamation-triangle'}`}></i>
+                      </div>
+                      <div className="alerta-card-info">
+                        <h3>{alerta.tipo}</h3>
+                        <p>Parcela: {obtenerNombreParcela(alerta.parcela)}</p>
+                        <p>Valor: {alerta.valor} {alerta.tipo.toLowerCase().includes('temperatura') ? '°C' : 
+                                  alerta.tipo.toLowerCase().includes('humedad') ? '%' : ''}</p>
+                        <p>Fecha: {formatearFecha(alerta.timestamp)}</p>
+                        <span className={`alerta-status ${alerta.severidad === 'critico' ? 'critico' : 'moderado'}`}>
+                          {alerta.severidad === 'critico' ? 'Alerta crítica' : 'Alerta moderada'}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => marcarAlertaComoRevisada(alerta.id)} 
+                        className="btn-marcar-revisada" 
+                        title="Marcar como revisada"
+                      >
+                        <i className="fas fa-check"></i>
+                      </button>
                     </div>
-                    <div className="alerta-card-info">
-                      <h3>Plantación: {parcela.cultivo_actual}</h3>
-                      <p>Variedad: {parcela.variedad}</p>
-                      <p>Edad: {parcela.edad}</p>
-                      <p>Ubicación: {parcela.ubicacion}</p>
-                      <span className="alerta-status optimo">Óptimo</span>
-                    </div>
+                  ))
+                ) : (
+                  <div className="alertas-empty">
+                    <i className="fas fa-check-circle"></i>
+                    <span>No hay alertas activas en este momento</span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -806,7 +920,7 @@ const DashboardAgronomo = () => {
               </div>
               <div className="cultivo-estado-item">
                 <i className="fas fa-chart-line"></i>
-                <span>Promedio de salud: {Math.round((parcelasOptimas / totalParcelas) * 100) || 78}%</span>
+                <span>Promedio de salud: {Math.round(((totalParcelas - alertasCriticas - (alertasModerate/2)) / totalParcelas) * 100) || 78}%</span>
               </div>
               <div className="cultivo-estado-item">
                 <i className="fas fa-thermometer-half"></i>
@@ -885,7 +999,7 @@ const DashboardAgronomo = () => {
             </div>
           </div>
 
-          {/* CHAT CON ASISTENTE IA - MEJORADO CON SELECTOR DE CONVERSACIONES */}
+          {/* CHAT CON ASISTENTE IA */}
           <div className="chat-asistente-ia">
             <div className="chat-asistente-header">
               <h3>Asistente IA Agrónomo</h3>

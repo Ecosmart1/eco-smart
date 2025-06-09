@@ -19,6 +19,7 @@ from random import randint
 import smtplib
 from email.mime.text import MIMEText
 import re
+from servicios.notificaciones import enviar_correo_alerta
 
 
 
@@ -41,9 +42,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
-# ...existing code...
 
-# Agregar este endpoint antes de la línea "if __name__ == '__main__':"
+
 
 @app.route('/api/debug/database', methods=['GET'])
 def debug_database():
@@ -1060,21 +1060,51 @@ def simulacion_continua_parcela():
         # Asegurar que se desactive la simulación en caso de error
         simulacion_activa = False
 
-def guardar_alertas_finales(parcela_id, datos, parametros):
-    
-    
-    
 
-    
+#endpoint para asignar un usuario a todas las parcelas sin usuario asignado
+@app.route('/api/debug/asignar_usuario_parcelas', methods=['GET'])
+def asignar_usuario_parcelas():
+    try:
+        # Buscar un usuario activo (o usar ID específico)
+        usuario = Usuario.query.first()
+        if not usuario:
+            return jsonify({"error": "No hay usuarios registrados"}), 404
+            
+        # Obtener parcelas sin usuario asignado
+        parcelas_sin_usuario = Parcela.query.filter(
+            (Parcela.usuario_id == None) | 
+            (Parcela.usuario_id == 0)
+        ).all()
+        
+        # Asignar el usuario a todas estas parcelas
+        for parcela in parcelas_sin_usuario:
+            parcela.usuario_id = usuario.id
+            print(f"Asignando usuario {usuario.id} a parcela {parcela.id}")
+            
+        db.session.commit()
+        
+        return jsonify({
+            "mensaje": f"Se asignó el usuario {usuario.nombre} (ID: {usuario.id}) a {len(parcelas_sin_usuario)} parcelas",
+            "parcelas_actualizadas": [p.id for p in parcelas_sin_usuario]
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+def guardar_alertas_finales(parcela_id, datos, parametros):
     """
     Guarda alertas críticas y moderadas en la base de datos al finalizar la simulación,
     según los valores críticos y de alerta definidos en los parámetros configurables.
+    También envía notificaciones por correo para alertas críticas.
     """
     try:
         if not parcela_id or not datos:
             return
 
         now = datetime.now(UTC)
+        
+        # Lista para almacenar las alertas creadas que deberán notificarse
+        alertas_a_notificar = []
 
         # Temperatura
         temp = datos.get(1, {}).get("valor")
@@ -1106,6 +1136,18 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
                     activa=True
                 )
                 db.session.add(alerta)
+                db.session.flush()  # Para obtener el ID generado
+                
+                # Si es crítica, añadir a la lista de alertas a notificar
+                if severidad == "critico":
+                    alertas_a_notificar.append({
+                        'id': alerta.id,
+                        'tipo': alerta.tipo,
+                        'valor': alerta.valor,
+                        'severidad': alerta.severidad,
+                        'mensaje': alerta.mensaje,
+                        'timestamp': alerta.timestamp.isoformat()
+                    })
 
         # Humedad
         humedad = datos.get(2, {}).get("valor")
@@ -1137,6 +1179,18 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
                     activa=True
                 )
                 db.session.add(alerta)
+                db.session.flush()  # Para obtener el ID generado
+                
+                # Si es crítica, añadir a la lista de alertas a notificar
+                if severidad == "critico":
+                    alertas_a_notificar.append({
+                        'id': alerta.id,
+                        'tipo': alerta.tipo,
+                        'valor': alerta.valor,
+                        'severidad': alerta.severidad,
+                        'mensaje': alerta.mensaje,
+                        'timestamp': alerta.timestamp.isoformat()
+                    })
 
         # pH
         ph = datos.get(3, {}).get("valor")
@@ -1168,6 +1222,18 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
                     activa=True
                 )
                 db.session.add(alerta)
+                db.session.flush()  # Para obtener el ID generado
+                
+                # Si es crítica, añadir a la lista de alertas a notificar
+                if severidad == "critico":
+                    alertas_a_notificar.append({
+                        'id': alerta.id,
+                        'tipo': alerta.tipo,
+                        'valor': alerta.valor,
+                        'severidad': alerta.severidad,
+                        'mensaje': alerta.mensaje,
+                        'timestamp': alerta.timestamp.isoformat()
+                    })
 
         # Nutrientes (si existen)
         nutrientes = datos.get(4, {}).get("valor")
@@ -1206,56 +1272,77 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
                         activa=True
                     )
                     db.session.add(alerta)
+                    db.session.flush()  # Para obtener el ID generado
+                    
+                    # Si es crítica, añadir a la lista de alertas a notificar
+                    if severidad == "critico":
+                        alertas_a_notificar.append({
+                            'id': alerta.id,
+                            'tipo': alerta.tipo,
+                            'valor': alerta.valor,
+                            'severidad': alerta.severidad,
+                            'mensaje': alerta.mensaje,
+                            'timestamp': alerta.timestamp.isoformat()
+                        })
 
+        # Guardar todos los cambios en la base de datos
         db.session.commit()
+        
+        # ENVIAR NOTIFICACIONES POR CORREO PARA ALERTAS CRÍTICAS
+        # Solo si hay alertas críticas que notificar
+        if alertas_a_notificar:
+            try:
+                # Obtener la parcela para incluir detalles en el correo
+                parcela = Parcela.query.get(parcela_id)
+                if parcela:
+                    print(f"DEBUG: Parcela encontrada: {parcela.id} - {parcela.nombre}")
+                    
+                    # Preparar datos de la parcela para las notificaciones
+                    datos_parcela = {
+                        'nombre': parcela.nombre,
+                        'cultivo': parcela.cultivo_actual if hasattr(parcela, 'cultivo_actual') else '',
+                        'id': parcela.id
+                    }
+                    
+                    # Importar la función para enviar correos
+                    from servicios.notificaciones import enviar_correo_alerta
+                    
+                    # MODIFICACIÓN: Enviar a TODOS los usuarios, no solo al asociado a la parcela
+                    # Obtener todos los usuarios con email configurado
+                    usuarios = Usuario.query.filter(Usuario.email.isnot(None)).all()
+                    
+                    if usuarios:
+                        print(f"DEBUG: Se encontraron {len(usuarios)} usuarios con email configurado")
+                        
+                        # Enviar notificaciones a todos los usuarios
+                        for usuario in usuarios:
+                            print(f"DEBUG: Enviando alertas a {usuario.email}")
+                            
+                            # Enviar una notificación por cada alerta crítica
+                            for alerta_data in alertas_a_notificar:
+                                try:
+                                    resultado = enviar_correo_alerta(usuario.email, alerta_data, datos_parcela)
+                                    if resultado:
+                                        print(f"✅ Alerta {alerta_data['id']} enviada a {usuario.email}")
+                                    else:
+                                        print(f"❌ Error al enviar alerta {alerta_data['id']} a {usuario.email}")
+                                except Exception as e:
+                                    print(f"Error al enviar correo individual: {str(e)}")
+                    else:
+                        print("DEBUG: No se encontraron usuarios con email configurado")
+                else:
+                    print(f"DEBUG: No se encontró la parcela con ID {parcela_id}")
+                        
+            except Exception as email_error:
+                import traceback
+                print(f"ERROR AL NOTIFICAR: {str(email_error)}")
+                traceback.print_exc()
+                current_app.logger.error(f"Error al enviar notificaciones por correo: {email_error}")
+            
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error al guardar alertas finales: {e}")
-# ...existing code...
 
-@app.route('/api/alertas/crear', methods=['POST'])
-def crear_alerta():
-    """Crear una nueva alerta"""
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({"error": "No se enviaron datos"}), 400
-        
-        # Crear nueva alerta
-        nueva_alerta = AlertaSensor(
-            parcela=data.get('parcela', 1),
-            sensor_id=data.get('sensor_id', 1),
-            tipo=data.get('tipo', 'sistema'),
-            valor=float(data.get('valor', 0.0)),
-            severidad=data.get('severidad', 'baja'),
-            mensaje=data.get('mensaje', 'Alerta generada'),
-            timestamp=datetime.now(UTC),
-            activa=data.get('activa', True)
-        )
-        
-        db.session.add(nueva_alerta)
-        db.session.commit()
-        
-        return jsonify({
-            "mensaje": "Alerta creada exitosamente",
-            "id": nueva_alerta.id,
-            "alerta": {
-                "id": nueva_alerta.id,
-                "tipo": nueva_alerta.tipo,
-                "severidad": nueva_alerta.severidad,
-                "mensaje": nueva_alerta.mensaje,
-                "timestamp": nueva_alerta.timestamp.strftime("%d/%m/%Y %H:%M"),
-                "activa": nueva_alerta.activa
-            }
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error creando alerta: {e}")
-        return jsonify({"error": str(e)}), 500
-
-# ...existing code...
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
     """Inicia la simulación continua utilizando la actualización centralizada"""
@@ -2886,16 +2973,15 @@ def guardar_analisis_parcela(parcela_id):
         return jsonify({"error": "Error al guardar el análisis", "details": str(e)}), 500
 
 @app.route('/api/alertas', methods=['GET'])
-def c():
+def obtener_alertas():
     user_id = request.args.get('user_id')
     inactivas = request.args.get('inactivas')
     query = AlertaSensor.query
 
-    #if user_id:
-    #    parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
-     #   parcelas_ids = [p.id for p in parcelas_usuario]
-      #  query = query.filter(AlertaSensor.parcela.in_(parcelas_ids))
-    
+    if user_id:
+        parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
+        parcelas_ids = [p.id for p in parcelas_usuario]
+        query = query.filter(AlertaSensor.parcela.in_(parcelas_ids))
     if inactivas == "1":
         query = query.filter(AlertaSensor.activa == False)
     else:
@@ -2933,6 +3019,85 @@ def eliminar_alerta(alerta_id):
     db.session.delete(alerta)
     db.session.commit()
     return jsonify({'mensaje': 'Alerta eliminada correctamente'})
+
+@app.route('/api/alertas', methods=['POST'])
+def crear_alerta():
+    try:
+        data = request.json
+        
+        # Validar datos
+        parcela_id = data.get('parcela')
+        if not parcela_id:
+            return jsonify({'error': 'Se requiere ID de parcela'}), 400
+            
+        # Buscar la parcela
+        parcela = Parcela.query.get(parcela_id)
+        if not parcela:
+            return jsonify({'error': 'Parcela no encontrada'}), 404
+            
+        # Crear nueva alerta
+        nueva_alerta = AlertaSensor(
+            parcela=parcela_id,
+            sensor_id=data.get('sensor_id'),
+            tipo=data.get('tipo', 'Sistema'),
+            valor=data.get('valor'),
+            severidad=data.get('severidad', 'alerta'),
+            mensaje=data.get('mensaje', 'Alerta del sistema'),
+            timestamp=datetime.now(UTC),
+            activa=True
+        )
+        
+        # Guardar en base de datos
+        db.session.add(nueva_alerta)
+        db.session.commit()
+        
+        # ENVIAR CORREO AUTOMÁTICAMENTE AL USUARIO ASOCIADO A LA PARCELA
+        try:
+            # Obtener usuario asociado a la parcela
+            usuario_id = parcela.usuario_id
+            if usuario_id:
+                usuario = Usuario.query.get(usuario_id)
+                
+                if usuario and usuario.email:
+                    # Preparar datos para la notificación
+                    datos_parcela = {
+                        'nombre': parcela.nombre,
+                        'cultivo': parcela.cultivo_actual if hasattr(parcela, 'cultivo_actual') else '',
+                        'id': parcela.id
+                    }
+                    
+                    alerta_data = {
+                        'id': nueva_alerta.id,
+                        'tipo': nueva_alerta.tipo,
+                        'valor': nueva_alerta.valor,
+                        'severidad': nueva_alerta.severidad,
+                        'mensaje': nueva_alerta.mensaje,
+                        'timestamp': nueva_alerta.timestamp.isoformat()
+                    }
+                    
+                    # Enviar correo de notificación
+                    enviar_correo_alerta(usuario.email, alerta_data, datos_parcela)
+                    print(f"Correo de alerta enviado a {usuario.email}")
+        except Exception as email_error:
+            # Si hay error al enviar el correo, solo lo registramos pero continuamos
+            print(f"Error al enviar correo de notificación: {str(email_error)}")
+        
+        # Devolvemos respuesta exitosa
+        return jsonify({
+            'mensaje': 'Alerta creada correctamente',
+            'alerta': {
+                'id': nueva_alerta.id,
+                'tipo': nueva_alerta.tipo,
+                'severidad': nueva_alerta.severidad,
+                'mensaje': nueva_alerta.mensaje
+            }
+        }), 201
+            
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al crear alerta: {str(e)}")
+        return jsonify({'error': f"Error al crear alerta: {str(e)}"}), 500
+
 
 @app.route('/')
 def home():

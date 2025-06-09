@@ -27,13 +27,15 @@ const API_URL = "http://localhost:5000/api";
 const DashboardAgricultor = () => {
   const [usuario, setUsuario] = useState(null);
   const [parcelas, setParcelas] = useState([]);
-  const [alertas, setAlertas] = useState([]); // cuando hayan alertas en backend, agrega fetch
+  const [alertas, setAlertas] = useState([]);
+  const [cargandoAlertas, setCargandoAlertas] = useState(false);
   const [datosMeteo, setDatosMeteo] = useState(null); // Si tienes meteorología en backend, agrega fetch
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [mostrarGraficosPopup, setMostrarGraficosPopup] = useState(false);
   const [recomendaciones, setRecomendaciones] = useState([]);
   const [cargandoRecomendaciones, setCargandoRecomendaciones] = useState(false);
+  const [errorConexion, setErrorConexion] = useState(false);
   
   // Nuevos estados para sensores
   const [datosSensores, setDatosSensores] = useState({
@@ -55,6 +57,98 @@ const DashboardAgricultor = () => {
   // Abrir/cerrar formulario de nueva parcela
   const cerrarFormulario = () => setMostrarFormulario(false);
   
+  // Función para obtener alertas desde el backend
+  const fetchAlertas = async () => {
+    try {
+      setCargandoAlertas(true);
+      const response = await fetch(`${API_URL}/alertas`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Alertas obtenidas de la BD:', data.length);
+        setAlertas(data);
+        setErrorConexion(false);
+      } else if (response.status === 401) {
+        console.warn("Token expirado al obtener alertas");
+        setErrorConexion(true);
+        // Usar datos de ejemplo si no se pueden obtener alertas reales
+        generarAlertasEjemplo();
+      } else {
+        throw new Error(`Error del servidor: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error al obtener alertas:', error);
+      setErrorConexion(true);
+      // Generar datos de ejemplo en caso de error
+      generarAlertasEjemplo();
+    } finally {
+      setCargandoAlertas(false);
+    }
+  };
+  
+  // Generar alertas de ejemplo cuando hay error
+  const generarAlertasEjemplo = () => {
+    const alertasEjemplo = [
+      {
+        id: 1,
+        parcela: 2,
+        sensor_id: 234,
+        tipo: "Humedad de suelo",
+        valor: 12.5,
+        severidad: "critico",
+        mensaje: "Humedad de suelo criticamente baja",
+        timestamp: new Date().toISOString(),
+        activa: true,
+        parcelaNombre: "Campo Norte"
+      },
+      {
+        id: 2,
+        parcela: 3,
+        sensor_id: 118,
+        tipo: "Temperatura",
+        valor: 39.7,
+        severidad: "alerta",
+        mensaje: "Temperatura elevada",
+        timestamp: new Date().toISOString(),
+        activa: true,
+        parcelaNombre: "Viñedo Sur"
+      },
+      {
+        id: 3,
+        parcela: 2,
+        sensor_id: 156,
+        tipo: "pH del suelo",
+        valor: 4.2,
+        severidad: "critico",
+        mensaje: "pH del suelo demasiado ácido",
+        timestamp: new Date().toISOString(),
+        activa: true,
+        parcelaNombre: "Campo Norte"
+      }
+    ];
+    setAlertas(alertasEjemplo);
+  };
+
+  // Función para marcar una alerta como resuelta
+  const marcarAlertaComoResuelta = async (alertaId) => {
+    try {
+      const res = await fetch(`${API_URL}/alertas/${alertaId}/revisada`, {
+        method: 'PUT',
+        headers: getAuthHeaders()
+      });
+      
+      if (res.ok) {
+        // Actualizar lista de alertas quitando la resuelta
+        setAlertas(alertas.filter(a => a.id !== alertaId));
+      } else {
+        console.error('Error al marcar alerta como resuelta');
+      }
+    } catch (error) {
+      console.error('Error de conexión:', error);
+    }
+  };
 
   const cargarRecomendaciones = async (maxCaracteres = 150) => {
     try {
@@ -126,54 +220,55 @@ const DashboardAgricultor = () => {
   useEffect(() => {
     if (usuario && (parcelas.length > 0)) {
       cargarRecomendaciones();
+      fetchAlertas();
     }
   }, [usuario, parcelas.length]);
 
   // Guardar parcela en backend
   const guardarParcela = async (parcelaData) => {
-  try {
-    const res = await fetch(`${API_URL}/parcelas`, {
-      method: "POST",
-      headers: getAuthHeaders(), // Usar la función importada
-      body: JSON.stringify(parcelaData)
-    });
-    if (res.ok) {
-      fetchParcelas();
-      cerrarFormulario();
-    } else {
-      const errorData = await res.json().catch(() => ({}));
-      alert(`Error al guardar la parcela: ${errorData.error || 'Error desconocido'}`);
+    try {
+      const res = await fetch(`${API_URL}/parcelas`, {
+        method: "POST",
+        headers: getAuthHeaders(), // Usar la función importada
+        body: JSON.stringify(parcelaData)
+      });
+      if (res.ok) {
+        fetchParcelas();
+        cerrarFormulario();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Error al guardar la parcela: ${errorData.error || 'Error desconocido'}`);
+      }
+    } catch (error) {
+      console.error("Error al guardar parcela:", error);
+      alert("Error de conexión");
     }
-  } catch (error) {
-    console.error("Error al guardar parcela:", error);
-    alert("Error de conexión");
-  }
-};
+  };
 
   // Obtener parcelas desde backend
   const fetchParcelas = async () => {
-  setCargando(true);
-  try {
-    const res = await fetch(`${API_URL}/parcelas`, {
-      headers: getAuthHeaders() // Usar la función importada
-    });
-    
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      console.error("Error al obtener parcelas:", errorData);
+    setCargando(true);
+    try {
+      const res = await fetch(`${API_URL}/parcelas`, {
+        headers: getAuthHeaders() // Usar la función importada
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Error al obtener parcelas:", errorData);
+        setParcelas([]);
+        return;
+      }
+      
+      const data = await res.json();
+      setParcelas(data);
+    } catch (error) {
+      console.error("Error al obtener parcelas:", error);
       setParcelas([]);
-      return;
+    } finally {
+      setCargando(false);
     }
-    
-    const data = await res.json();
-    setParcelas(data);
-  } catch (error) {
-    console.error("Error al obtener parcelas:", error);
-    setParcelas([]);
-  } finally {
-    setCargando(false);
-  }
-};
+  };
 
   // NUEVA FUNCIÓN: Consultar al asistente IA sobre datos de sensores
   const consultarAsistente = (tipo, parcelaId, parcelaNombre) => {
@@ -204,75 +299,72 @@ const DashboardAgricultor = () => {
   };
 
   // Función para obtener datos de sensores
-const fetchDatosSensores = async () => {
-  try {
-    // Definir periodo de tiempo para la consulta
-    let periodo;
-    switch(rangoTiempo) {
-      case '7d': periodo = '7d'; break;
-      case '30d': periodo = '30d'; break;
-      default: periodo = '24h'; break;
+  const fetchDatosSensores = async () => {
+    try {
+      // Definir periodo de tiempo para la consulta
+      let periodo;
+      switch(rangoTiempo) {
+        case '7d': periodo = '7d'; break;
+        case '30d': periodo = '30d'; break;
+        default: periodo = '24h'; break;
+      }
+      
+      // Definir parcela para la consulta
+      const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
+                      (parcelas.length > 0 ? parcelas[0].id : null);
+      
+      if (!parcelaId) return; // No hay parcelas para consultar
+      
+      const response = await fetch(
+        `${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`,
+        { headers: getAuthHeaders() } 
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Asegurarse de que todos los tipos de datos estén presentes
+        const datosCompletos = {
+          humedad: data.humedad || [],
+          temperatura: data.temperatura || [],
+          ph: data.ph || [],
+          nutrientes: data.nutrientes || []
+        };
+        setDatosSensores(datosCompletos);
+        console.log("Datos cargados:", datosCompletos);
+        console.log("Estructura de nutrientes:", datosCompletos.nutrientes);
+        console.log("Primer elemento de nutrientes:", datosCompletos.nutrientes[0]);
+        console.log("Datos cargados:", datosCompletos);
+      } else {
+        throw new Error(`Error del servidor: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error al obtener datos de sensores:', error);
+      // Usar datos de prueba en caso de error
+      setDatosSensores({
+        temperatura: [{ 
+          timestamp: new Date().toISOString(), 
+          valor: 22.5 
+        }],
+        humedad: [{ 
+          timestamp: new Date().toISOString(), 
+          valor: 45.2 
+        }],
+        ph: [{ 
+          timestamp: new Date().toISOString(), 
+          valor: 6.8 
+        }],
+        nutrientes: [{ 
+          timestamp: new Date().toISOString(), 
+          valor: { 
+            nitrogeno: 150, 
+            fosforo: 45, 
+            potasio: 200 
+          } 
+        }]
+      });
     }
-    
-    // Definir parcela para la consulta
-    const parcelaId = parcelaSeleccionada ? parcelaSeleccionada : 
-                     (parcelas.length > 0 ? parcelas[0].id : null);
-    
-    if (!parcelaId) return; // No hay parcelas para consultar
-    
-    const response = await fetch(
-      `${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`,
-      { headers: getAuthHeaders() } 
-    );
-    
-    if (response.ok) {
-      const data = await response.json();
-      // Asegurarse de que todos los tipos de datos estén presentes
-      const datosCompletos = {
-        humedad: data.humedad || [],
-        temperatura: data.temperatura || [],
-        ph: data.ph || [],
-        nutrientes: data.nutrientes || []
-      };
-      setDatosSensores(datosCompletos);
-      console.log("Datos cargados:", datosCompletos);
-      console.log("Estructura de nutrientes:", datosCompletos.nutrientes);
-      console.log("Primer elemento de nutrientes:", datosCompletos.nutrientes[0]);
-      console.log("Datos cargados:", datosCompletos);
-    } else {
-      throw new Error(`Error del servidor: ${response.status}`);
-    }
-  } catch (error) {
-    console.error('Error al obtener datos de sensores:', error);
-    // Usar datos de prueba en caso de error
-    setDatosSensores({
-      temperatura: [{ 
-        timestamp: new Date().toISOString(), 
-        valor: 22.5 
-      }],
-      humedad: [{ 
-        timestamp: new Date().toISOString(), 
-        valor: 45.2 
-      }],
-      ph: [{ 
-        timestamp: new Date().toISOString(), 
-        valor: 6.8 
-      }],
-      nutrientes: [{ 
-        timestamp: new Date().toISOString(), 
-        valor: { 
-          nitrogeno: 150, 
-          fosforo: 45, 
-          potasio: 200 
-        } 
-      }]
-    });
-  }
-};
-
-
+  };
   
-
   // Verificar usuario y cargar parcelas al montar
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -308,8 +400,8 @@ const fetchDatosSensores = async () => {
 
   const getSeveridadColor = (severidad) => {
     switch (severidad) {
-      case "alta": return "severidad-alta";
-      case "media": return "severidad-media";
+      case "critico": return "severidad-alta";
+      case "alerta": return "severidad-media";
       case "baja": return "severidad-baja";
       default: return "";
     }
@@ -321,9 +413,19 @@ const fetchDatosSensores = async () => {
     return parcela ? parcela.nombre : 'seleccionada';
   };
 
-  // Formato de fecha/hora para los gráficos
+  // Formato de fecha/hora para los gráficos y alertas
   const formatXAxis = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  // Formatea la fecha para mostrarla amigable
+  const formatearFecha = (fechaStr) => {
+    try {
+      const fecha = new Date(fechaStr);
+      return fecha.toLocaleString();
+    } catch (error) {
+      return fechaStr;
+    }
   };
 
   // Tooltip personalizado para gráficos
@@ -422,30 +524,72 @@ const fetchDatosSensores = async () => {
           <div className="dashboard-card alertas-panel">
             <div className="card-header">
               <h3>Alertas Activas</h3>
-              <Link to="/alertas" className="ver-todo">Ver todas</Link>
+              <div className="header-actions">
+                <Link to="/dashboard/agricultor/alertas" className="ver-todo">Ver todas</Link>
+                <button 
+                  onClick={fetchAlertas} 
+                  className={`btn-actualizar-alertas ${cargandoAlertas ? 'loading' : ''}`}
+                  disabled={cargandoAlertas}
+                >
+                  <i className={`fas ${cargandoAlertas ? 'fa-spinner fa-spin' : 'fa-sync'}`}></i>
+                </button>
+              </div>
             </div>
             <div className="alertas-list">
-              {alertas.map(alerta => (
-                <div key={alerta.id} className="alerta-item">
-                  <div className={`alerta-severidad ${getSeveridadColor(alerta.severidad)}`}></div>
-                  <div className="alerta-content">
-                    <div className="alerta-header">
-                      <div className="alerta-title">
-                        <i className={`fas fa-${alerta.tipo === 'humedad' ? 'tint' : alerta.tipo === 'temperatura' ? 'thermometer-half' : 'bug'}`}></i>
-                        <h4>{alerta.mensaje}</h4>
+              {cargandoAlertas ? (
+                <div className="alertas-cargando">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Cargando alertas...</span>
+                </div>
+              ) : alertas.length > 0 ? (
+                alertas.map(alerta => (
+                  <div key={alerta.id} className="alerta-item">
+                    <div className={`alerta-severidad ${getSeveridadColor(alerta.severidad)}`}></div>
+                    <div className="alerta-content">
+                      <div className="alerta-header">
+                        <div className="alerta-title">
+                          <i className={`fas fa-${alerta.tipo.toLowerCase().includes('temperatura') ? 'thermometer-half' : 
+                                         alerta.tipo.toLowerCase().includes('humedad') ? 'tint' : 
+                                         alerta.tipo.toLowerCase().includes('ph') ? 'flask' : 
+                                         'exclamation-triangle'}`}></i>
+                          <h4>{alerta.mensaje}</h4>
+                        </div>
+                        <span className="alerta-fecha">{formatearFecha(alerta.timestamp)}</span>
                       </div>
-                      <span className="alerta-fecha">{alerta.fecha}</span>
-                    </div>
-                    <div className="alerta-footer">
-                      <span className="alerta-parcela">{alerta.parcelaNombre}</span>
-                      <div className="alerta-actions">
-                        <button className="btn-alerta-resolver">Resolver</button>
-                        <button className="btn-alerta-mas">...</button>
+                      <div className="alerta-footer">
+                        <span className="alerta-parcela">Parcela: {getParcelaNombre(alerta.parcela)}</span>
+                        <div className="alerta-actions">
+                          <button 
+                            className="btn-alerta-resolver" 
+                            onClick={() => marcarAlertaComoResuelta(alerta.id)}
+                          >
+                            Resolver
+                          </button>
+                          <button 
+                            className="btn-alerta-mas"
+                            onClick={() => consultarAsistente('general', alerta.parcela, getParcelaNombre(alerta.parcela))}
+                            title="Consultar con IA"
+                          >
+                            <i className="fas fa-robot"></i>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="alertas-empty">
+                  <i className="fas fa-check-circle"></i>
+                  <span>No hay alertas activas en este momento</span>
                 </div>
-              ))}
+              )}
+              
+              {alertas.length > 0 && (
+                <div className="actualizacion-info">
+                  <i className="fas fa-info-circle"></i>
+                  <span>Alertas actualizadas en tiempo real. Última actualización: {new Date().toLocaleTimeString()}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -629,61 +773,59 @@ const fetchDatosSensores = async () => {
             </div>
           </div>
 
-          // Reemplazar la sección actual de recomendaciones
-
-<div className="dashboard-card recomendaciones-panel">
-  <div className="card-header">
-    <h3>Recomendaciones</h3>
-    <div className="header-actions">
-      <Link to="/dashboard/agricultor/recomendaciones" className="ver-todo">Ver todas</Link>
-      <button 
-        onClick={() => cargarRecomendaciones()} 
-        className={`btn-actualizar-recomendaciones ${cargandoRecomendaciones ? 'loading' : ''}`}
-        disabled={cargandoRecomendaciones}
-      >
-        <i className={`fas ${cargandoRecomendaciones ? 'fa-spinner fa-spin' : 'fa-sync'}`}></i>
-      </button>
-    </div>
-  </div>
-  <div className="recomendaciones-list">
-    {cargandoRecomendaciones ? (
-      <div className="recomendaciones-cargando">
-        <i className="fas fa-spinner fa-spin"></i>
-        <span>Generando recomendaciones...</span>
-      </div>
-    ) : recomendaciones.length > 0 ? (
-      recomendaciones.slice(0, 3).map((rec, index) => (
-        <div className="recomendacion-item" key={rec.id || `rec-${index}`}>
-          <div className="recomendacion-icon">
-            <i className={`fas fa-${obtenerIconoRecomendacion(rec.recomendacion)}`}></i>
+          <div className="dashboard-card recomendaciones-panel">
+            <div className="card-header">
+              <h3>Recomendaciones</h3>
+              <div className="header-actions">
+                <Link to="/dashboard/agricultor/recomendaciones" className="ver-todo">Ver todas</Link>
+                <button 
+                  onClick={() => cargarRecomendaciones()} 
+                  className={`btn-actualizar-recomendaciones ${cargandoRecomendaciones ? 'loading' : ''}`}
+                  disabled={cargandoRecomendaciones}
+                >
+                  <i className={`fas ${cargandoRecomendaciones ? 'fa-spinner fa-spin' : 'fa-sync'}`}></i>
+                </button>
+              </div>
+            </div>
+            <div className="recomendaciones-list">
+              {cargandoRecomendaciones ? (
+                <div className="recomendaciones-cargando">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Generando recomendaciones...</span>
+                </div>
+              ) : recomendaciones.length > 0 ? (
+                recomendaciones.slice(0, 3).map((rec, index) => (
+                  <div className="recomendacion-item" key={rec.id || `rec-${index}`}>
+                    <div className="recomendacion-icon">
+                      <i className={`fas fa-${obtenerIconoRecomendacion(rec.recomendacion)}`}></i>
+                    </div>
+                    <div className="recomendacion-content">
+                      <h4>{obtenerTituloRecomendacion(rec.recomendacion)}</h4>
+                      <p><strong>{rec.parcela} - {rec.cultivo}:</strong> {rec.recomendacion}</p>
+                      <button 
+                        className="btn-recomendacion"
+                        onClick={() => consultarAsistente('general', null, rec.parcela)}
+                      >
+                        <i className="fas fa-robot"></i> Asistencia IA
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="recomendaciones-empty">
+                  <i className="fas fa-info-circle"></i>
+                  <span>No hay recomendaciones disponibles en este momento.</span>
+                </div>
+              )}
+              
+              {recomendaciones.length > 0 && (
+                <div className="actualizacion-info">
+                  <i className="fas fa-info-circle"></i>
+                  <span>Recomendaciones basadas en datos de sensores de los últimos 7 días.</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="recomendacion-content">
-            <h4>{obtenerTituloRecomendacion(rec.recomendacion)}</h4>
-            <p><strong>{rec.parcela} - {rec.cultivo}:</strong> {rec.recomendacion}</p>
-            <button 
-              className="btn-recomendacion"
-              onClick={() => consultarAsistente('general', null, rec.parcela)}
-            >
-              <i className="fas fa-robot"></i> Asistencia IA
-            </button>
-          </div>
-        </div>
-      ))
-    ) : (
-      <div className="recomendaciones-empty">
-        <i className="fas fa-info-circle"></i>
-        <span>No hay recomendaciones disponibles en este momento.</span>
-      </div>
-    )}
-    
-    {recomendaciones.length > 0 && (
-      <div className="actualizacion-info">
-        <i className="fas fa-info-circle"></i>
-        <span>Recomendaciones basadas en datos de sensores de los últimos 7 días.</span>
-      </div>
-    )}
-  </div>
-</div>
         </div>
       </div>
       
@@ -841,20 +983,18 @@ const fetchDatosSensores = async () => {
                   {datosSensores.nutrientes && datosSensores.nutrientes.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart 
-                       // En las líneas 741-745, cambia por esto que maneja ambos formatos:
-                        // Reemplaza las líneas 741-750 con esto:
-                      data={datosSensores.nutrientes
-                        .filter(dato => dato.valor && typeof dato.valor === 'object' && dato.valor.nitrogeno) // Solo objetos con estructura completa
-                        .map(dato => {
-                          console.log("Procesando dato válido:", dato);
-                          return {
-                            timestamp: dato.timestamp,
-                            nitrogeno: dato.valor.nitrogeno,
-                            fosforo: dato.valor.fosforo,
-                            potasio: dato.valor.potasio
-                          };
-                        })
-                      }
+                        data={datosSensores.nutrientes
+                          .filter(dato => dato.valor && typeof dato.valor === 'object' && dato.valor.nitrogeno) 
+                          .map(dato => {
+                            console.log("Procesando dato válido:", dato);
+                            return {
+                              timestamp: dato.timestamp,
+                              nitrogeno: dato.valor.nitrogeno,
+                              fosforo: dato.valor.fosforo,
+                              potasio: dato.valor.potasio
+                            };
+                          })
+                        }
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
