@@ -36,7 +36,7 @@ CORS(app, resources={
 # ...existing code... # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -1061,6 +1061,11 @@ def simulacion_continua_parcela():
         simulacion_activa = False
 
 def guardar_alertas_finales(parcela_id, datos, parametros):
+    
+    
+    
+
+    
     """
     Guarda alertas críticas y moderadas en la base de datos al finalizar la simulación,
     según los valores críticos y de alerta definidos en los parámetros configurables.
@@ -1206,7 +1211,51 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error al guardar alertas finales: {e}")
+# ...existing code...
 
+@app.route('/api/alertas/crear', methods=['POST'])
+def crear_alerta():
+    """Crear una nueva alerta"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No se enviaron datos"}), 400
+        
+        # Crear nueva alerta
+        nueva_alerta = AlertaSensor(
+            parcela=data.get('parcela', 1),
+            sensor_id=data.get('sensor_id', 1),
+            tipo=data.get('tipo', 'sistema'),
+            valor=float(data.get('valor', 0.0)),
+            severidad=data.get('severidad', 'baja'),
+            mensaje=data.get('mensaje', 'Alerta generada'),
+            timestamp=datetime.now(UTC),
+            activa=data.get('activa', True)
+        )
+        
+        db.session.add(nueva_alerta)
+        db.session.commit()
+        
+        return jsonify({
+            "mensaje": "Alerta creada exitosamente",
+            "id": nueva_alerta.id,
+            "alerta": {
+                "id": nueva_alerta.id,
+                "tipo": nueva_alerta.tipo,
+                "severidad": nueva_alerta.severidad,
+                "mensaje": nueva_alerta.mensaje,
+                "timestamp": nueva_alerta.timestamp.strftime("%d/%m/%Y %H:%M"),
+                "activa": nueva_alerta.activa
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creando alerta: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ...existing code...
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
     """Inicia la simulación continua utilizando la actualización centralizada"""
@@ -2837,15 +2886,16 @@ def guardar_analisis_parcela(parcela_id):
         return jsonify({"error": "Error al guardar el análisis", "details": str(e)}), 500
 
 @app.route('/api/alertas', methods=['GET'])
-def obtener_alertas():
+def c():
     user_id = request.args.get('user_id')
     inactivas = request.args.get('inactivas')
     query = AlertaSensor.query
 
-    if user_id:
-        parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
-        parcelas_ids = [p.id for p in parcelas_usuario]
-        query = query.filter(AlertaSensor.parcela.in_(parcelas_ids))
+    #if user_id:
+    #    parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
+     #   parcelas_ids = [p.id for p in parcelas_usuario]
+      #  query = query.filter(AlertaSensor.parcela.in_(parcelas_ids))
+    
     if inactivas == "1":
         query = query.filter(AlertaSensor.activa == False)
     else:

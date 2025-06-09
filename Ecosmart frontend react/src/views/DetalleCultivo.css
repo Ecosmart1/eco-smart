@@ -1085,38 +1085,231 @@
   background: #e0a800;
 }
 
-.actividad-item {
+.badge-pendiente
+.badge-error
+*/
+
+/* MANTENER SOLO estos estilos para alertas: */
+
+/* Estilos para alertas del cultivo */
+.alertas-cultivo {
+  grid-column: span 2;
+  margin-top: 20px;
+}
+
+.cargando-alertas {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-  transition: background 0.3s;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: #666;
 }
 
-.actividad-item:hover {
-  background: #f8f9fa;
+.cargando-alertas .fa-spinner {
+  animation: spin 1s linear infinite;
 }
 
-.actividad-item:hover .actividad-acciones {
-  opacity: 1;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.actividad-acciones {
-  opacity: 0.7;
-  transition: opacity 0.3s;
+.alertas-activas-seccion h4 {
+  margin: 0 0 15px 0;
+  color: #e74c3c;
+  font-weight: 600;
 }
 
-/* Responsive para móviles */
+.lista-alertas-cultivo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alerta-cultivo-item {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  border-left: 4px solid #666;
+  transition: box-shadow 0.2s ease;
+}
+
+.alerta-cultivo-item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alerta-cultivo-item.critica {
+  border-left-color: #e74c3c;
+  background: #fdf2f2;
+}
+
+.alerta-cultivo-item.alta {
+  border-left-color: #f39c12;
+  background: #fef9e7;
+}
+
+.alerta-cultivo-item.media {
+  border-left-color: #f1c40f;
+  background: #fffbdd;
+}
+
+.alerta-cultivo-item.baja {
+  border-left-color: #3498db;
+  background: #f4f9fd;
+}
+
+.alerta-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.severidad-badge {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: bold;
+  color: white;
+  text-transform: uppercase;
+}
+
+.severidad-badge.critica { 
+  background: #e74c3c; 
+}
+
+.severidad-badge.alta { 
+  background: #f39c12; 
+}
+
+.severidad-badge.media { 
+  background: #f1c40f; 
+  color: #333; 
+}
+
+.severidad-badge.baja { 
+  background: #3498db; 
+}
+
+.alerta-tipo {
+  background: #ecf0f1;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.alerta-fecha {
+  color: #7f8c8d;
+  font-size: 0.8em;
+  margin-left: auto;
+}
+
+.alerta-mensaje {
+  color: #2c3e50;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.sin-alertas-activas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px;
+  color: #27ae60;
+  background: #d5f4e6;
+  border-radius: 8px;
+  border: 1px solid #a9dfbf;
+}
+
+.sin-alertas-activas i {
+  font-size: 1.2em;
+}
+
+/* Responsive para alertas */
 @media (max-width: 768px) {
-  .actividad-acciones {
-    flex-direction: row;
-    gap: 8px;
+  .alertas-cultivo {
+    grid-column: span 1;
   }
   
-  .btn-eliminar,
-  .btn-reintentar {
-    padding: 8px 10px;
-    font-size: 14px;
+  .alerta-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .alerta-fecha {
+    margin-left: 0;
   }
 }
+/* ...existing code... */
+
+/* ESTILOS PARA ALERTAS - AGREGAR MODERADO */
+.alerta-cultivo-item.moderado {
+  border-left-color: #17a2b8; /* Azul info */
+  background-color: #d1ecf1;
+}
+
+.alerta-cultivo-item.moderado .severidad-badge {
+  background-color: #17a2b8;
+  color: white;
+}
+
+/* Si ya tienes otros estilos, asegúrate de tener todos: */
+.alerta-cultivo-item.critica {
+  border-left-color: #dc3545; /* Rojo */
+  background-color: #f8d7da;
+}
+
+.alerta-cultivo-item.alta {
+  border-left-color: #fd7e14; /* Naranja */
+  background-color: #fff3cd;
+}
+
+.alerta-cultivo-item.media {
+  border-left-color: #ffc107; /* Amarillo */
+  background-color: #fff3cd;
+}
+
+.alerta-cultivo-item.baja {
+  border-left-color: #28a745; /* Verde */
+  background-color: #d4edda;
+}
+
+.alerta-cultivo-item.moderado {
+  border-left-color: #17a2b8; /* Azul */
+  background-color: #d1ecf1;
+}
+
+/* BADGES DE SEVERIDAD */
+.severidad-badge.critica {
+  background-color: #dc3545;
+  color: white;
+}
+
+.severidad-badge.alta {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.severidad-badge.media {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.severidad-badge.baja {
+  background-color: #28a745;
+  color: white;
+}
+
+.severidad-badge.moderado {
+  background-color: #17a2b8;
+  color: white;
+}
+
+/* ...existing code... */

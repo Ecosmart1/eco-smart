@@ -4,250 +4,120 @@ import axios from 'axios';
 import './DetalleCultivo.css';
 
 const DetalleCultivo = ({ API_URL }) => {
-  const { id } = useParams(); // ID de la parcela
+  const { id } = useParams(); // ID de la parcela desde la URL
   const navigate = useNavigate();
+  
+  // Estados principales
   const [parcela, setParcela] = useState(null);
   const [cultivo, setCultivo] = useState(null);
   const [actividades, setActividades] = useState([]);
   const [analisisHistorico, setAnalisisHistorico] = useState([]);
+  
+  // Estados de control
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [guardandoActividad, setGuardandoActividad] = useState(false);
+  
+  // Estados para formulario de actividades
   const [nuevaActividad, setNuevaActividad] = useState('');
   const [tipoActividad, setTipoActividad] = useState('observacion');
-  // AGREGAR esta línea después de const [tipoActividad, setTipoActividad] = useState('observacion');
-const [guardandoActividad, setGuardandoActividad] = useState(false);
-
-useEffect(() => {
-  const cargarDatosCultivo = async () => {
-    try {
-      setCargando(true);
-      const token = localStorage.getItem('ecosmart_token');
-
-      // Cargar información de la parcela
-      const responseParcela = await fetch(`${API_URL}/parcelas/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (responseParcela.ok) {
-        const dataParcela = await responseParcela.json();
-        setParcela(dataParcela);
-
-        // AGREGAR DEBUG PARA VER QUÉ DATOS LLEGAN:
-        console.log("🌱 Datos de parcela:", dataParcela);
-        console.log("🌾 Datos de cultivo:", dataParcela.cultivo);
-        console.log("🔍 Cultivo actual:", dataParcela.cultivo_actual);
-
-        // CARGAR DATOS ADICIONALES DEL CULTIVO DESDE LA BD
-        let datosCultivo = null;
-        try {
-          // USAR ENDPOINT ESPECÍFICO para cultivo de la parcela
-          const responseCultivoParcela = await fetch(`${API_URL}/parcelas/${id}/cultivo`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (responseCultivoParcela.ok) {
-            datosCultivo = await responseCultivoParcela.json();
-            console.log("🌿 Cultivo específico encontrado:", datosCultivo);
-          } else {
-            // FALLBACK: Buscar en lista de todos los cultivos
-            const responseCultivo = await fetch(`${API_URL}/cultivos`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (responseCultivo.ok) {
-              const listaCultivos = await responseCultivo.json();
-              // Buscar por parcela_id
-              datosCultivo = listaCultivos.find(c => c.parcela_id == id && c.activo);
-              console.log("🌿 Cultivo encontrado en lista:", datosCultivo);
-            }
-          }
-        } catch (errorCultivo) {
-          console.log("⚠️ Error al cargar cultivo:", errorCultivo);
-        }
-
-        // USAR DATOS REALES del cultivo de BD:
-        // USAR DATOS REALES del cultivo de BD:
-setCultivo({
-  // DATOS REALES de la BD:
-  nombre: datosCultivo ? datosCultivo.nombre : (dataParcela.cultivo_actual || 'Sin cultivo'),
-  variedad: datosCultivo ? datosCultivo.variedad : 'No especificada',
-  fecha_siembra: datosCultivo ? datosCultivo.fecha_siembra : dataParcela.fecha_siembra,
-  dias_transcurridos: datosCultivo ? datosCultivo.edad_dias : 
-    (dataParcela.fecha_siembra 
-      ? Math.floor((new Date() - new Date(dataParcela.fecha_siembra)) / (1000 * 60 * 60 * 24))
-      : 0),
-  fase_actual: datosCultivo ? datosCultivo.etapa_desarrollo : calcularFaseActual(dataParcela.fecha_siembra),
-  estado_salud: 'óptimo',
   
-  // CALCULAR PROGRESO REAL BASADO EN DÍAS Y TIPO DE CULTIVO
- // CALCULAR PROGRESO REAL BASADO EN DÍAS Y TIPO DE CULTIVO - SIEMPRE DINÁMICO
-progreso_real: (() => {
-  const nombreCultivo = datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual;
-  const diasReales = datosCultivo ? datosCultivo.edad_dias : 
-    (dataParcela.fecha_siembra 
-      ? Math.floor((new Date() - new Date(dataParcela.fecha_siembra)) / (1000 * 60 * 60 * 24))
-      : 0);
-  
-  // USAR CONFIGURACIÓN ESPECÍFICA POR CULTIVO
-  const config = obtenerConfigCultivo(nombreCultivo);
-  
-  // FORZAR CÁLCULO DINÁMICO - IGNORAR progreso_cosecha de BD
-  const progresoCalculado = Math.round((diasReales / config.dias) * 100);
-  
-  console.log(`📊 PROGRESO FORZADO DINÁMICO para ${nombreCultivo}:`, {
-    diasReales,
-    diasCiclo: config.dias,
-    progresoCalculadoDinamico: Math.min(progresoCalculado, 100),
-    progresoBD: datosCultivo ? datosCultivo.progreso_cosecha : 'N/A',
-    configUsada: config
-  });
-  
-  // RETORNAR SIEMPRE EL CALCULADO, NO EL DE BD
-  return Math.min(progresoCalculado, 100);
-})(),
-  
-  // DATOS DINÁMICOS SEGÚN CONFIGURACIÓN:
-  rendimiento_esperado: obtenerRendimientoEsperado(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
-  densidad_plantacion: obtenerDensidadPlantacion(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
-  ph_optimo: obtenerPhOptimo(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
-  temperatura_optima: obtenerTemperaturaOptima(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
-  
-  // DATOS CALCULADOS:
-  fecha_cosecha_estimada: calcularFechaCosecha(
-    datosCultivo ? datosCultivo.fecha_siembra : dataParcela.fecha_siembra, 
-    datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual
-  ),
-  sistema_riego: 'Goteo automatizado' // Mantener genérico
-});
-        
-      
+  // Estados para alertas del cultivo
+  const [alertasCultivo, setAlertasCultivo] = useState([]);
+  const [alertasHistorial, setAlertasHistorial] = useState([]);
+  const [cargandoAlertas, setCargandoAlertas] = useState(false);
 
-        console.log("✅ Cultivo creado con datos 100% reales de BD");
-        console.log("🔍 Datos usados:", {
-          nombre: datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual,
-          variedad: datosCultivo ? datosCultivo.variedad : 'No especificada',
-          edad_dias: datosCultivo ? datosCultivo.edad_dias : 'Calculado',
-          progreso: datosCultivo ? datosCultivo.progreso_cosecha : 'Calculado'
-        });
-      }
-
-      // Intentar cargar actividades, pero usar datos simulados si falla
-      try {
-        const responseActividades = await fetch(`${API_URL}/parcelas/${id}/actividades`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (responseActividades.ok) {
-          const dataActividades = await responseActividades.json();
-          setActividades(dataActividades);
-        } else {
-          throw new Error('Endpoint no disponible');
-        }
-      } catch (errorActividades) {
-        console.log('Usando datos simulados para actividades');
-        // Datos simulados si no hay backend
-        setActividades([
-          {
-            id: 1,
-            fecha: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            tipo: 'riego',
-            descripcion: 'Riego automático programado - 15L/m²',
-            realizada_por: 'Sistema automático'
-          },
-          {
-            id: 2,
-            fecha: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            tipo: 'fertilizacion',
-            descripcion: 'Aplicación de fertilizante NPK 20-20-20',
-            realizada_por: 'Juan Pérez'
-          },
-          {
-            id: 3,
-            fecha: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            tipo: 'analisis',
-            descripcion: 'Análisis de imagen - Estado saludable detectado',
-            realizada_por: 'Sistema IA'
-          },
-          {
-            id: 4,
-            fecha: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-            tipo: 'poda',
-            descripcion: 'Poda de hojas secas y brotes laterales',
-            realizada_por: 'María García'
-          },
-          {
-            id: 5,
-            fecha: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            tipo: 'tratamiento',
-            descripcion: 'Aplicación preventiva de fungicida',
-            realizada_por: 'Carlos López'
-          }
-        ]);
-      }
-
-      // Intentar cargar análisis históricos, pero usar datos simulados si falla
-      try {
-        const responseAnalisis = await fetch(`${API_URL}/parcelas/${id}/analisis`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (responseAnalisis.ok) {
-          const dataAnalisis = await responseAnalisis.json();
-          setAnalisisHistorico(dataAnalisis);
-        } else {
-          throw new Error('Endpoint no disponible');
-        }
-      } catch (errorAnalisis) {
-        console.log('Usando datos simulados para análisis');
-        // Datos simulados
-        setAnalisisHistorico([
-          {
-            id: 1,
-            fecha: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-            resultado: 'Saludable',
-            confianza: 95,
-            problemas_detectados: [],
-            recomendaciones: ['Mantener régimen de riego actual', 'Continuar monitoreo regular']
-          },
-          {
-            id: 2,
-            fecha: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-            resultado: 'Estrés leve',
-            confianza: 87,
-            problemas_detectados: ['Posible deficiencia de nitrógeno'],
-            recomendaciones: ['Aumentar fertilización nitrogenada', 'Revisar sistema de riego']
-          },
-          {
-            id: 3,
-            fecha: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
-            resultado: 'Saludable',
-            confianza: 92,
-            problemas_detectados: [],
-            recomendaciones: ['Excelente estado general', 'Mantener cuidados actuales']
-          },
-          {
-            id: 4,
-            fecha: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
-            resultado: 'Alerta',
-            confianza: 78,
-            problemas_detectados: ['Manchas en hojas', 'Posible inicio de enfermedad fúngica'],
-            recomendaciones: ['Aplicar fungicida preventivo', 'Mejorar ventilación', 'Reducir humedad']
-          }
-        ]);
-      }
-
-    } catch (error) {
-      console.error('Error al cargar datos del cultivo:', error);
-      setError(error.message);
-    } finally {
-      setCargando(false);
+   // =================== CONFIGURACIÓN DE CULTIVOS ===================
+  // Base de datos de configuraciones por tipo de cultivo
+  const configuracionCultivos = {
+    // Variantes de Maíz
+    'Maiz': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
+    'maiz': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
+    'MAIZ': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
+    'Maíz': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
+    
+    // Otros cultivos
+    'Trigo': { dias: 150, rendimiento: '3-6 ton/ha', densidad: '400-500 plantas/m²', ph: '6.0-7.5', temp: '15-25°C' },
+    'Soja': { dias: 130, rendimiento: '2-4 ton/ha', densidad: '30-40 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
+    'Tomate': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '2.5 plantas/m²', ph: '6.0-6.8', temp: '18-24°C' },
+    'Lechuga': { dias: 60, rendimiento: '4-6 ton/ha', densidad: '4 plantas/m²', ph: '6.0-7.0', temp: '15-20°C' },
+    'Cebolla': { dias: 90, rendimiento: '6-8 ton/ha', densidad: '25-30 plantas/m²', ph: '6.0-7.0', temp: '15-25°C' },
+    
+    // Configuración por defecto
+    'default': { dias: 90, rendimiento: '5-10 ton/ha', densidad: '10-20 plantas/m²', ph: '6.0-7.0', temp: '18-25°C' }
+  };
+  
+   // =================== FUNCIONES AUXILIARES ===================
+  
+  /**
+   * Obtiene la configuración específica para un cultivo
+   * @param {string} nombreCultivo - Nombre del cultivo
+   * @returns {object} Configuración del cultivo (días, rendimiento, etc.)
+   */
+  const obtenerConfigCultivo = (nombreCultivo) => {
+    if (!nombreCultivo) return configuracionCultivos['default'];
+    
+    const nombre = nombreCultivo.toString().trim();
+    
+    // Búsqueda por coincidencia exacta
+    if (configuracionCultivos[nombre]) {
+      console.log(`✅ Configuración encontrada para: ${nombre}`);
+      return configuracionCultivos[nombre];
     }
+    
+    // Búsqueda sin distinción de mayúsculas/minúsculas
+    const nombreLower = nombre.toLowerCase();
+    const configKey = Object.keys(configuracionCultivos).find(key => 
+      key.toLowerCase() === nombreLower
+    );
+    
+    if (configKey) {
+      console.log(`✅ Configuración encontrada (case-insensitive) para: ${nombre} -> ${configKey}`);
+      return configuracionCultivos[configKey];
+    }
+    
+    // Búsqueda por palabras clave
+    if (nombreLower.includes('maiz') || nombreLower.includes('maíz')) {
+      console.log(`✅ Configuración de Maíz aplicada para: ${nombre}`);
+      return configuracionCultivos['Maiz'];
+    }
+    if (nombreLower.includes('cebolla')) {
+      return configuracionCultivos['Cebolla'];
+    }
+    
+    // Configuración por defecto
+    console.log(`⚠️ Usando configuración default para: ${nombre}`);
+    return configuracionCultivos['default'];
   };
 
-  cargarDatosCultivo();
-}, [API_URL, id]);
+  /**
+   * Funciones para obtener parámetros específicos del cultivo
+   */
+  const obtenerRendimientoEsperado = (nombreCultivo) => {
+    const config = obtenerConfigCultivo(nombreCultivo);
+    return config.rendimiento;
+  };
 
-  // Funciones auxiliares
+  const obtenerDensidadPlantacion = (nombreCultivo) => {
+    const config = obtenerConfigCultivo(nombreCultivo);
+    return config.densidad;
+  };
+
+  const obtenerPhOptimo = (nombreCultivo) => {
+    const config = obtenerConfigCultivo(nombreCultivo);
+    return config.ph;
+  };
+
+  const obtenerTemperaturaOptima = (nombreCultivo) => {
+    const config = obtenerConfigCultivo(nombreCultivo);
+    return config.temp;
+  };
+
+  /**
+   * Calcula la fase actual del cultivo basado en días transcurridos
+   * @param {string} fechaSiembra - Fecha de siembra del cultivo
+   * @returns {string} Fase actual del cultivo
+   */
   const calcularFaseActual = (fechaSiembra) => {
     if (!fechaSiembra) return 'No determinada';
     
@@ -260,87 +130,91 @@ progreso_real: (() => {
     if (dias < 120) return 'Fructificación';
     return 'Maduración';
   };
-const calcularFechaCosecha = (fechaSiembra, tipoCultivo) => {
-  if (!fechaSiembra) return 'No determinada';
-  
-  const fechaBase = new Date(fechaSiembra);
-  const config = obtenerConfigCultivo(tipoCultivo);
-  const diasCiclo = config.dias;
-  
-  const fechaCosecha = new Date(fechaBase.getTime() + diasCiclo * 24 * 60 * 60 * 1000);
-  return fechaCosecha.toLocaleDateString();
-};
 
-  const agregarActividad = async () => {
-    if (!nuevaActividad.trim()) return;
-
-    const userData = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
-    const nombreUsuario = userData.nombre || userData.username || 'Usuario';
-
-
-    const nuevaAct = {
-      fecha: new Date().toISOString(),
-      tipo: tipoActividad,
-      descripcion: nuevaActividad,
-     realizada_por: nombreUsuario
-    };
-
-    try {
-      const token = localStorage.getItem('ecosmart_token');
-      const response = await fetch(`${API_URL}/parcelas/${id}/actividades`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(nuevaAct)
-      });
-
-      if (response.ok) {
-        const actividadGuardada = await response.json();
-        setActividades(prev => [actividadGuardada, ...prev]);
-      } else {
-        // Si falla, agregar localmente
-        setActividades(prev => [{ ...nuevaAct, id: Date.now() }, ...prev]);
-      }
-    } catch (error) {
-      // Agregar localmente si hay error
-      setActividades(prev => [{ ...nuevaAct, id: Date.now() }, ...prev]);
-    }
-
-    setNuevaActividad('');
+  /**
+   * Calcula la fecha estimada de cosecha
+   * @param {string} fechaSiembra - Fecha de siembra
+   * @param {string} tipoCultivo - Tipo de cultivo
+   * @returns {string} Fecha estimada de cosecha
+   */
+  const calcularFechaCosecha = (fechaSiembra, tipoCultivo) => {
+    if (!fechaSiembra) return 'No determinada';
+    
+    const fechaBase = new Date(fechaSiembra);
+    const config = obtenerConfigCultivo(tipoCultivo);
+    const diasCiclo = config.dias;
+    
+    const fechaCosecha = new Date(fechaBase.getTime() + diasCiclo * 24 * 60 * 60 * 1000);
+    return fechaCosecha.toLocaleDateString();
   };
 
-  const eliminarActividad = async (actividadId) => {
-  // Confirmar eliminación
-  const confirmar = window.confirm('¿Está seguro de que desea eliminar esta actividad?');
-  if (!confirmar) return;
+  /**
+   * Funciones de cálculo avanzado para análisis del cultivo
+   */
+  const calcularProgresoInteligente = (cultivo) => {
+    const config = obtenerConfigCultivo(cultivo.nombre);
+    const diasEstimados = config.dias;
+    const progreso = Math.round((cultivo.dias_transcurridos / diasEstimados) * 100);
+    return Math.min(progreso, 100); // No superar 100%
+  };
 
-  try {
-    const token = localStorage.getItem('ecosmart_token');
-    const response = await fetch(`${API_URL}/parcelas/${id}/actividades/${actividadId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+  const calcularDiasRestantes = (cultivo) => {
+    const config = obtenerConfigCultivo(cultivo.nombre);
+    const totalDias = config.dias;
+    const restantes = totalDias - cultivo.dias_transcurridos;
+    return restantes > 0 ? restantes : 0;
+  };
 
-    if (response.ok) {
-      // Eliminar de la lista inmediatamente
-      setActividades(prev => prev.filter(act => act.id !== actividadId));
-      console.log('✅ Actividad eliminada exitosamente');
-    } else {
-      // Si falla el servidor, eliminar localmente también
-      setActividades(prev => prev.filter(act => act.id !== actividadId));
-      console.log('⚠️ Actividad eliminada localmente (servidor no disponible)');
+  const calcularEficiencia = (cultivo) => {
+    const config = obtenerConfigCultivo(cultivo.nombre);
+    const progresoEsperado = (cultivo.dias_transcurridos / config.dias) * 100;
+    const progresoReal = cultivo.progreso_real || calcularProgresoInteligente(cultivo);
+    
+    if (progresoReal >= progresoEsperado) {
+      return Math.min(100, Math.round((progresoReal / progresoEsperado) * 100));
     }
-  } catch (error) {
-    console.error('Error al eliminar actividad:', error);
-    // Eliminar localmente si hay error
-    setActividades(prev => prev.filter(act => act.id !== actividadId));
-  }
-};
+    return Math.round((progresoReal / progresoEsperado) * 100);
+  };
 
+  const calcularVelocidadCrecimiento = (cultivo) => {
+    const velocidad = (cultivo.progreso_real || calcularProgresoInteligente(cultivo)) / cultivo.dias_transcurridos;
+    if (velocidad > 0.8) return 'Muy rápida';
+    if (velocidad > 0.6) return 'Rápida';
+    if (velocidad > 0.4) return 'Normal';
+    if (velocidad > 0.2) return 'Lenta';
+    return 'Muy lenta';
+  };
+
+  const calcularFechaCosechaReal = (cultivo) => {
+    const diasRestantes = calcularDiasRestantes(cultivo);
+    const fechaCosecha = new Date();
+    fechaCosecha.setDate(fechaCosecha.getDate() + diasRestantes);
+    return fechaCosecha.toLocaleDateString();
+  };
+
+  const calcularRendimientoProyectado = (cultivo) => {
+    const eficiencia = calcularEficiencia(cultivo);
+    const config = obtenerConfigCultivo(cultivo.nombre);
+    
+    // Extraer número promedio del rango (ej: "8-12 ton/ha" -> 10)
+    const rendimientoBase = config.rendimiento.match(/(\d+)-(\d+)/);
+    let promedioBase = 10; // Por defecto
+    
+    if (rendimientoBase) {
+      const min = parseInt(rendimientoBase[1]);
+      const max = parseInt(rendimientoBase[2]);
+      promedioBase = (min + max) / 2;
+    }
+    
+    const proyectado = (promedioBase * eficiencia / 100).toFixed(1);
+    return `${proyectado} ton/ha`;
+  };
+
+  // =================== FUNCIONES DE INTERFAZ ===================
+  
+  /**
+   * Obtiene el ícono CSS para cada tipo de actividad
+   */
   const getIconoActividad = (tipo) => {
     const iconos = {
       'riego': 'fa-tint',
@@ -354,6 +228,9 @@ const calcularFechaCosecha = (fechaSiembra, tipoCultivo) => {
     return iconos[tipo] || 'fa-circle';
   };
 
+  /**
+   * Obtiene el color CSS para cada estado de salud
+   */
   const getColorEstado = (estado) => {
     const colores = {
       'óptimo': '#28a745',
@@ -362,139 +239,329 @@ const calcularFechaCosecha = (fechaSiembra, tipoCultivo) => {
     };
     return colores[estado] || '#6c757d';
   };
-  // CONFIGURACIÓN DINÁMICA DE CULTIVOS
-// CONFIGURACIÓN DINÁMICA DE CULTIVOS
-const configuracionCultivos = {
-  // VARIANTES DE MAÍZ (agregar estas líneas)
-  'Maiz': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
-  'maiz': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
-  'MAIZ': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
-  'Maíz': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '5-7 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
-  
-  // CULTIVOS EXISTENTES
-  'Trigo': { dias: 150, rendimiento: '3-6 ton/ha', densidad: '400-500 plantas/m²', ph: '6.0-7.5', temp: '15-25°C' },
-  'Soja': { dias: 130, rendimiento: '2-4 ton/ha', densidad: '30-40 plantas/m²', ph: '6.0-7.0', temp: '20-30°C' },
-  'Tomate': { dias: 120, rendimiento: '8-12 ton/ha', densidad: '2.5 plantas/m²', ph: '6.0-6.8', temp: '18-24°C' },
-  'Lechuga': { dias: 60, rendimiento: '4-6 ton/ha', densidad: '4 plantas/m²', ph: '6.0-7.0', temp: '15-20°C' },
-  
-  // CONFIGURACIÓN POR DEFECTO
-  'default': { dias: 90, rendimiento: '5-10 ton/ha', densidad: '10-20 plantas/m²', ph: '6.0-7.0', temp: '18-25°C' }
-};
 
-// FUNCIÓN PARA OBTENER CONFIGURACIÓN DE CUALQUIER CULTIVO
-// FUNCIÓN PARA OBTENER CONFIGURACIÓN DE CUALQUIER CULTIVO
-const obtenerConfigCultivo = (nombreCultivo) => {
-  if (!nombreCultivo) return configuracionCultivos['default'];
+ // =================== FUNCIONES DE DATOS ===================
   
-  const nombre = nombreCultivo.toString().trim();
-  
-  // BUSCAR COINCIDENCIA EXACTA PRIMERO
-  if (configuracionCultivos[nombre]) {
-    console.log(`✅ Configuración encontrada para: ${nombre}`);
-    return configuracionCultivos[nombre];
+  /**
+   * Carga las alertas específicas del cultivo actual
+   * @param {string} parcelaId - ID de la parcela
+   */
+  // ...existing code...
+// ...existing code...
+// ...existing code...
+const cargarAlertasCultivo = async (parcelaId, dataParcela = null) => {
+  try {
+    setCargandoAlertas(true);
+    const token = localStorage.getItem('ecosmart_token');
+    
+    console.log(`🚨 Cargando alertas para parcela: ${parcelaId}`);
+    console.log(`🆔 PARÁMETRO RECIBIDO: "${parcelaId}"`);
+    console.log(`🆔 ID de la URL: "${id}"`);
+    console.log(`🌱 Datos de parcela recibidos:`, dataParcela?.nombre || 'No disponible');
+    
+    const response = await fetch(`${API_URL}/alertas`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const alertas = await response.json();
+      console.log(`✅ TODAS las alertas del backend:`, alertas);
+      
+      // FILTRO MEJORADO - Usar datos de parcela directos O state
+      const alertasParcela = alertas.filter(alertaWrapper => {
+        const alerta = alertaWrapper.alerta || alertaWrapper;
+        
+        // Usar dataParcela si está disponible, sino usar el state
+        const parcelaData = dataParcela || parcela;
+        
+        // Buscar por nombre real de la parcela (desde BD)
+        const coincidePorNombre = parcelaData && parcelaData.nombre && 
+                                  alerta.parcela === parcelaData.nombre;
+        
+        // Fallback: buscar por formato "Parcela + ID" 
+        const coincidePorId = alerta.parcela === `Parcela ${parcelaId}`;
+        
+        const coincide = coincidePorNombre || coincidePorId;
+        
+        console.log(`🎯 Comparando: "${alerta.parcela}" con "${parcelaData?.nombre}" o "Parcela ${parcelaId}" = ${coincide}`);
+        
+        return coincide;
+      });
+      
+      console.log(`🎯 Alertas filtradas para Parcela ${parcelaId}:`, alertasParcela);
+      
+      // Separar alertas activas e historial
+      const alertasActivas = alertasParcela
+        .map(wrapper => {
+          const alerta = wrapper.alerta || wrapper;
+          return {
+            ...alerta,
+            activa: alerta.activa !== undefined ? alerta.activa : true
+          };
+        })
+        .filter(alerta => alerta.activa);
+
+      const alertasHistorial = alertasParcela
+        .map(wrapper => {
+          const alerta = wrapper.alerta || wrapper;
+          return {
+            ...alerta,
+            activa: alerta.activa !== undefined ? alerta.activa : true
+          };
+        })
+        .filter(alerta => !alerta.activa);
+      
+      setAlertasCultivo(alertasActivas);
+      setAlertasHistorial(alertasHistorial);
+      
+      console.log(`📊 RESULTADO FINAL - Activas: ${alertasActivas.length}, Historial: ${alertasHistorial.length}`);
+      
+    } else {
+      console.log(`❌ Error del servidor: ${response.status}`);
+      setAlertasCultivo([]);
+      setAlertasHistorial([]);
+    }
+    
+  } catch (error) {
+    console.error('Error al cargar alertas:', error);
+    setAlertasCultivo([]);
+    setAlertasHistorial([]);
+  } finally {
+    setCargandoAlertas(false);
   }
+};
+
+// =================== EFFECT PRINCIPAL ===================
+useEffect(() => {
+  const cargarDatosCultivo = async () => {
+    try {
+      setCargando(true);
+      const token = localStorage.getItem('ecosmart_token');
+
+      // 1. Cargar información de la parcela
+      const responseParcela = await fetch(`${API_URL}/parcelas/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (responseParcela.ok) {
+        const dataParcela = await responseParcela.json();
+        setParcela(dataParcela);
+
+        // Debug de datos recibidos
+        console.log("🌱 Datos de parcela:", dataParcela);
+        console.log("🌾 Datos de cultivo:", dataParcela.cultivo);
+        console.log("🔍 Cultivo actual:", dataParcela.cultivo_actual);
+
+        // 2. Cargar datos adicionales del cultivo desde la BD
+        let datosCultivo = null;
+        try {
+          // Intentar endpoint específico para cultivo de parcela
+          const responseCultivoParcela = await fetch(`${API_URL}/parcelas/${id}/cultivo`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (responseCultivoParcela.ok) {
+            datosCultivo = await responseCultivoParcela.json();
+            console.log("🌿 Cultivo específico encontrado:", datosCultivo);
+          } else {
+            // Fallback: buscar en lista de todos los cultivos
+            const responseCultivo = await fetch(`${API_URL}/cultivos`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (responseCultivo.ok) {
+              const listaCultivos = await responseCultivo.json();
+              datosCultivo = listaCultivos.find(c => c.parcela_id == id && c.activo);
+              console.log("🌿 Cultivo encontrado en lista:", datosCultivo);
+            }
+          }
+        } catch (errorCultivo) {
+          console.log("⚠️ Error al cargar cultivo:", errorCultivo);
+        }
+
+        // 3. Crear objeto cultivo con datos reales de BD
+        setCultivo({
+          // Datos básicos del cultivo
+          nombre: datosCultivo ? datosCultivo.nombre : (dataParcela.cultivo_actual || 'Sin cultivo'),
+          variedad: datosCultivo ? datosCultivo.variedad : 'No especificada',
+          fecha_siembra: datosCultivo ? datosCultivo.fecha_siembra : dataParcela.fecha_siembra,
+          dias_transcurridos: datosCultivo ? datosCultivo.edad_dias : 
+            (dataParcela.fecha_siembra 
+              ? Math.floor((new Date() - new Date(dataParcela.fecha_siembra)) / (1000 * 60 * 60 * 24))
+              : 0),
+          fase_actual: datosCultivo ? datosCultivo.etapa_desarrollo : calcularFaseActual(dataParcela.fecha_siembra),
+          estado_salud: 'óptimo',
+          
+          // Progreso calculado dinámicamente
+          progreso_real: (() => {
+            const nombreCultivo = datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual;
+            const diasReales = datosCultivo ? datosCultivo.edad_dias : 
+              (dataParcela.fecha_siembra 
+                ? Math.floor((new Date() - new Date(dataParcela.fecha_siembra)) / (1000 * 60 * 60 * 24))
+                : 0);
+            
+            const config = obtenerConfigCultivo(nombreCultivo);
+            const progresoCalculado = Math.round((diasReales / config.dias) * 100);
+            
+            console.log(`📊 PROGRESO DINÁMICO para ${nombreCultivo}:`, {
+              diasReales,
+              diasCiclo: config.dias,
+              progresoCalculado: Math.min(progresoCalculado, 100),
+              progresoBD: datosCultivo ? datosCultivo.progreso_cosecha : 'N/A',
+              configUsada: config
+            });
+            
+            return Math.min(progresoCalculado, 100);
+          })(),
+          
+          // Datos técnicos dinámicos según configuración
+          rendimiento_esperado: obtenerRendimientoEsperado(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
+          densidad_plantacion: obtenerDensidadPlantacion(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
+          ph_optimo: obtenerPhOptimo(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
+          temperatura_optima: obtenerTemperaturaOptima(datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual),
+          
+          // Fechas calculadas
+          fecha_cosecha_estimada: calcularFechaCosecha(
+            datosCultivo ? datosCultivo.fecha_siembra : dataParcela.fecha_siembra, 
+            datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual
+          ),
+          sistema_riego: 'Goteo automatizado'
+        });
+
+        console.log("✅ Cultivo creado con datos reales de BD");
+        console.log("🔍 Datos usados:", {
+          nombre: datosCultivo ? datosCultivo.nombre : dataParcela.cultivo_actual,
+          variedad: datosCultivo ? datosCultivo.variedad : 'No especificada',
+          edad_dias: datosCultivo ? datosCultivo.edad_dias : 'Calculado',
+          progreso: datosCultivo ? datosCultivo.progreso_cosecha : 'Calculado'
+        });
+
+        // 4. Cargar actividades (con fallback a datos simulados)
+        try {
+          const responseActividades = await fetch(`${API_URL}/parcelas/${id}/actividades`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (responseActividades.ok) {
+            const dataActividades = await responseActividades.json();
+            setActividades(dataActividades);
+          } else {
+            throw new Error('Endpoint no disponible');
+          }
+        } catch (errorActividades) {
+          console.log('Usando datos simulados para actividades');
+          setActividades([
+            {
+              id: 1,
+              fecha: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+              tipo: 'riego',
+              descripcion: 'Riego automático programado - 15L/m²',
+              realizada_por: 'Sistema automático'
+            },
+            {
+              id: 2,
+              fecha: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+              tipo: 'fertilizacion',
+              descripcion: 'Aplicación de fertilizante NPK 20-20-20',
+              realizada_por: 'Juan Pérez'
+            },
+            {
+              id: 3,
+              fecha: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+              tipo: 'analisis',
+              descripcion: 'Análisis de imagen - Estado saludable detectado',
+              realizada_por: 'Sistema IA'
+            },
+            {
+              id: 4,
+              fecha: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+              tipo: 'poda',
+              descripcion: 'Poda de hojas secas y brotes laterales',
+              realizada_por: 'María García'
+            },
+            {
+              id: 5,
+              fecha: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+              tipo: 'tratamiento',
+              descripcion: 'Aplicación preventiva de fungicida',
+              realizada_por: 'Carlos López'
+            }
+          ]);
+        }
+
+        // 5. Cargar análisis históricos (con fallback a datos simulados)
+        try {
+          const responseAnalisis = await fetch(`${API_URL}/parcelas/${id}/analisis`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (responseAnalisis.ok) {
+            const dataAnalisis = await responseAnalisis.json();
+            setAnalisisHistorico(dataAnalisis);
+          } else {
+            throw new Error('Endpoint no disponible');
+          }
+        } catch (errorAnalisis) {
+          console.log('Usando datos simulados para análisis');
+          setAnalisisHistorico([
+            {
+              id: 1,
+              fecha: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+              resultado: 'Saludable',
+              confianza: 95,
+              problemas_detectados: [],
+              recomendaciones: ['Mantener régimen de riego actual', 'Continuar monitoreo regular']
+            },
+            {
+              id: 2,
+              fecha: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+              resultado: 'Estrés leve',
+              confianza: 87,
+              problemas_detectados: ['Posible deficiencia de nitrógeno'],
+              recomendaciones: ['Aumentar fertilización nitrogenada', 'Revisar sistema de riego']
+            },
+            {
+              id: 3,
+              fecha: new Date(Date.now() - 17 * 24 * 60 * 60 * 1000).toISOString(),
+              resultado: 'Saludable',
+              confianza: 92,
+              problemas_detectados: [],
+              recomendaciones: ['Excelente estado general', 'Mantener cuidados actuales']
+            },
+            {
+              id: 4,
+              fecha: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
+              resultado: 'Alerta',
+              confianza: 78,
+              problemas_detectados: ['Manchas en hojas', 'Posible inicio de enfermedad fúngica'],
+              recomendaciones: ['Aplicar fungicida preventivo', 'Mejorar ventilación', 'Reducir humedad']
+            }
+          ]);
+        }
+
+        // ✅ 6. CARGAR ALERTAS AL FINAL CON DATOS DE PARCELA DISPONIBLES
+        console.log("🚨 Cargando alertas con parcela disponible:", dataParcela.nombre);
+        await cargarAlertasCultivo(id, dataParcela);
+
+      } // ✅ CIERRE DEL IF - Las alertas se cargan DENTRO donde dataParcela está disponible
+      
+    } catch (error) {
+      console.error('Error al cargar datos del cultivo:', error);
+      setError(error.message);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  cargarDatosCultivo();
+}, [API_URL, id]);
+
+
+
   
-  // BUSCAR SIN DISTINCIÓN DE MAYÚSCULAS/MINÚSCULAS
-  const nombreLower = nombre.toLowerCase();
-  const configKey = Object.keys(configuracionCultivos).find(key => 
-    key.toLowerCase() === nombreLower
-  );
-  
-  if (configKey) {
-    console.log(`✅ Configuración encontrada (case-insensitive) para: ${nombre} -> ${configKey}`);
-    return configuracionCultivos[configKey];
-  }
-  
-  // BUSCAR POR PALABRAS CLAVE
-  if (nombreLower.includes('maiz') || nombreLower.includes('maíz')) {
-    console.log(`✅ Configuración de Maíz aplicada para: ${nombre}`);
-    return configuracionCultivos['Maiz'];
-  }
-  
-  // USAR CONFIGURACIÓN POR DEFECTO
-  console.log(`⚠️ Usando configuración default para: ${nombre}`);
-  return configuracionCultivos['default'];
-};
-
-// FUNCIONES DINÁMICAS PARA CUALQUIER CULTIVO
-const obtenerRendimientoEsperado = (nombreCultivo) => {
-  const config = obtenerConfigCultivo(nombreCultivo);
-  return config.rendimiento;
-};
-
-const obtenerDensidadPlantacion = (nombreCultivo) => {
-  const config = obtenerConfigCultivo(nombreCultivo);
-  return config.densidad;
-};
-
-const obtenerPhOptimo = (nombreCultivo) => {
-  const config = obtenerConfigCultivo(nombreCultivo);
-  return config.ph;
-};
-
-const obtenerTemperaturaOptima = (nombreCultivo) => {
-  const config = obtenerConfigCultivo(nombreCultivo);
-  return config.temp;
-};
-
-const calcularProgresoInteligente = (cultivo) => {
-  const config = obtenerConfigCultivo(cultivo.nombre);
-  const diasEstimados = config.dias;
-  const progreso = Math.round((cultivo.dias_transcurridos / diasEstimados) * 100);
-  return Math.min(progreso, 100); // No superar 100%
-};
-
-const calcularDiasRestantes = (cultivo) => {
-  const config = obtenerConfigCultivo(cultivo.nombre);
-  const totalDias = config.dias;
-  const restantes = totalDias - cultivo.dias_transcurridos;
-  return restantes > 0 ? restantes : 0;
-};
-
-const calcularEficiencia = (cultivo) => {
-  const config = obtenerConfigCultivo(cultivo.nombre);
-  const progresoEsperado = (cultivo.dias_transcurridos / config.dias) * 100;
-  const progresoReal = cultivo.progreso_real || calcularProgresoInteligente(cultivo);
-  
-  if (progresoReal >= progresoEsperado) {
-    return Math.min(100, Math.round((progresoReal / progresoEsperado) * 100));
-  }
-  return Math.round((progresoReal / progresoEsperado) * 100);
-};
-
-const calcularVelocidadCrecimiento = (cultivo) => {
-  const velocidad = (cultivo.progreso_real || calcularProgresoInteligente(cultivo)) / cultivo.dias_transcurridos;
-  if (velocidad > 0.8) return 'Muy rápida';
-  if (velocidad > 0.6) return 'Rápida';
-  if (velocidad > 0.4) return 'Normal';
-  if (velocidad > 0.2) return 'Lenta';
-  return 'Muy lenta';
-};
-
-const calcularFechaCosechaReal = (cultivo) => {
-  const diasRestantes = calcularDiasRestantes(cultivo);
-  const fechaCosecha = new Date();
-  fechaCosecha.setDate(fechaCosecha.getDate() + diasRestantes);
-  return fechaCosecha.toLocaleDateString();
-};
-
-const calcularRendimientoProyectado = (cultivo) => {
-  const eficiencia = calcularEficiencia(cultivo);
-  const config = obtenerConfigCultivo(cultivo.nombre);
-  
-  // Extraer número promedio del rango (ej: "8-12 ton/ha" -> 10)
-  const rendimientoBase = config.rendimiento.match(/(\d+)-(\d+)/);
-  let promedioBase = 10; // Por defecto
-  
-  if (rendimientoBase) {
-    const min = parseInt(rendimientoBase[1]);
-    const max = parseInt(rendimientoBase[2]);
-    promedioBase = (min + max) / 2;
-  }
-  
-  const proyectado = (promedioBase * eficiencia / 100).toFixed(1);
-  return `${proyectado} ton/ha`;
-};
 
 
 
@@ -759,88 +826,50 @@ const calcularRendimientoProyectado = (cultivo) => {
             ))}
           </div>
         </div>
-
-        {/* Actividades del cultivo */}
-        <div className="card actividades-cultivo">
-          <h3><i className="fas fa-tasks"></i> Actividades del Cultivo</h3>
+            {/*Alertas del cultivo */}
+            <div className="card alertas-cultivo">
+          <h3><i className="fas fa-exclamation-triangle"></i> Alertas del Cultivo</h3>
           
-          {/* Formulario nueva actividad */}
-          <div className="nueva-actividad">
-            <select 
-              value={tipoActividad} 
-              onChange={(e) => setTipoActividad(e.target.value)}
-            >
-              <option value="observacion">Observación</option>
-              <option value="riego">Riego</option>
-              <option value="fertilizacion">Fertilización</option>
-              <option value="poda">Poda</option>
-              <option value="tratamiento">Tratamiento</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Describe la actividad..."
-              value={nuevaActividad}
-              onChange={(e) => setNuevaActividad(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && agregarActividad()}
-            />
-            <button onClick={agregarActividad}>
-              <i className="fas fa-plus"></i>
-            </button>
-          </div>
-            {/* Lista de actividades MEJORADA */}
-<div className="lista-actividades">
-  {actividades.map((actividad, index) => (
-    <div key={actividad.id || index} className={`actividad-item ${actividad.estado || ''}`}>
-      <div className="actividad-icono">
-        <i className={`fas ${getIconoActividad(actividad.tipo)}`}></i>
-      </div>
-      <div className="actividad-contenido">
-        <div className="actividad-descripcion">
-          {actividad.descripcion}
-          {actividad.estado === 'pendiente' && (
-            <span className="badge-pendiente">Guardando...</span>
-          )}
-          {actividad.estado === 'error' && (
-            <span className="badge-error">Error al guardar</span>
-          )}
-        </div>
-        <div className="actividad-meta">
-          <span className="fecha">
-            {new Date(actividad.fecha).toLocaleDateString()} - {new Date(actividad.fecha).toLocaleTimeString()}
-          </span>
-          <span className="tipo">{actividad.tipo}</span>
-          {actividad.realizada_por && (
-            <span className="realizador">por {actividad.realizada_por}</span>
+          {cargandoAlertas ? (
+            <div className="cargando-alertas">
+              <i className="fas fa-spinner fa-spin"></i>
+              <span>Cargando alertas...</span>
+            </div>
+          ) : (
+            <>
+              {/* Alertas activas */}
+              {alertasCultivo.length > 0 ? (
+                <div className="alertas-activas-seccion">
+                  <h4>🚨 Alertas Activas ({alertasCultivo.length})</h4>
+                  <div className="lista-alertas-cultivo">
+                    {alertasCultivo.map(alerta => (
+                      <div key={alerta.id} className={`alerta-cultivo-item ${alerta.severidad}`}>
+                        <div className="alerta-header">
+                          <span className={`severidad-badge ${alerta.severidad}`}>
+                            {alerta.severidad.toUpperCase()}
+                          </span>
+                          <span className="alerta-tipo">{alerta.tipo}</span>
+                          <span className="alerta-fecha">
+                            {alerta.timestamp}
+                          </span>
+                        </div>
+                        <div className="alerta-mensaje">
+                          {alerta.mensaje}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="sin-alertas-activas">
+                  <i className="fas fa-check-circle"></i>
+                  <span>No hay alertas activas para este cultivo</span>
+                </div>
+              )}
+            </>
           )}
         </div>
-      </div>
-      
-      {/* BOTONES DE ACCIÓN */}
-      <div className="actividad-acciones">
-        <button 
-          className="btn-eliminar"
-          onClick={() => eliminarActividad(actividad.id)}
-          title="Eliminar actividad"
-          disabled={guardandoActividad}
-        >
-          <i className="fas fa-trash"></i>
-        </button>
         
-        {actividad.estado === 'error' && (
-          <button 
-            className="btn-reintentar"
-            onClick={() => reintentarActividad(actividad)}
-            title="Reintentar guardar"
-            disabled={guardandoActividad}
-          >
-            <i className="fas fa-redo"></i>
-          </button>
-        )}
-      </div>
-    </div>
-  ))}
-</div>
-        </div>
       </div>
     </div>
   );
