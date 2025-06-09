@@ -1,0 +1,136 @@
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+from datetime import datetime, timezone, UTC  # Añade UTC aquí
+
+UTC = timezone.utc  # Define UTC como la zona horaria
+
+db = SQLAlchemy()
+
+class LecturaSensor(db.Model):
+    __tablename__ = 'lecturas_sensores'  # Verificar nombre de tabla
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    parcela = db.Column(db.Integer, db.ForeignKey('parcelas.id'))
+    sensor_id = db.Column(db.Integer)
+    tipo = db.Column(db.String(50))
+    valor = db.Column(db.Text)  # Cambiar de Float a Text para soportar JSON
+    unidad = db.Column(db.String(20))
+
+
+
+class Usuario(db.Model):
+    __tablename__ = 'usuarios'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    rol = db.Column(db.String(50), nullable=False)
+    codigo_recuperacion = db.Column(db.Integer, nullable=True)
+    codigo_expira = db.Column(db.DateTime, nullable=True)
+# ...existing code...
+
+class Parcela(db.Model):
+    __tablename__ = 'parcelas'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    ubicacion = db.Column(db.String(200), nullable=True)
+    hectareas = db.Column(db.Float, nullable=True)
+    latitud = db.Column(db.Float, nullable=True)
+    longitud = db.Column(db.Float, nullable=True)
+    fecha_creacion = db.Column(db.DateTime, nullable=True)
+    cultivo_actual = db.Column(db.String(100), nullable=True)
+    fecha_siembra = db.Column(db.Date, nullable=True)
+    
+    # AGREGAR: Relación con cultivos
+    cultivos = db.relationship('DetalleCultivo', backref='parcela', lazy=True, cascade='all, delete-orphan')
+    
+    def get_cultivo_activo(self):
+        """Obtiene el cultivo activo actual de la parcela"""
+        return DetalleCultivo.query.filter_by(parcela_id=self.id, activo=True).first()
+
+# ...existing code...
+    
+class Conversacion(db.Model):
+    __tablename__ = 'conversaciones'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+    # Cambiar de utcnow a now(UTC) para consistencia
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    mensajes = db.relationship('Mensaje', backref='conversacion', lazy=True)
+
+    def get_last_message(self):
+        # Actualizar para usar timestamp en lugar de created_at
+        ultimo_mensaje = Mensaje.query.filter_by(conversacion_id=self.id).order_by(Mensaje.timestamp.desc()).first()
+        if ultimo_mensaje:
+            return ultimo_mensaje.content
+        return ""
+
+
+class Mensaje(db.Model):
+    __tablename__ = 'mensajes'
+    id = db.Column(db.Integer, primary_key=True)
+    conversacion_id = db.Column(db.Integer, db.ForeignKey('conversaciones.id'))
+    sender = db.Column(db.String(20))
+    content = db.Column(db.Text)
+    # Cambiar created_at a timestamp
+    timestamp = db.Column(db.DateTime, default=datetime.now(UTC))
+
+
+class LogAccionUsuario(db.Model):
+    __tablename__ = 'log_accion_usuario'
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, nullable=False)
+    accion = db.Column(db.String(100), nullable=False)  # Ej: "crear_parcela", "consulta_ia", "modificar_usuario"
+    entidad = db.Column(db.String(100), nullable=True)  # Ej: "parcela", "usuario"
+    entidad_id = db.Column(db.Integer, nullable=True)   # ID de la parcela/usuario/etc.
+    detalles = db.Column(db.Text, nullable=True)        # JSON/string con detalles extra de la acción
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AlertaSensor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    parcela = db.Column(db.Integer)
+    sensor_id = db.Column(db.Integer)
+    tipo = db.Column(db.String)
+    valor = db.Column(db.Float)
+    severidad = db.Column(db.String)  # 'alerta' o 'critico'
+    mensaje = db.Column(db.String)
+    timestamp = db.Column(db.DateTime)
+    activa = db.Column(db.Boolean, default=True)  # True si la alerta sigue activa, False si ya fue resuelta
+
+class DetalleCultivo(db.Model):
+    __tablename__ = 'cultivos'
+    id = db.Column(db.Integer, primary_key=True)
+    parcela_id = db.Column(db.Integer, db.ForeignKey('parcelas.id'), nullable=False)
+    nombre = db.Column(db.String(100), nullable=False)
+    variedad = db.Column(db.String(100), nullable=True)
+    edad = db.Column(db.Integer, nullable=True)
+    etapa_desarrollo = db.Column(db.String(50), nullable=True)
+    fecha_siembra = db.Column(db.DateTime, nullable=True)
+    dias_cosecha_estimados = db.Column(db.Integer, nullable=True)
+    activo = db.Column(db.Boolean, default=True)
+    fecha_cosecha = db.Column(db.DateTime, nullable=True)
+    
+    def calcular_edad_dias(self):
+        """Calcula la edad en días desde la siembra"""
+        if self.fecha_siembra:
+            from datetime import datetime, UTC
+            
+            # Asegurar que ambas fechas tengan la misma zona horaria
+            ahora = datetime.now(UTC)
+            
+            # Si fecha_siembra no tiene zona horaria, agregarla
+            if self.fecha_siembra.tzinfo is None:
+                fecha_siembra_utc = self.fecha_siembra.replace(tzinfo=UTC)
+            else:
+                fecha_siembra_utc = self.fecha_siembra
+            
+            return (ahora - fecha_siembra_utc).days
+        return 0
+    
+    def progreso_cosecha(self):
+        """Calcula el porcentaje de progreso hacia la cosecha"""
+        if self.dias_cosecha_estimados and self.fecha_siembra:
+            edad = self.calcular_edad_dias()
+            return min(100, (edad / self.dias_cosecha_estimados) * 100)
+        return 0
+

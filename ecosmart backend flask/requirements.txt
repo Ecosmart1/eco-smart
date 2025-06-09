@@ -1,0 +1,11 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate 
+Flask-RESTful  
+requests  
+openai
+python-dotenv
+flask-cors
+pandas
+psycopg2-binary
+flask-mail

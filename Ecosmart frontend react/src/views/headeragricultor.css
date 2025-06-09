@@ -1,0 +1,169 @@
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 100;
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  .logo {
+    height: 40px;
+    margin-right: 0.5rem;
+  }
+  
+  .app-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #218838;
+    margin: 0;
+  }
+  
+  .header-nav {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .nav-item {
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    color: #495057;
+    cursor: pointer;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+  
+  .nav-item:hover {
+    background-color: #f1f1f1;
+    color: #218838;
+  }
+  
+  .nav-item.active {
+    background-color: #e8f5e9;
+    color: #218838;
+  }
+  
+  .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    background-color: #218838;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 600;
+  }
+  
+  .user-info {
+    text-align: left;
+  }
+  
+  .user-name {
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  
+  .user-role {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+  
+  .user-menu-icon {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+  
+  .user-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    z-index: 1000;
+  }
+  
+  .dropdown-item {
+    padding: 0.8rem 1rem;
+    color: #212529;
+    display: block;
+    text-decoration: none;
+    transition: background-color 0.2s;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #218838;
+  }
+  
+  .dropdown-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 0.5rem 0;
+  }
+  
+  .icono-campana {
+    position: relative;
+    background: none;
+    border: none;
+    font-size: 1.7em;
+    cursor: pointer;
+    color: #2e7d32;
+  }
+  
+.notification-container {
+    position: relative;
+    display: inline-block;
+}
+
+.notification-counter {   
+
+    position: absolute;
+    top: -2px;
+    left: 12px;
+    background-color: rgba(212, 19, 13, 1);
+    color: #fff;
+    border-radius: 3px;
+    padding: 1px 3px;
+    font: 14px Verdana, Geneva, Tahoma, sans-serif;
+    font-weight: bold;
+    min-width: 12px;
+    text-align: center;
+    z-index: 2;
+    border: 1.5px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+  
+  @media (max-width: 768px) {
+    .header-nav {
+      display: none;
+    }
+    
+    .user-info {
+      display: none;
+    }
+  }

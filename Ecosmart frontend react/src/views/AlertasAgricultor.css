@@ -1,0 +1,159 @@
+.alertas-usuario-page {
+  min-height: 100vh;
+  background: #f7f9fa;
+}
+
+.alertas-usuario-content {
+  max-width: 700px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 32px 24px;
+}
+
+.alertas-usuario-content h2 {
+  margin-bottom: 24px;
+  color: #22963e;
+  font-weight: 700;
+}
+
+.alerta-vacia {
+  color: #888;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.alertas-usuario-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.alerta-usuario-item {
+  border-left: 6px solid #fbc02d;
+  background: #fcfcfc;
+  margin-bottom: 18px;
+  padding: 18px 18px 12px 18px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  transition: box-shadow 0.2s;
+}
+
+.alerta-usuario-item.critico {
+  border-left-color: #d32f2f;
+  background: #fff5f5;
+}
+
+.alerta-usuario-item.alerta {
+  border-left-color: #fbc02d;
+  background: #fffbe7;
+}
+
+.alerta-usuario-item.normal {
+  border-left-color: #22963e;
+  background: #f5fff7;
+}
+
+.alerta-usuario-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.alerta-severidad-badge {
+  font-size: 0.85em;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+  color: #fff;
+  background: #bdbdbd;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.alerta-severidad-badge.critico { background: #d32f2f; }
+.alerta-severidad-badge.moderado { background: #fbc02d;  }
+.alerta-severidad-badge.normal { background: #22963e; }
+.alerta-severidad-badge.moderado { background: #fbc02d;  }
+
+.alerta-tipo {
+  font-size: 0.95em;
+  color: #555;
+  background: #e3e3e3;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
+.alerta-fecha {
+  margin-left: auto;
+  font-size: 0.95em;
+  color: #888;
+}
+
+.alerta-usuario-body strong {
+  font-size: 1.08em;
+  color: #222;
+}
+
+.alerta-info-extra {
+  margin-top: 6px;
+  font-size: 0.97em;
+  color: #444;
+}
+/* ...existing styles... */
+
+.alerta-acciones {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+}
+
+.btn-alerta {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.97em;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.btn-alerta.revisar {
+  background: #22963e;
+  color: #fff;
+}
+
+.btn-alerta.revisar:hover {
+  background: #19732e;
+}
+
+.btn-alerta.eliminar {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.btn-alerta.eliminar:hover {
+  background: #a31515;
+}
+/* ...existing styles... */
+
+.tick-icon {
+  vertical-align: middle;
+  margin-right: 6px;
+  margin-bottom: 2px;
+}
+
+.alerta-tick-revisada {
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+  vertical-align: middle;
+}
+/* ...existing styles... */
+
+.alertas-usuario-lista .alerta-usuario-item.historial {
+  background: #e6fbe7;      /* Verde muy suave */
+  border-left-color: #22963e;
+  opacity: 0.85;
+}

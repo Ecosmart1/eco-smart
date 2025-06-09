@@ -1,0 +1,460 @@
+/* Forzar alineación a la izquierda para los mensajes del asistente */
+.mensaje.assistant .contenido {
+  text-align: left !important;
+}
+
+/* Para cualquier elemento dentro del mensaje del asistente */
+.mensaje.assistant div, 
+.mensaje.assistant p, 
+.mensaje.assistant h1,
+.mensaje.assistant h2,
+.mensaje.assistant h3,
+.mensaje.assistant h4,
+.mensaje.assistant ul,
+.mensaje.assistant ol,
+.mensaje.assistant pre {
+  text-align: left !important;
+}
+
+.chat-container {
+  display: flex;
+  height: calc(100vh - 80px);
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 15px;
+}
+
+/* Sidebar con la lista de conversaciones */
+.sidebar {
+  width: 280px;
+  background-color: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar button {
+  margin: 16px;
+  padding: 12px 16px;
+  background-color: #22963e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(34, 150, 62, 0.2);
+}
+
+.sidebar button:hover {
+  background-color: #1b7a33;
+  transform: translateY(-1px);
+}
+
+.conversaciones-lista {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px;
+}
+
+.conversacion-item {
+  padding: 14px;
+  margin: 8px 0;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.conversacion-item:hover {
+  background-color: #e8f5e9;
+}
+
+.conversacion-item.active {
+  background-color: #e8f5e9;
+  border-left: 3px solid #22963e;
+}
+
+.conversacion-item span {
+  font-size: 0.9rem;
+  color: #424242;
+}
+
+.conversacion-item button {
+  margin: 0;
+  padding: 5px 8px;
+  background-color: #f1f3f5;
+  color: #616161;
+  font-size: 0.75rem;
+  box-shadow: none;
+}
+
+.conversacion-item button:hover {
+  background-color: #ff5252;
+  color: white;
+}
+
+/* Área principal del chat */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  position: relative;
+}
+
+.mensajes {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-image: linear-gradient(to bottom, rgba(230, 250, 236, 0.2), rgba(230, 250, 236, 0.05));
+}
+
+.mensaje {
+  max-width: 80%;
+  padding: 14px 18px;
+  border-radius: 16px;
+  position: relative;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mensaje.user {
+  align-self: flex-end;
+  background-color: #e2f2e2;
+  color: #212121;
+  border-bottom-right-radius: 4px;
+}
+
+.mensaje.assistant {
+  align-self: flex-start;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  color: #212121;
+  border-bottom-left-radius: 4px;
+}
+
+.mensaje.sistema {
+  align-self: center;
+  background-color: #f1f3f5;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-style: italic;
+  color: #757575;
+  max-width: 60%;
+  text-align: center;
+  box-shadow: none;
+}
+
+.contenido {
+  font-size: 15px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.timestamp {
+  font-size: 0.7rem;
+  color: #9e9e9e;
+  text-align: right;
+  margin-top: 6px;
+}
+
+.entrada-mensaje {
+  display: flex;
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  background-color: white;
+  position: relative;
+}
+
+.entrada-mensaje input {
+  flex: 1;
+  padding: 14px 16px;
+  border: 2px solid #22963e; /* Cambiar el borde a verde */
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s;
+  background-color: #f8fdf9; /* Fondo con un toque verde claro */
+  color: #2e2e2e; /* Color del texto */
+}
+
+.entrada-mensaje input:focus {
+  outline: none;
+  border-color: #22963e;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(34, 150, 62, 0.1);
+}
+
+.entrada-mensaje button {
+  margin-left: 10px;
+  padding: 12px 24px;
+  background-color: #22963e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.entrada-mensaje button:hover:not(:disabled) {
+  background-color: #1b7a33;
+  transform: translateY(-1px);
+}
+
+.entrada-mensaje button:disabled {
+  background-color: #a5d6a7;
+  cursor: not-allowed;
+}
+
+/* Estilos responsive */
+@media (max-width: 768px) {
+  .chat-container {
+    flex-direction: column;
+    margin: 8px;
+    height: calc(100vh - 60px);
+  }
+  
+  .sidebar {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .mensaje {
+    max-width: 90%;
+  }
+}
+/* Añadir estos estilos al final de tu archivo CSS */
+
+/* Estilo para mensaje de carga */
+.mensaje.cargando {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-style: italic;
+  padding: 10px 20px;
+  background-color: #f5f5f5;
+  border-radius: 20px;
+  box-shadow: none;
+  margin: 10px 0;
+}
+
+.dots {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.dots span {
+  width: 6px;
+  height: 6px;
+  margin: 0 2px;
+  background-color: #666;
+  border-radius: 50%;
+  animation: dotPulse 1.5s infinite ease-in-out;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* Estilos para cuando no hay conversaciones */
+.no-conversaciones {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  background-color: rgba(0,0,0,0.03);
+  border-radius: 8px;
+  margin: 15px 0;
+}
+
+.no-conversaciones .tip {
+  font-size: 0.9rem;
+  margin-top: 8px;
+  color: #888;
+  font-style: italic;
+}
+
+/* Pantalla de bienvenida */
+.bienvenida-chat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-color: rgba(0,0,0,0.02);
+}
+
+.bienvenida-contenido {
+  max-width: 600px;
+  text-align: center;
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.chat-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 15px;
+}
+
+.bienvenida-contenido h2 {
+  color: #22963e;
+  margin-bottom: 15px;
+}
+
+.bienvenida-contenido p {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.ejemplos-titulo {
+  font-weight: 500;
+  margin-bottom: 10px !important;
+}
+
+.ejemplos-preguntas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.ejemplos-preguntas button {
+  background-color: #f0f8e8;
+  border: 1px solid #d0e8c0;
+  color: #33691e;
+  padding: 12px 15px;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ejemplos-preguntas button:hover {
+  background-color: #e0f0d0;
+  transform: translateY(-1px);
+}
+
+.btn-iniciar-chat {
+  background-color: #22963e;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-iniciar-chat:hover {
+  background-color: #1b7a33;
+  transform: translateY(-1px);
+}
+/* Estilizar mejor los mensajes del asistente */
+.mensaje.assistant {
+  border-left: 4px solid #22963e;
+  background-color: #f9fffa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+}
+
+.mensaje.assistant:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Estilizar listas en respuestas */
+.mensaje.assistant ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.mensaje.assistant ul li {
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.mensaje.assistant ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+/* Estilizado para código y datos técnicos */
+.mensaje.assistant pre,
+.mensaje.assistant code {
+  background: #f0f7f0;
+  border: 1px solid #dceadc;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: monospace;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.92em;
+}
+
+/* Hacer que los encabezados se destaquen */
+.mensaje.assistant h3,
+.mensaje.assistant h4 {
+  color: #22963e;
+  margin-top: 14px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  border-bottom: 1px solid #e0f0e0;
+  padding-bottom: 4px;
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Destacar datos importantes */
+.mensaje.assistant strong {
+  color: #1b7a33;
+}
+
+/* Dar un toque de distinción con un icono */
+.mensaje.assistant::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.mensaje.assistant .contenido {
+  margin-left: 26px; /* Dejar espacio para el icono */
+}
+
