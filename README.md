@@ -80,6 +80,7 @@ EcoSmart/
 
 - **[Node.js](https://nodejs.org/)** (v18 o superior)
 - **[Python](https://www.python.org/downloads/)** (v3.10 o superior)
+- **[PostgreSQL](https://www.postgresql.org/download/)** (v13 o superior)
 - **[Git](https://git-scm.com/)**
 - **Permisos para ejecutar scripts** (`.sh` en Linux/Mac, `.ps1` en Windows)
 
@@ -107,6 +108,12 @@ Estos scripts:
 - Instalan dependencias del backend y frontend.
 - Verifican Node.js y npm (e instalan si es posible en Linux).
 - Inician el backend Flask y el frontend React en terminales separadas.
+- **Recuerda:** Antes de usar la plataforma por primera vez, debes crear la estructura de la base de datos ejecutando el archivo `/modelos/models.py` desde el entorno virtual del backend:
+  ```bash
+  cd "ecosmart backend flask"
+  source venv/bin/activate  # o .\venv\Scripts\activate en Windows
+  python modelos/models.py
+  ```
 
 ---
 
@@ -131,6 +138,10 @@ python -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
+
+# Crea la estructura de la base de datos (solo la primera vez):
+python modelos/models.py
+
 python Sensores/simulador_sensores.py
 ```
 
