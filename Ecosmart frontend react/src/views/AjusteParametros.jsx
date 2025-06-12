@@ -338,7 +338,7 @@ function AjusteParametros() {
           <button onClick={guardarCambios} disabled={guardando}>
             {guardando ? 'Guardando...' : 'Guardar Cambios'}
           </button>
-          <Link to="/sensores" className="boton-volver">Volver a Sensores</Link>
+          <Link to="/dashboard/agricultor/sensores" className="boton-volver">Volver a Sensores</Link>
         </div>
         
         {mensaje && <div className="mensaje">{mensaje}</div>}
