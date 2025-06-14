@@ -112,7 +112,7 @@ Estos scripts:
   ```bash
   cd "ecosmart backend flask"
   source venv/bin/activate  # o .\venv\Scripts\activate en Windows
-  python modelos/models.py
+  python interprete.py
   ```
 
 ---
@@ -140,7 +140,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Crea la estructura de la base de datos (solo la primera vez):
-python modelos/models.py
+python interprete.py
 
 python Sensores/simulador_sensores.py
 ```
