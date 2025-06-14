@@ -14,6 +14,7 @@ const AlertasUsuario = () => {
   const [alertas, setAlertas] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [usuario, setUsuario] = useState(null);
+  const [parcelasUsuario, setParcelasUsuario] = useState([]);
   const { fetchAlertasActivas } = useAlertas();
 
   useEffect(() => {
@@ -23,28 +24,16 @@ const AlertasUsuario = () => {
     const usuarioObj = JSON.parse(usuarioGuardado);
     setUsuario(usuarioObj);
 
-    // Traer alertas activas
-    fetch(`http://localhost:5000/api/alertas`)
+    // Traer alertas activas del usuario
+    fetch(`http://localhost:5000/api/alertas?user_id=${usuarioObj.id}`)
       .then(res => res.json())
-      .then(data => {
-        // Filtrar solo las alertas del usuario
-        const alertasFiltradas = Array.isArray(data)
-          ? data.filter(a => a.usuario_id === usuarioObj.id)
-          : [];
-        setAlertas(alertasFiltradas);
-      })
+      .then(data => setAlertas(Array.isArray(data) ? data : []))
       .catch(() => setAlertas([]));
 
-    // Traer historial de alertas (inactivas)
-    fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+    // Traer historial de alertas (inactivas) del usuario
+    fetch(`http://localhost:5000/api/alertas?user_id=${usuarioObj.id}&inactivas=1`)
       .then(res => res.json())
-      .then(data => {
-        // Filtrar solo las alertas del usuario
-        const historialFiltrado = Array.isArray(data)
-          ? data.filter(a => a.usuario_id === usuarioObj.id)
-          : [];
-        setHistorial(historialFiltrado);
-      })
+      .then(data => setHistorial(Array.isArray(data) ? data : []))
       .catch(() => setHistorial([]));
   }, []);
 
