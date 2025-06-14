@@ -51,7 +51,10 @@ const GestionParcelas = ({ API_URL }) => {
   const fetchParcelas = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/parcelas`);
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      const response = await axios.get(`${API_URL}/parcelas`, {
+        headers: { 'X-User-Id': user.id }
+      });
       setParcelas(response.data);
       setLoading(false);
     } catch (err) {
@@ -65,7 +68,10 @@ const GestionParcelas = ({ API_URL }) => {
   const handleDelete = async (id) => {
     if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
       try {
-        await axios.delete(`${API_URL}/parcelas/${id}`);
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+        await axios.delete(`${API_URL}/parcelas/${id}`, {
+          headers: { 'X-User-Id': user.id }
+        });
         // Actualizar la lista de parcelas localmente (sin recargar)
         setParcelas(parcelas.filter(parcela => parcela.id !== id));
         // Mostrar mensaje de éxito

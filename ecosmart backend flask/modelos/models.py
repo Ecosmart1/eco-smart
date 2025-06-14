@@ -40,6 +40,7 @@ class Parcela(db.Model):
     fecha_creacion = db.Column(db.DateTime, nullable=True)
     cultivo_actual = db.Column(db.String(100), nullable=True)
     fecha_siembra = db.Column(db.Date, nullable=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)  # Nueva FK
     
     # AGREGAR: Relación con cultivos
     cultivos = db.relationship('DetalleCultivo', backref='parcela', lazy=True, cascade='all, delete-orphan')

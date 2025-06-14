@@ -86,11 +86,12 @@ const DetalleParcela = ({ API_URL }) => {
     const fetchParcelaData = async () => {
       try {
         setLoading(true);
-        
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
         // Obtener datos de la parcela
-        const response = await axios.get(`${API_URL}/parcelas/${id}`);
+        const response = await axios.get(`${API_URL}/parcelas/${id}`, {
+          headers: { 'X-User-Id': user.id }
+        });
         setParcela(response.data);
-        
         
         setLoading(false);
       } catch (err) {

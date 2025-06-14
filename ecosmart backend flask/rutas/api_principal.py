@@ -37,7 +37,7 @@ CORS(app, resources={
 # ...existing code... # Permite solicitudes CORS para la API
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -744,7 +744,12 @@ def exportar_csv():
 def listar_parcelas():
     """Listar todas las parcelas con su cultivo único"""
     try:
-        parcelas = Parcela.query.all()
+        # Obtener usuario activo desde headers
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+
+        parcelas = Parcela.query.filter_by(usuario_id=user_id).all()
         parcelas_data = []
         
         for parcela in parcelas:
@@ -1307,31 +1312,26 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
                     # Importar la función para enviar correos
                     from servicios.notificaciones import enviar_correo_alerta
                     
-                    # MODIFICACIÓN: Enviar a TODOS los usuarios, no solo al asociado a la parcela
-                    # Obtener todos los usuarios con email configurado
-                    usuarios = Usuario.query.filter(Usuario.email.isnot(None)).all()
-                    
-                    if usuarios:
-                        print(f"DEBUG: Se encontraron {len(usuarios)} usuarios con email configurado")
-                        
-                        # Enviar notificaciones a todos los usuarios
-                        for usuario in usuarios:
-                            print(f"DEBUG: Enviando alertas a {usuario.email}")
-                            
-                            # Enviar una notificación por cada alerta crítica
-                            for alerta_data in alertas_a_notificar:
-                                try:
-                                    resultado = enviar_correo_alerta(usuario.email, alerta_data, datos_parcela)
-                                    if resultado:
-                                        print(f"✅ Alerta {alerta_data['id']} enviada a {usuario.email}")
-                                    else:
-                                        print(f"❌ Error al enviar alerta {alerta_data['id']} a {usuario.email}")
-                                except Exception as e:
-                                    print(f"Error al enviar correo individual: {str(e)}")
+                   
+                # Obtener solo el usuario asociado a la parcela
+                usuario_id = parcela.usuario_id if hasattr(parcela, 'usuario_id') else None
+                if usuario_id:
+                    usuario = Usuario.query.get(usuario_id)
+                    if usuario and usuario.email:
+                        print(f"DEBUG: Enviando alertas solo a {usuario.email}")
+                        for alerta_data in alertas_a_notificar:
+                            try:
+                                resultado = enviar_correo_alerta(usuario.email, alerta_data, datos_parcela)
+                                if resultado:
+                                    print(f"✅ Alerta {alerta_data['id']} enviada a {usuario.email}")
+                                else:
+                                    print(f"❌ Error al enviar alerta {alerta_data['id']} a {usuario.email}")
+                            except Exception as e:
+                                print(f"Error al enviar correo individual: {str(e)}")
                     else:
-                        print("DEBUG: No se encontraron usuarios con email configurado")
+                        print("DEBUG: Usuario asociado a la parcela no tiene email configurado")
                 else:
-                    print(f"DEBUG: No se encontró la parcela con ID {parcela_id}")
+                    print("DEBUG: No se encontró usuario asociado a la parcela")
                         
             except Exception as email_error:
                 import traceback
@@ -1567,15 +1567,19 @@ def agregar_parcela():
     """Agregar una nueva parcela con su cultivo único"""
     try:
         data = request.json
-        
-        # Crear parcela
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+
+        # Crear parcela y asignar usuario_id
         nueva_parcela = Parcela(
             nombre=data['nombre'],
             ubicacion=data.get('ubicacion'),
             hectareas=data.get('hectareas'),
             latitud=data.get('latitud'),
             longitud=data.get('longitud'),
-            fecha_creacion=datetime.now(UTC)
+            fecha_creacion=datetime.now(UTC),
+            usuario_id=user_id  # Asignar usuario activo
         )
         
         db.session.add(nueva_parcela)
@@ -1662,74 +1666,12 @@ def agregar_parcela():
         current_app.logger.error(f"Error al crear parcela: {str(e)}")
         return jsonify({'error': f"Error al crear parcela: {str(e)}"}), 500
 
-# ...existing code...
-# ...existing code...
-#endoints para la API de conversaciones
-# Endpoint para listar todas las conversaciones de un usuario
-# Endpoint para obtener conversaciones de un usuario
-@app.route('/api/conversaciones/<user_id>', methods=['GET'])
-def obtener_conversaciones(user_id):
-    try:
-        # Verificar que el usuario exista
-        usuario = Usuario.query.get_or_404(user_id)
-        
-        # Obtener conversaciones
-        conversaciones = Conversacion.query.filter_by(usuario_id=user_id).order_by(Conversacion.created_at.desc()).all()
-        
-        # Construir resultado directamente sin usar get_last_message
-        resultado = []
-        for conv in conversaciones:
-            # Buscar el último mensaje manualmente
-            ultimo_mensaje = db.session.query(Mensaje).filter_by(
-                conversacion_id=conv.id
-            ).order_by(Mensaje.timestamp.desc()).first()
-            
-            resultado.append({
-                'id': conv.id,
-                'created_at': conv.created_at.isoformat(),
-                'last_message': ultimo_mensaje.content if ultimo_mensaje else ""
-            })
-        
-        return jsonify(resultado)
-        
-    except Exception as e:
-        current_app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-#Endpoin para eliminar una parcela
-@app.route('/api/parcelas/<int:id>', methods=['DELETE'])
-def eliminar_parcela(id):
-    try:
-        parcela = Parcela.query.get(id)
-        if not parcela:
-            return jsonify({'error': 'Parcela no encontrada'}), 404
-        
-        # Primero eliminar todas las lecturas de sensores asociadas
-        LecturaSensor.query.filter_by(parcela=id).delete()
-        
-        # Luego eliminar la parcela
-        db.session.delete(parcela)
-        db.session.commit()
-        
-        # Registrar log solo si existe el ID de usuario
-        user_id = request.headers.get('X-User-Id')
-        if user_id:
-            try:
-                registrar_log(user_id, 'eliminar_parcela', 'parcela', id)
-            except Exception as e:
-                current_app.logger.error(f"Error al registrar log: {e}")
-                # No detenemos la ejecución por errores de log
-        
-        return jsonify({'mensaje': 'Parcela eliminada correctamente'})
-    
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error al eliminar parcela: {str(e)}")
-        return jsonify({'error': f"Error al eliminar parcela: {str(e)}"}), 500
-
-# Endpoint para obtener una parcela específica por ID
 @app.route('/api/parcelas/<int:id>', methods=['GET'])
 def obtener_parcela(id):
-    parcela = Parcela.query.get(id)
+    user_id = request.headers.get('X-User-Id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+    parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
     if not parcela:
         return jsonify({'error': 'Parcela no encontrada'}), 404
     
@@ -1746,10 +1688,12 @@ def obtener_parcela(id):
         "fecha_siembra": parcela.fecha_siembra.isoformat() if parcela.fecha_siembra else None
     })
 
-# Endpoint para actualizar una parcela existente
 @app.route('/api/parcelas/<int:id>', methods=['PUT'])
 def actualizar_parcela(id):
-    parcela = Parcela.query.get(id)
+    user_id = request.headers.get('X-User-Id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+    parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
     if not parcela:
         return jsonify({'error': 'Parcela no encontrada'}), 404
     
@@ -1786,11 +1730,27 @@ def actualizar_parcela(id):
         db.session.commit()
         user_id = request.headers.get('X-User-Id')
         registrar_log(user_id, 'actualizar_parcela', 'parcela', id, detalles=str(data))
-    
         return jsonify({'mensaje': 'Parcela actualizada correctamente'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
+
+@app.route('/api/parcelas/<int:id>', methods=['DELETE'])
+def eliminar_parcela(id):
+    user_id = request.headers.get('X-User-Id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+    parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
+    if not parcela:
+        return jsonify({'error': 'Parcela no encontrada'}), 404
+    # Primero eliminar todas las lecturas de sensores asociadas
+    LecturaSensor.query.filter_by(parcela=id).delete()
+    
+    # Luego eliminar la parcela
+    db.session.delete(parcela)
+    db.session.commit()
+    return jsonify({'mensaje': 'Parcela eliminada correctamente'})
+
 
 @app.route('/api/debug/sensores/<int:parcela_id>', methods=['GET'])
 def debug_sensores_parcela(parcela_id):
@@ -1858,11 +1818,7 @@ def obtener_mensajes(conv_id):
         return jsonify({
             'id': conversacion.id,
             'created_at': conversacion.created_at.isoformat(),
-            'messages': [{
-                'sender': msg.sender,
-                'content': msg.content,
-                'timestamp': msg.created_at.isoformat()
-            } for msg in mensajes]
+            'last_message': ultimo_mensaje.content if ultimo_mensaje else ""
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2051,7 +2007,7 @@ import random
 def obtener_recomendaciones_parcelas():
     """Devuelve recomendaciones para las parcelas basadas en los datos de los sensores"""
     try:
-        # Get user_id from headers for logging
+        # Get user_id from headers
         user_id = request.headers.get('X-User-Id')
         
         # Get optional parameters
@@ -2435,7 +2391,7 @@ def obtener_datos_sensores_recientes(parcela_id):
             LecturaSensor.tipo == 'Temperatura',
             LecturaSensor.timestamp >= desde
         ).order_by(LecturaSensor.timestamp.desc()).first()
-        
+
         ph = LecturaSensor.query.filter(
             LecturaSensor.parcela == parcela_id,
             LecturaSensor.tipo == 'pH del suelo',
@@ -2599,7 +2555,7 @@ def obtener_datos_sensores():
         periodo = request.args.get('periodo', '24h')
         
         # Calcular fecha desde usando UTC
-        desde = datetime.now(UTC)
+        desde = datetime.now(UTC) - timedelta(hours=24)
         if periodo == '7d':
             desde = desde - timedelta(days=7)
         elif periodo == '30d':
@@ -3217,18 +3173,8 @@ def obtener_cultivo_por_parcela(parcela_id):
     except Exception as e:
         current_app.logger.error(f"Error al obtener cultivo de parcela: {str(e)}")
         return jsonify({'error': f"Error al obtener cultivo: {str(e)}"}), 500
-
-# ...existing code...
-    
-    
-    
-    
-    
-    
-    
     
 
-# ...existing code...
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

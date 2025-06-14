@@ -47,7 +47,10 @@ const ChatContainer = ({ userId }) => {
   useEffect(() => {
     const fetchParcelas = async () => {
       try {
-        const response = await fetch(`${API_URL}/parcelas`);
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+        const response = await fetch(`${API_URL}/parcelas`, {
+          headers: { 'X-User-Id': user.id }
+        });
         if (response.ok) {
           const data = await response.json();
           setParcelas(data);

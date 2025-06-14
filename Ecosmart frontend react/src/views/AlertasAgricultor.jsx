@@ -26,13 +26,25 @@ const AlertasUsuario = () => {
     // Traer alertas activas
     fetch(`http://localhost:5000/api/alertas`)
       .then(res => res.json())
-      .then(data => setAlertas(Array.isArray(data) ? data : []))
+      .then(data => {
+        // Filtrar solo las alertas del usuario
+        const alertasFiltradas = Array.isArray(data)
+          ? data.filter(a => a.usuario_id === usuarioObj.id)
+          : [];
+        setAlertas(alertasFiltradas);
+      })
       .catch(() => setAlertas([]));
 
     // Traer historial de alertas (inactivas)
     fetch(`http://localhost:5000/api/alertas?inactivas=1`)
       .then(res => res.json())
-      .then(data => setHistorial(Array.isArray(data) ? data : []))
+      .then(data => {
+        // Filtrar solo las alertas del usuario
+        const historialFiltrado = Array.isArray(data)
+          ? data.filter(a => a.usuario_id === usuarioObj.id)
+          : [];
+        setHistorial(historialFiltrado);
+      })
       .catch(() => setHistorial([]));
   }, []);
 
