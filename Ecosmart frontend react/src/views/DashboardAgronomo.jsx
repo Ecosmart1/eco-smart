@@ -789,14 +789,39 @@ const DashboardAgronomo = () => {
   };
 
   // Formatea la fecha para mostrarla amigable
-  const formatearFecha = (fechaStr) => {
-    try {
-      const fecha = new Date(fechaStr);
-      return fecha.toLocaleString();
-    } catch (error) {
-      return fechaStr;
+  // Formatea la fecha para mostrarla amigable
+const formatearFecha = (fechaStr) => {
+  try {
+    if (!fechaStr) return 'Sin fecha';
+    
+    // Si viene en formato "15/06/2025 15:11" (del backend)
+    if (fechaStr.includes('/')) {
+      const [fechaParte, horaParte] = fechaStr.split(' ');
+      const [dia, mes, año] = fechaParte.split('/');
+      
+      // Crear fecha válida: año-mes-dia hora
+      const fechaValida = new Date(`${año}-${mes}-${dia}T${horaParte || '00:00'}:00`);
+      
+      if (isNaN(fechaValida.getTime())) {
+        return fechaStr; // Devolver original si falla
+      }
+      
+      return fechaValida.toLocaleString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
-  };
+    
+    // Para otros formatos
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleString();
+  } catch (error) {
+    return fechaStr; // Devolver original en caso de error
+  }
+};
 
   return (
     <div className="ecosmart-dashboard">

@@ -42,9 +42,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
-
-
-
 @app.route('/api/debug/database', methods=['GET'])
 def debug_database():
     """Endpoint para verificar estado de la base de datos"""
@@ -82,11 +79,7 @@ def debug_database():
             'database_connected': False
         }), 500
 
-# ...existing code...
 
-
-
-# ...existing code...
 @app.route('/api/parcelas/recomendaciones', methods=['GET', 'POST', 'OPTIONS'])
 def recomendaciones_parcelas():
     if request.method == 'OPTIONS':

@@ -418,13 +418,51 @@ const DashboardAgricultor = () => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  // Formatea la fecha para mostrarla amigable
+ 
+   // Formatea la fecha para mostrarla amigable
   const formatearFecha = (fechaStr) => {
     try {
+      if (!fechaStr) return 'Sin fecha';
+      
+      // Si viene en formato "15/06/2025 15:11" (del backend)
+      if (fechaStr.includes('/')) {
+        const [fechaParte, horaParte] = fechaStr.split(' ');
+        const [dia, mes, año] = fechaParte.split('/');
+        
+        // Crear fecha válida: año-mes-dia hora
+        const fechaValida = new Date(`${año}-${mes}-${dia}T${horaParte || '00:00'}:00`);
+        
+        if (isNaN(fechaValida.getTime())) {
+          return fechaStr; // Devolver original si falla
+        }
+        
+        return fechaValida.toLocaleString('es-CL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      // Para otros formatos ISO
       const fecha = new Date(fechaStr);
-      return fecha.toLocaleString();
+      
+      if (isNaN(fecha.getTime())) {
+        return fechaStr; // Devolver original si no es una fecha válida
+      }
+      
+      return fecha.toLocaleString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
     } catch (error) {
-      return fechaStr;
+      console.error('Error al formatear fecha:', error);
+      return fechaStr; // Devolver original en caso de error
     }
   };
 
@@ -542,8 +580,8 @@ const DashboardAgricultor = () => {
                   <span>Cargando alertas...</span>
                 </div>
               ) : alertas.length > 0 ? (
-                alertas.map(alerta => (
-                  <div key={alerta.id} className="alerta-item">
+                                alertas.map(alerta => (
+                  <div key={alerta.id} className={`alerta-item severidad-${alerta.severidad}`}>
                     <div className={`alerta-severidad ${getSeveridadColor(alerta.severidad)}`}></div>
                     <div className="alerta-content">
                       <div className="alerta-header">
@@ -557,7 +595,7 @@ const DashboardAgricultor = () => {
                         <span className="alerta-fecha">{formatearFecha(alerta.timestamp)}</span>
                       </div>
                       <div className="alerta-footer">
-                        <span className="alerta-parcela">Parcela: {getParcelaNombre(alerta.parcela)}</span>
+                        <span className="alerta-parcela">Parcela: {alerta.parcela}</span>
                         <div className="alerta-actions">
                           <button 
                             className="btn-alerta-resolver" 
@@ -566,11 +604,12 @@ const DashboardAgricultor = () => {
                             Resolver
                           </button>
                           <button 
-                            className="btn-alerta-mas"
+                            className="btn-consultar-ia"
                             onClick={() => consultarAsistente('general', alerta.parcela, getParcelaNombre(alerta.parcela))}
-                            title="Consultar con IA"
+                            title="Consultar con IA sobre esta alerta"
                           >
                             <i className="fas fa-robot"></i>
+                            IA
                           </button>
                         </div>
                       </div>

@@ -220,19 +220,55 @@ const DashboardTecnico = () => {
   };
 
   // Función para formatear fecha
+  // Función para formatear fecha - VERSIÓN ARREGLADA
   const formatearFecha = (timestamp) => {
     try {
-      return new Date(timestamp).toLocaleString('es-CL', {
+      if (!timestamp) return 'Sin fecha';
+      
+      // Si viene en formato "15/06/2025 15:11" (formato del backend)
+      if (timestamp.includes('/')) {
+        const [fechaParte, horaParte] = timestamp.split(' ');
+        const [dia, mes, año] = fechaParte.split('/');
+        
+        // Crear fecha válida: año-mes-dia hora
+        const fechaValida = new Date(`${año}-${mes}-${dia}T${horaParte || '00:00'}:00`);
+        
+        // Verificar que la fecha sea válida
+        if (isNaN(fechaValida.getTime())) {
+          return 'Fecha inválida';
+        }
+        
+        return fechaValida.toLocaleString('es-CL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      // Si viene en formato ISO o estándar
+      const fecha = new Date(timestamp);
+      
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha inválida';
+      }
+      
+      return fecha.toLocaleString('es-CL', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       });
+      
     } catch (error) {
-      return 'Fecha no disponible';
+      console.error('Error al formatear fecha:', error);
+      return 'Error en fecha';
     }
   };
+
+// ...existing code...
 
   if (cargando) {
     return (
@@ -351,10 +387,13 @@ const DashboardTecnico = () => {
                 Ver todas
               </Link>
             </div>
-            <div className="alertas-lista">
+                        <div className="alertas-lista">
               {alertasRecientes.length > 0 ? (
                 alertasRecientes.map(alerta => (
-                  <div key={alerta.id} className="alerta-item">
+                  <div 
+                    key={alerta.id} 
+                    className={`alerta-item severidad-${alerta.severidad}`}
+                  >
                     <div 
                       className="alerta-severidad"
                       style={{ backgroundColor: getSeveridadColor(alerta.severidad) }}
@@ -441,11 +480,17 @@ const DashboardTecnico = () => {
                 <div className="resumen-numero">{usuariosReales.length}</div>
                 <div className="resumen-label">Usuarios registrados</div>
               </div>
-              <div className="resumen-detalle">
+                            <div className="resumen-detalle">
                 {usuariosReales.filter(u => u.rol === 'agricultor').length > 0 && (
                   <div className="detalle-item">
                     <span className="detalle-valor">{usuariosReales.filter(u => u.rol === 'agricultor').length}</span>
                     <span className="detalle-texto">Agricultores</span>
+                  </div>
+                )}
+                {usuariosReales.filter(u => u.rol === 'agronomo').length > 0 && (
+                  <div className="detalle-item">
+                    <span className="detalle-valor">{usuariosReales.filter(u => u.rol === 'agronomo').length}</span>
+                    <span className="detalle-texto">Agrónomos</span>
                   </div>
                 )}
                 {usuariosReales.filter(u => u.rol === 'tecnico').length > 0 && (
