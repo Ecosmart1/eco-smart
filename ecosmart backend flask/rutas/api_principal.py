@@ -3218,9 +3218,465 @@ def obtener_cultivo_por_parcela(parcela_id):
         current_app.logger.error(f"Error al obtener cultivo de parcela: {str(e)}")
         return jsonify({'error': f"Error al obtener cultivo: {str(e)}"}), 500
 
-# ...existing code...
-    
-    
+#endpoints informes
+# Agregar estos endpoints al final del archivo, antes de if __name__ == '__main__':
+
+
+@app.route('/api/informes/resumen', methods=['GET'])
+def obtener_resumen_informes():
+    """Endpoint específico para obtener resumen de métricas"""
+    try:
+        parcela_id = request.args.get('parcela_id')
+        periodo = request.args.get('periodo', '24h')
+        
+        # Calcular fecha desde
+        desde = datetime.now(UTC)
+        if periodo == '7d':
+            desde = desde - timedelta(days=7)
+        elif periodo == '30d':
+            desde = desde - timedelta(days=30)
+        else:  # '24h' por defecto
+            desde = desde - timedelta(hours=24)
+        
+        # Construir consulta base
+        query_base = LecturaSensor.query.filter(
+            LecturaSensor.timestamp >= desde
+        )
+        
+        if parcela_id:
+            query_base = query_base.filter(LecturaSensor.parcela == parcela_id)
+        
+        # Obtener promedios por tipo de sensor
+        temp_data = query_base.filter(LecturaSensor.tipo == 'Temperatura').all()
+        humedad_data = query_base.filter(LecturaSensor.tipo == 'Humedad').all()
+        
+        temperatura_promedio = 0
+        humedad_promedio = 0
+        
+        if temp_data:
+            valores_temp = [float(d.valor) for d in temp_data if d.valor]
+            temperatura_promedio = round(sum(valores_temp) / len(valores_temp), 1) if valores_temp else 0
+        
+        if humedad_data:
+            valores_humedad = [float(d.valor) for d in humedad_data if d.valor]
+            humedad_promedio = round(sum(valores_humedad) / len(valores_humedad), 1) if valores_humedad else 0
+        
+        # Contar alertas por severidad
+        alertas_query = AlertaSensor.query.filter(AlertaSensor.timestamp >= desde)
+        if parcela_id:
+            alertas_query = alertas_query.filter(AlertaSensor.parcela == parcela_id)
+        
+        alertas_criticas = alertas_query.filter(AlertaSensor.severidad == 'critico').count()
+        alertas_moderadas = alertas_query.filter(
+            (AlertaSensor.severidad == 'moderado') | (AlertaSensor.severidad == 'alerta')
+        ).count()
+        alertas_bajas = alertas_query.filter(AlertaSensor.severidad == 'baja').count()
+        
+        # Contar parcelas
+        parcelas_total = Parcela.query.count()
+        
+        resumen = {
+            'temperatura_promedio': temperatura_promedio,
+            'humedad_promedio': humedad_promedio,
+            'parcelas_monitoreadas': parcelas_total,
+            'alertas_criticas': alertas_criticas,
+            'alertas_moderadas': alertas_moderadas,
+            'alertas_bajas': alertas_bajas,
+            'alertas_totales': alertas_criticas + alertas_moderadas + alertas_bajas,
+            'periodo': periodo,
+            'fecha_desde': desde.isoformat(),
+            'fecha_hasta': datetime.now(UTC).isoformat()
+        }
+        
+        # Registrar log
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'consulta_resumen', 'informes', None,
+                             detalles=f"periodo={periodo}, parcela={parcela_id}")
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        return jsonify(resumen)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener resumen: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sensores/datos/completos', methods=['GET'])
+def obtener_datos_sensores_completos():
+    """Obtener datos completos de todos los sensores para gráficos"""
+    try:
+        parcela_id = request.args.get('parcela')
+        if not parcela_id:
+            return jsonify({"error": "Falta parámetro 'parcela'"}), 400
+            
+        periodo = request.args.get('periodo', '24h')
+        
+        # Calcular fecha desde
+        desde = datetime.now(UTC)
+        if periodo == '7d':
+            desde = desde - timedelta(days=7)
+        elif periodo == '30d':
+            desde = desde - timedelta(days=30)
+        else:  # '24h' por defecto
+            desde = desde - timedelta(hours=24)
+        
+        # Consultar todos los tipos de sensores
+        tipos_sensores = ['Temperatura', 'Humedad', 'pH del suelo', 'Nutrientes']
+        resultado = {}
+        
+        for tipo in tipos_sensores:
+            datos = LecturaSensor.query.filter(
+                LecturaSensor.parcela == parcela_id,
+                LecturaSensor.tipo == tipo,
+                LecturaSensor.timestamp >= desde
+            ).order_by(LecturaSensor.timestamp).all()
+            
+            # Formatear datos según el tipo
+            if tipo == 'Nutrientes':
+                datos_formateados = []
+                for d in datos:
+                    try:
+                        valor_obj = json.loads(d.valor)
+                        datos_formateados.append({
+                            "timestamp": d.timestamp.isoformat(),
+                            "valor": valor_obj
+                        })
+                    except (JSONDecodeError, TypeError, ValueError):
+                        try:
+                            datos_formateados.append({
+                                "timestamp": d.timestamp.isoformat(),
+                                "valor": float(d.valor)
+                            })
+                        except:
+                            continue
+            else:
+                datos_formateados = []
+                for d in datos:
+                    try:
+                        datos_formateados.append({
+                            "timestamp": d.timestamp.isoformat(),
+                            "valor": float(d.valor)
+                        })
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Mapear nombres para compatibilidad
+            if tipo == 'Temperatura':
+                resultado['temperatura'] = datos_formateados
+            elif tipo == 'Humedad':
+                resultado['humedad'] = datos_formateados
+            elif tipo == 'pH del suelo':
+                resultado['ph'] = datos_formateados
+            elif tipo == 'Nutrientes':
+                resultado['nutrientes'] = datos_formateados
+        
+        # Registrar log
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'consulta_datos_completos', 'sensores', parcela_id,
+                             detalles=f"periodo={periodo}")
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener datos completos: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# REEMPLAZA el endpoint anterior con este nuevo nombre:
+
+@app.route('/api/informes/alertas', methods=['GET'])
+def obtener_alertas_para_informes():
+    """Obtener historial completo de alertas específicamente para informes interactivos"""
+    try:
+        # Parámetros de filtrado
+        parcela_id = request.args.get('parcela_id')
+        severidad = request.args.get('severidad')
+        activas_solo = request.args.get('activas_solo', 'false').lower() == 'true'
+        limite = request.args.get('limite', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        fecha_desde = request.args.get('fecha_desde')
+        fecha_hasta = request.args.get('fecha_hasta')
+        
+        # Construir consulta base
+        query = AlertaSensor.query
+        
+        # Filtro por parcela específica
+        if parcela_id:
+            query = query.filter(AlertaSensor.parcela == parcela_id)
+        
+        # Filtro por severidad
+        if severidad and severidad != 'todas':
+            # Normalizar severidad
+            if severidad == 'alerta':
+                severidad = 'moderado'
+            elif severidad == 'critico':
+                severidad = 'critico'
+            elif severidad == 'baja':
+                severidad = 'baja'
+            query = query.filter(AlertaSensor.severidad == severidad)
+        
+        # Filtro por estado activo/inactivo
+        if activas_solo:
+            query = query.filter(AlertaSensor.activa == True)
+        
+        # Filtros por fecha
+        if fecha_desde:
+            try:
+                fecha_desde_dt = datetime.fromisoformat(fecha_desde.replace('Z', '+00:00'))
+                query = query.filter(AlertaSensor.timestamp >= fecha_desde_dt)
+            except ValueError:
+                current_app.logger.warning(f"Formato de fecha_desde inválido: {fecha_desde}")
+        
+        if fecha_hasta:
+            try:
+                fecha_hasta_dt = datetime.fromisoformat(fecha_hasta.replace('Z', '+00:00'))
+                query = query.filter(AlertaSensor.timestamp <= fecha_hasta_dt)
+            except ValueError:
+                current_app.logger.warning(f"Formato de fecha_hasta inválido: {fecha_hasta}")
+        
+        # Contar total para paginación
+        total_alertas = query.count()
+        
+        # Ordenar por fecha más reciente y aplicar paginación
+        alertas = query.order_by(AlertaSensor.timestamp.desc()).offset(offset).limit(limite).all()
+        
+        # Formatear resultado
+        alertas_data = []
+        for alerta in alertas:
+            # Obtener nombre de parcela
+            parcela = Parcela.query.get(alerta.parcela)
+            parcela_nombre = parcela.nombre if parcela else f"Parcela {alerta.parcela}"
+            
+            # Formatear fecha para compatibilidad
+            fecha_formateada = alerta.timestamp.strftime("%d/%m/%Y %H:%M") if alerta.timestamp else "Fecha no disponible"
+            
+            alerta_item = {
+                'id': alerta.id,
+                'parcela': parcela_nombre,
+                'tipo': alerta.tipo,
+                'severidad': alerta.severidad,
+                'mensaje': alerta.mensaje,
+                'valor': alerta.valor,
+                'timestamp': alerta.timestamp.isoformat() if alerta.timestamp else None,
+                'fecha_formateada': fecha_formateada,
+                'activa': getattr(alerta, 'activa', True),
+                'sensor_id': getattr(alerta, 'sensor_id', None)
+            }
+            alertas_data.append(alerta_item)
+        
+        # Registrar log
+        user_id_header = request.headers.get('X-User-Id')
+        if user_id_header:
+            try:
+                filtros_log = {
+                    'parcela_id': parcela_id,
+                    'severidad': severidad,
+                    'activas_solo': activas_solo,
+                    'total_encontradas': len(alertas_data)
+                }
+                registrar_log(user_id_header, 'consulta_alertas_informes', 'alertas', None,
+                             detalles=str(filtros_log))
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        # Respuesta con metadatos de paginación
+        respuesta = {
+            'alertas': alertas_data,
+            'total': total_alertas,
+            'limite': limite,
+            'offset': offset,
+            'tiene_mas': (offset + limite) < total_alertas
+        }
+        
+        return jsonify(respuesta)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener alertas para informes: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Endpoint adicional específico para estadísticas de alertas en informes
+@app.route('/api/informes/alertas/estadisticas', methods=['GET'])
+def obtener_estadisticas_alertas_informes():
+    """Obtener estadísticas de alertas específicamente para informes"""
+    try:
+        parcela_id = request.args.get('parcela_id')
+        periodo_dias = request.args.get('periodo_dias', 30, type=int)
+        
+        # Calcular fecha desde
+        desde = datetime.now(UTC) - timedelta(days=periodo_dias)
+        
+        # Construir consulta base
+        query = AlertaSensor.query.filter(AlertaSensor.timestamp >= desde)
+        
+        if parcela_id:
+            query = query.filter(AlertaSensor.parcela == parcela_id)
+        
+        # Estadísticas por severidad
+        criticas = query.filter(AlertaSensor.severidad == 'critico').count()
+        moderadas = query.filter(
+            (AlertaSensor.severidad == 'moderado') | (AlertaSensor.severidad == 'alerta')
+        ).count()
+        bajas = query.filter(AlertaSensor.severidad == 'baja').count()
+        
+        # Estadísticas por tipo
+        tipos_query = query.with_entities(
+            AlertaSensor.tipo,
+            func.count(AlertaSensor.id).label('total')
+        ).group_by(AlertaSensor.tipo).all()
+        
+        tipos_estadisticas = [{'tipo': tipo, 'total': total} for tipo, total in tipos_query]
+        
+        # Alertas activas vs resueltas
+        activas = query.filter(AlertaSensor.activa == True).count()
+        resueltas = query.filter(AlertaSensor.activa == False).count()
+        
+        # Tendencia por días (últimos 7 días)
+        tendencia = []
+        for i in range(7):
+            fecha_dia = datetime.now(UTC) - timedelta(days=i)
+            fecha_inicio = fecha_dia.replace(hour=0, minute=0, second=0, microsecond=0)
+            fecha_fin = fecha_inicio + timedelta(days=1)
+            
+            alertas_dia = AlertaSensor.query.filter(
+                AlertaSensor.timestamp >= fecha_inicio,
+                AlertaSensor.timestamp < fecha_fin
+            )
+            
+            if parcela_id:
+                alertas_dia = alertas_dia.filter(AlertaSensor.parcela == parcela_id)
+            
+            total_dia = alertas_dia.count()
+            tendencia.append({
+                'fecha': fecha_inicio.strftime('%Y-%m-%d'),
+                'total': total_dia
+            })
+        
+        estadisticas = {
+            'periodo_dias': periodo_dias,
+            'total_alertas': criticas + moderadas + bajas,
+            'por_severidad': {
+                'criticas': criticas,
+                'moderadas': moderadas,
+                'bajas': bajas
+            },
+            'por_estado': {
+                'activas': activas,
+                'resueltas': resueltas
+            },
+            'por_tipo': tipos_estadisticas,
+            'tendencia_7_dias': list(reversed(tendencia))
+        }
+        
+        return jsonify(estadisticas)
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener estadísticas de alertas para informes: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Endpoint para acciones específicas de alertas en informes
+@app.route('/api/informes/alertas/<int:alerta_id>/revisada', methods=['PUT'])
+def marcar_alerta_revisada_informes(alerta_id):
+    """Marcar una alerta específica como revisada desde informes"""
+    try:
+        alerta = AlertaSensor.query.get(alerta_id)
+        if not alerta:
+            return jsonify({'error': 'Alerta no encontrada'}), 404
+        
+        alerta.activa = False
+        db.session.commit()
+        
+        # Registrar log
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'marcar_alerta_revisada_informe', 'alertas', alerta_id,
+                             detalles=f"alerta_id: {alerta_id}")
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        return jsonify({
+            'mensaje': 'Alerta marcada como revisada',
+            'alerta_id': alerta_id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al marcar alerta como revisada: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/informes/alertas/<int:alerta_id>', methods=['DELETE'])
+def eliminar_alerta_informes(alerta_id):
+    """Eliminar una alerta específica desde informes"""
+    try:
+        alerta = AlertaSensor.query.get(alerta_id)
+        if not alerta:
+            return jsonify({'error': 'Alerta no encontrada'}), 404
+        
+        db.session.delete(alerta)
+        db.session.commit()
+        
+        # Registrar log
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'eliminar_alerta_informe', 'alertas', alerta_id,
+                             detalles=f"alerta_id: {alerta_id}")
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        return jsonify({
+            'mensaje': 'Alerta eliminada correctamente',
+            'alerta_id': alerta_id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al eliminar alerta: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/informes/alertas/marcar_multiples', methods=['PUT'])
+def marcar_multiples_alertas_informes():
+    """Marcar múltiples alertas como revisadas desde informes"""
+    try:
+        data = request.json
+        alertas_ids = data.get('alertas_ids', [])
+        
+        if not alertas_ids:
+            return jsonify({'error': 'Se requiere lista de IDs de alertas'}), 400
+        
+        # Actualizar alertas
+        alertas_actualizadas = AlertaSensor.query.filter(
+            AlertaSensor.id.in_(alertas_ids)
+        ).update(
+            {AlertaSensor.activa: False},
+            synchronize_session=False
+        )
+        
+        db.session.commit()
+        
+        # Registrar log
+        user_id = request.headers.get('X-User-Id')
+        if user_id:
+            try:
+                registrar_log(user_id, 'marcar_multiples_alertas_informe', 'alertas', None,
+                             detalles=f"alertas_ids: {alertas_ids}")
+            except Exception as e:
+                current_app.logger.error(f"Error al registrar log: {e}")
+        
+        return jsonify({
+            'mensaje': f'{alertas_actualizadas} alertas marcadas como revisadas',
+            'alertas_actualizadas': alertas_actualizadas
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al marcar múltiples alertas: {e}")
+        return jsonify({'error': str(e)}), 500
     
     
     
@@ -3228,7 +3684,7 @@ def obtener_cultivo_por_parcela(parcela_id):
     
     
 
-# ...existing code...
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
