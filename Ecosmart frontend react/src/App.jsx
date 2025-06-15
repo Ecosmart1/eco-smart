@@ -35,6 +35,8 @@ import EstadoCultivos from './views/EstadoCultivos';
 import DetalleCultivo from './views/DetalleCultivo';
 import AlertasAgricultor from './views/AlertasAgricultor';
 import AlertasAgronomo from './views/AlertasAgricultor';
+import InformesInteractivos from './views/InformesInteractivos';
+
 
 
 
@@ -132,6 +134,8 @@ function App() {
             <SensoresPanel API_URL={API_URL} />
           </div>
         } />
+
+        <Route path="/dashboard/:rol/informes" element={<InformesInteractivos />} />
 
         <Route path="/dashboard/agricultor/chat" element={
           <div className="app-container">
