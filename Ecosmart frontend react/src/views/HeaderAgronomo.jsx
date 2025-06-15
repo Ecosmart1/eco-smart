@@ -90,7 +90,16 @@ const HeaderAgronomo = ({ activeItem }) => {
         >
           Asistente IA
         </Link>
+        <Link 
+  to="/dashboard/agricultor/informes" 
+  className={activeItem === 'informes' ? 'nav-item active' : 'nav-item'}
+>
+  <i className="fas fa-chart-bar"></i>
+  <span>Informes</span>
+</Link>
+
       </div>
+
       
       <div className="header-user-alertas">
         <div className="notificaciones-wrapper" ref={alertasRef}>

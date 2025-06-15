@@ -1845,3 +1845,106 @@
 .recomendacion-icon .fa-cloud-rain {
   color: #03a9f4;
 }
+/* ...existing code... */
+
+/* ========== ESTILOS PARA ALERTAS MEJORADAS ========== */
+
+/* Bordes según severidad de alertas */
+.alerta-item.severidad-critico {
+  border-left: 4px solid #F44336;
+  background: linear-gradient(90deg, rgba(244, 67, 54, 0.05) 0%, white 10%);
+}
+
+.alerta-item.severidad-moderado {
+  border-left: 4px solid #FFC107;
+  background: linear-gradient(90deg, rgba(255, 152, 0, 0.05) 0%, white 10%);
+}
+
+.alerta-item.severidad-baja {
+  border-left: 4px solid #4CAF50;
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.05) 0%, white 10%);
+}
+
+/* Efectos hover para alertas */
+.alerta-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alerta-item.severidad-critico:hover {
+  border-left-width: 6px;
+  box-shadow: 0 2px 12px rgba(244, 67, 54, 0.2);
+}
+
+.alerta-item.severidad-moderado:hover {
+  border-left-width: 6px;
+  box-shadow: 0 2px 12px rgba(255, 152, 0, 0.2);
+}
+
+/* Botón consultar IA personalizado */
+.btn-consultar-ia {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.btn-consultar-ia:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.btn-consultar-ia i {
+  font-size: 14px;
+}
+
+/* Actualizar estilos existentes de alertas */
+.alerta-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Mejorar el indicador de parcela */
+.alerta-parcela {
+  font-size: 0.85rem;
+  color: #333 !important;
+  background-color: #e8f5e9 !important;
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 500;
+  border: 1px solid #c8e6c9;
+}
+
+/* Estilos para fechas en alertas */
+.alerta-fecha {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 400;
+}
+
+/* Iconos según tipo de alerta */
+.alerta-title i.fa-thermometer-half {
+  color: #f44336;
+}
+
+.alerta-title i.fa-tint {
+  color: #2196f3;
+}
+
+.alerta-title i.fa-flask {
+  color: #9c27b0;
+}
+
+.alerta-title i.fa-exclamation-triangle {
+  color: #ff9800;
+}
