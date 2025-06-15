@@ -11,7 +11,7 @@ import RecuperarContrasena from './views/RecuperarContrasena';
 // ===== COMPONENTES DE NAVEGACIÓN =====
 import HeaderTecnico from './views/headertecnico';
 import HeaderAgricultor from './views/headeragricultor';
-import HeaderAgronomo from './views/HeaderAgronomo'; // Comentado temporalmente
+import HeaderAgronomo from './views/HeaderAgronomo';
 
 // ===== VISTAS PARA TÉCNICO =====
 import DashboardTecnico from './views/DashboardTecnico';
@@ -29,16 +29,13 @@ import FormularioParcela from './views/FormularioParcela';
 import EditarParcelaPage from './views/EditarParcelaPage';
 import RecomendacionesPage from './views/Recomendaciones';
 
-// ===== VISTAS PARA AGRICULTOR =====
+// ===== VISTAS PARA AGRÓNOMO =====
 import DashboardAgronomo from './views/DashboardAgronomo';
 import EstadoCultivos from './views/EstadoCultivos';
 import DetalleCultivo from './views/DetalleCultivo';
 import AlertasAgricultor from './views/AlertasAgricultor';
 import AlertasAgronomo from './views/AlertasAgricultor';
 import InformesInteractivos from './views/InformesInteractivos';
-
-
-
 
 /**
  * Componente principal de la aplicación
@@ -96,12 +93,12 @@ function App() {
           </div>
         } />
         
-        
+        {/* RUTA ACTUALIZADA PARA ALERTAS TÉCNICO - Usar el mismo componente que agricultor por ahora */}
         <Route path="/dashboard/tecnico/alertas" element={
           <div className="app-container">
             <HeaderTecnico />
             <div className="content-container">
-              Página de alertas en construcción
+              <AlertasAgricultor userId={getUserId()} tipoUsuario="tecnico" />
             </div>
           </div>
         } />
@@ -248,8 +245,6 @@ function App() {
     </div>
   </div>
 } />
-
-
 
 <Route path="/dashboard/agronomo/alertas" element={
   <div className="app-container">
