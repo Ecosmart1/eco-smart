@@ -1,181 +1,489 @@
-// frontend/src/views/DashboardTecnico.jsx
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './DashboardTecnico.css';
 import "./vistascompartidas.css";
+import { getAuthHeaders } from '../services/serviciorutas';
+
+const API_URL = "http://localhost:5000/api";
 
 const DashboardTecnico = () => {
   const navigate = useNavigate();
   
-  // Obtener información del usuario almacenada al iniciar sesión
-  const userStr = localStorage.getItem('ecosmart_user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const [totalUsuarios, setTotalUsuarios] = useState(0);
-  // Protección básica de ruta
+  // Estados principales
+  const [usuario, setUsuario] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorConexion, setErrorConexion] = useState(false);
+  
+  // Estados para estadísticas
+  const [estadisticas, setEstadisticas] = useState({
+    totalUsuarios: 0,
+    usuariosActivos: 0,
+    dispositivosActivos: 0,
+    alertasPendientes: 0,
+    parcelasMonitoreadas: 0,
+    sensoresOnline: 0
+  });
+  
+  // Estados para datos reales
+  const [alertasRecientes, setAlertasRecientes] = useState([]);
+  const [usuariosReales, setUsuariosReales] = useState([]);
+  const [parcelasReales, setParcelasReales] = useState([]);
+
+  // Verificar autenticación al cargar
   useEffect(() => {
-    // Si no hay usuario o no es técnico, redirigir al login
-    if (!user || user.rol !== 'tecnico') {
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    const tokenGuardado = localStorage.getItem('ecosmart_token');
+    
+    if (!usuarioGuardado || !tokenGuardado) {
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      const usuarioObj = JSON.parse(usuarioGuardado);
+      if (usuarioObj.rol !== 'tecnico') {
+        navigate('/login');
+        return;
+      }
+      
+      setUsuario(usuarioObj);
+      cargarDashboardData();
+    } catch (error) {
+      console.error('Error al verificar usuario:', error);
       navigate('/login');
     }
-    // Obtener el total de usuarios desde la API
-    fetch('http://localhost:5000/api/usuarios/total')
-      .then(res => res.json())
-      .then(data => setTotalUsuarios(data.total))
-      .catch(() => setTotalUsuarios(0));
+  }, [navigate]);
 
-  }, [navigate, user]);
-
-  // Función para cerrar sesión
-  const handleLogout = () => {
-    localStorage.removeItem('ecosmart_user');
-    navigate('/login');
+  // Cargar todos los datos del dashboard
+  const cargarDashboardData = async () => {
+    setCargando(true);
+    try {
+      await Promise.all([
+        cargarEstadisticasUsuarios(),
+        cargarEstadisticasParcelas(),
+        cargarEstadisticasAlertas(),
+        cargarEstadisticasSensores(),
+        cargarAlertasRecientes()
+      ]);
+      setErrorConexion(false);
+    } catch (error) {
+      console.error('Error al cargar datos del dashboard:', error);
+      setErrorConexion(true);
+    } finally {
+      setCargando(false);
+    }
   };
 
-  // Si aún estamos verificando o no hay usuario, mostrar nada
-  if (!user) {
+  // Cargar estadísticas de usuarios usando endpoint existente
+  const cargarEstadisticasUsuarios = async () => {
+    try {
+      // Obtener total de usuarios
+      const totalResponse = await fetch(`${API_URL}/usuarios/total`, {
+        headers: getAuthHeaders()
+      });
+      
+      // Obtener lista de usuarios para calcular activos
+      const usuariosResponse = await fetch(`${API_URL}/usuarios`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (totalResponse.ok) {
+        const totalData = await totalResponse.json();
+        setEstadisticas(prev => ({
+          ...prev,
+          totalUsuarios: totalData.total || 0
+        }));
+      }
+
+      if (usuariosResponse.ok) {
+        const usuariosData = await usuariosResponse.json();
+        if (Array.isArray(usuariosData)) {
+          setUsuariosReales(usuariosData);
+          setEstadisticas(prev => ({
+            ...prev,
+            usuariosActivos: usuariosData.length
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    }
+  };
+
+  // Cargar estadísticas de parcelas usando endpoint existente
+  const cargarEstadisticasParcelas = async () => {
+    try {
+      const response = await fetch(`${API_URL}/parcelas`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const parcelas = await response.json();
+        if (Array.isArray(parcelas)) {
+          setParcelasReales(parcelas);
+          setEstadisticas(prev => ({
+            ...prev,
+            parcelasMonitoreadas: parcelas.length
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar parcelas:', error);
+    }
+  };
+
+  // Cargar estadísticas de alertas usando endpoint existente
+  const cargarEstadisticasAlertas = async () => {
+    try {
+      const response = await fetch(`${API_URL}/alertas`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const alertas = await response.json();
+        if (Array.isArray(alertas)) {
+          const alertasActivas = alertas.filter(alerta => alerta.activa !== false);
+          setEstadisticas(prev => ({
+            ...prev,
+            alertasPendientes: alertasActivas.length
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar alertas:', error);
+    }
+  };
+
+  // Cargar estadísticas de sensores usando endpoint existente
+  const cargarEstadisticasSensores = async () => {
+    try {
+      const response = await fetch(`${API_URL}/sensores`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const sensores = await response.json();
+        if (Array.isArray(sensores)) {
+          setEstadisticas(prev => ({
+            ...prev,
+            sensoresOnline: sensores.length,
+            dispositivosActivos: sensores.length
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar sensores:', error);
+    }
+  };
+
+  // Cargar alertas recientes usando endpoint existente
+  const cargarAlertasRecientes = async () => {
+    try {
+      const response = await fetch(`${API_URL}/alertas`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const alertas = await response.json();
+        
+        if (Array.isArray(alertas)) {
+          const alertasRecientes = alertas
+            .filter(alerta => alerta.activa !== false)
+            .slice(0, 5)
+            .map(alerta => ({
+              id: alerta.id,
+              tipo: alerta.tipo || 'Sistema',
+              mensaje: alerta.mensaje || 'Sin mensaje',
+              severidad: alerta.severidad || 'moderado',
+              timestamp: alerta.timestamp || new Date().toISOString(),
+              parcela: alerta.parcela || 'Parcela desconocida'
+            }));
+          
+          setAlertasRecientes(alertasRecientes);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar alertas recientes:', error);
+      setAlertasRecientes([]);
+    }
+  };
+
+  // Función para obtener color según severidad
+  const getSeveridadColor = (severidad) => {
+    switch (severidad) {
+      case 'critico': return '#f44336';
+      case 'alerta': 
+      case 'moderado': return '#ff9800';
+      case 'baja': return '#4caf50';
+      default: return '#9e9e9e';
+    }
+  };
+
+  // Función para formatear fecha
+  const formatearFecha = (timestamp) => {
+    try {
+      return new Date(timestamp).toLocaleString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Fecha no disponible';
+    }
+  };
+
+  if (cargando) {
+    return (
+      <div className="dashboard-loading">
+        <div className="loading-spinner"></div>
+        <p>Cargando panel de control...</p>
+      </div>
+    );
+  }
+
+  if (!usuario) {
     return null;
   }
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-tecnico">
+      
+      {/* Alerta de conexión */}
+      {errorConexion && (
+        <div className="alerta-conexion">
+          <div className="alerta-conexion-content">
+            <i className="fas fa-exclamation-triangle"></i>
+            <span>Problemas de conectividad. Verificando conexión...</span>
+            <button onClick={cargarDashboardData}>
+              <i className="fas fa-sync-alt"></i> Reintentar
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Contenido principal */}
-      <div className="dashboard-layout">
-        {/* Menú lateral */}
-        <aside className="sidebar">
-          <nav className="sidebar-nav">
-            <div className="sidebar-header">Panel de Técnico</div>
-            <ul className="sidebar-menu">
-              <li className="sidebar-item active">
-                <Link to="/dashboard/tecnico" className="sidebar-link">
-                  <i className="fas fa-tachometer-alt"></i>
-                  <span>Dashboard</span>
-                </Link>
-              </li>
-              <li className="sidebar-item">
-                <Link to="/dashboard/tecnico/Usuarios" className="sidebar-link">
-                  <i className="fas fa-users"></i>
-                  <span>Usuarios</span>
-                </Link>
-              </li>
-              <li className="sidebar-item">
-                <Link to="/dashboard/tecnico/dispositivos" className="sidebar-link">
-                  <i className="fas fa-microchip"></i>
-                  <span>Dispositivos</span>
-                </Link>
-              </li>
-              <li className="sidebar-item">
-                <Link to="/dashboard/tecnico/ajustes" className="sidebar-link">
+      <div className="dashboard-content">
+        
+        {/* Header del dashboard */}
+        <div className="dashboard-header-section">
+          <div className="welcome-info">
+            <h1>Panel de Control Técnico</h1>
+            <p>Bienvenido, {usuario?.nombre}. Gestiona el sistema EcoSmart desde aquí.</p>
+            <div className="fecha-actual">
+              {new Date().toLocaleDateString('es-CL', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
+          </div>
+          <div className="header-actions">
+            <button onClick={cargarDashboardData} className="btn-actualizar">
+              <i className="fas fa-sync-alt"></i> Actualizar
+            </button>
+          </div>
+        </div>
+
+        {/* Tarjetas de estadísticas principales */}
+        <div className="stats-grid">
+          <div className="stat-card usuarios">
+            <div className="stat-icon">
+              <i className="fas fa-users"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Usuarios</h3>
+              <div className="stat-value">{estadisticas.totalUsuarios}</div>
+              <div className="stat-detail">
+                {estadisticas.usuariosActivos} registrados
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card dispositivos">
+            <div className="stat-icon">
+              <i className="fas fa-microchip"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Sensores</h3>
+              <div className="stat-value">{estadisticas.sensoresOnline}</div>
+              <div className="stat-detail">
+                Dispositivos activos
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card alertas">
+            <div className="stat-icon">
+              <i className="fas fa-exclamation-triangle"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Alertas</h3>
+              <div className="stat-value">{estadisticas.alertasPendientes}</div>
+              <div className="stat-detail">
+                Alertas activas
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-card parcelas">
+            <div className="stat-icon">
+              <i className="fas fa-map"></i>
+            </div>
+            <div className="stat-info">
+              <h3>Parcelas</h3>
+              <div className="stat-value">{estadisticas.parcelasMonitoreadas}</div>
+              <div className="stat-detail">
+                Bajo monitoreo
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sección de alertas y acciones */}
+        <div className="dashboard-widgets">
+          <div className="widget-card alertas-widget">
+            <div className="widget-header">
+              <h3>Alertas Recientes</h3>
+              {/* RUTA CORREGIDA - Usar la ruta definida en App.jsx */}
+              <Link to="/dashboard/tecnico/alertas" className="ver-todas">
+                Ver todas
+              </Link>
+            </div>
+            <div className="alertas-lista">
+              {alertasRecientes.length > 0 ? (
+                alertasRecientes.map(alerta => (
+                  <div key={alerta.id} className="alerta-item">
+                    <div 
+                      className="alerta-severidad"
+                      style={{ backgroundColor: getSeveridadColor(alerta.severidad) }}
+                    ></div>
+                    <div className="alerta-content">
+                      <div className="alerta-tipo">{alerta.tipo}</div>
+                      <div className="alerta-mensaje">{alerta.mensaje}</div>
+                      <div className="alerta-tiempo">
+                        {formatearFecha(alerta.timestamp)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="no-alertas">
+                  <i className="fas fa-check-circle"></i>
+                  <span>No hay alertas recientes</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="widget-card acciones-widget">
+            <div className="widget-header">
+              <h3>Acciones Rápidas</h3>
+            </div>
+            <div className="acciones-grid">
+              {/* RUTAS CORREGIDAS - Usar las rutas definidas en App.jsx */}
+              <Link to="/dashboard/tecnico/Usuarios" className="accion-item">
+                <div className="accion-icon">
+                  <i className="fas fa-users-cog"></i>
+                </div>
+                <div className="accion-content">
+                  <h4>Gestionar Usuarios</h4>
+                  <p>Administrar cuentas de usuario</p>
+                </div>
+              </Link>
+
+              <Link to="/dashboard/tecnico/ajustes" className="accion-item">
+                <div className="accion-icon">
                   <i className="fas fa-sliders-h"></i>
-                  <span>Ajuste de Parámetros</span>
-                </Link>
-              </li>
-              <li className="sidebar-item">
-  <Link to="/sensores" className="sidebar-link">
-    <i className="fas fa-microchip"></i>
-    <span>Sensores</span>
-  </Link>
-</li>
-            </ul>
-          </nav>
-        </aside>
+                </div>
+                <div className="accion-content">
+                  <h4>Parámetros</h4>
+                  <p>Configurar sensores y umbrales</p>
+                </div>
+              </Link>
 
-        {/* Contenido principal */}
-        <main className="main-content">
-          <div className="page-header">
-            <h1>Panel de Control</h1>
-            <p>Bienvenido, {user.nombre}. Aquí puedes gestionar tus tareas de técnico.</p>
+              <Link to="/sensores" className="accion-item">
+                <div className="accion-icon">
+                  <i className="fas fa-microchip"></i>
+                </div>
+                <div className="accion-content">
+                  <h4>Sensores</h4>
+                  <p>Monitorear dispositivos</p>
+                </div>
+              </Link>
+
+              <Link to="/dashboard/tecnico/chat" className="accion-item">
+                <div className="accion-icon">
+                  <i className="fas fa-robot"></i>
+                </div>
+                <div className="accion-content">
+                  <h4>Asistente IA</h4>
+                  <p>Consultas técnicas</p>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Resumen de datos reales */}
+        <div className="dashboard-widgets">
+          <div className="widget-card resumen-usuarios">
+            <div className="widget-header">
+              <h3>Usuarios del Sistema</h3>
+              {/* RUTA CORREGIDA */}
+              <Link to="/dashboard/tecnico/Usuarios" className="ver-todas">
+                Gestionar
+              </Link>
+            </div>
+            <div className="resumen-content">
+              <div className="resumen-stat">
+                <div className="resumen-numero">{usuariosReales.length}</div>
+                <div className="resumen-label">Usuarios registrados</div>
+              </div>
+              <div className="resumen-detalle">
+                {usuariosReales.filter(u => u.rol === 'agricultor').length > 0 && (
+                  <div className="detalle-item">
+                    <span className="detalle-valor">{usuariosReales.filter(u => u.rol === 'agricultor').length}</span>
+                    <span className="detalle-texto">Agricultores</span>
+                  </div>
+                )}
+                {usuariosReales.filter(u => u.rol === 'tecnico').length > 0 && (
+                  <div className="detalle-item">
+                    <span className="detalle-valor">{usuariosReales.filter(u => u.rol === 'tecnico').length}</span>
+                    <span className="detalle-texto">Técnicos</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Tarjetas de estadísticas */}
-          <div className="stats-cards">
-            <div className="stat-card">
-              <div className="stat-card-icon blue">
-                <i className="fas fa-users"></i>
-              </div>
-              <div className="stat-card-info">
-                <h3>Usuarios Activos</h3>
-                <p className="stat-value">{totalUsuarios}</p>
-              </div>
+          <div className="widget-card resumen-parcelas">
+            <div className="widget-header">
+              <h3>Parcelas Monitoreadas</h3>
+              {/* Como no hay ruta específica para parcelas del técnico, enlazamos a sensores */}
+              <Link to="/sensores" className="ver-todas">
+                Ver sensores
+              </Link>
             </div>
-            
-            <div className="stat-card">
-              <div className="stat-card-icon green">
-                <i className="fas fa-check-circle"></i>
+            <div className="resumen-content">
+              <div className="resumen-stat">
+                <div className="resumen-numero">{parcelasReales.length}</div>
+                <div className="resumen-label">Parcelas activas</div>
               </div>
-              <div className="stat-card-info">
-                <h3>Dispositivos Activos</h3>
-                <p className="stat-value">48</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-card-icon orange">
-                <i className="fas fa-exclamation-triangle"></i>
-              </div>
-              <div className="stat-card-info">
-                <h3>Alertas Pendientes</h3>
-                <p className="stat-value">5</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-card-icon purple">
-                <i className="fas fa-calendar-check"></i>
-              </div>
-              <div className="stat-card-info">
-                <h3>Tareas Programadas</h3>
-                <p className="stat-value">7</p>
-              </div>
+              {parcelasReales.length > 0 && (
+                <div className="resumen-detalle">
+                  <div className="detalle-item">
+                    <span className="detalle-valor">
+                      {parcelasReales.filter(p => p.usuario_id).length}
+                    </span>
+                    <span className="detalle-texto">Con usuario asignado</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Acciones rápidas */}
-          <div className="section-header">
-            <h2>Acciones Rápidas</h2>
-          </div>
-          
-          <div className="action-cards">
-            <div className="action-card" onClick={() => navigate('/dashboard/tecnico/ajustes')}>
-              <div className="action-card-icon">
-                <i className="fas fa-sliders-h"></i>
-              </div>
-              <div className="action-card-content">
-                <h3>Ajuste de Parámetros</h3>
-                <p>Configurar sensores y umbrales de alerta</p>
-              </div>
-              <div className="action-card-arrow">
-                <i className="fas fa-chevron-right"></i>
-              </div>
-            </div>
-            
-            <div className="action-card">
-              <div className="action-card-icon">
-                <i className="fas fa-tools"></i>
-              </div>
-              <div className="action-card-content">
-                <h3>Mantenimiento</h3>
-                <p>Programar visitas de mantenimiento</p>
-              </div>
-              <div className="action-card-arrow">
-                <i className="fas fa-chevron-right"></i>
-              </div>
-            </div>
-            
-            <div className="action-card">
-              <div className="action-card-icon">
-                <i className="fas fa-chart-line"></i>
-              </div>
-              <div className="action-card-content">
-                <h3>Reportes</h3>
-                <p>Ver informes de rendimiento</p>
-              </div>
-              <div className="action-card-arrow">
-                <i className="fas fa-chevron-right"></i>
-              </div>
-            </div>
-          </div>
-        </main>
+        </div>
       </div>
     </div>
   );
