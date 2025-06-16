@@ -19,6 +19,8 @@ import { Icon } from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import servicioMeteo from '../services/servicioMeteo';
+import servicioRecomendaciones from '../services/servicioRecomendaciones';
 
 // Corregir el ícono de Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -46,6 +48,9 @@ const DetalleParcela = ({ API_URL }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [pronostico, setPronostico] = useState([]);
+  const [recomendacionClima, setRecomendacionClima] = useState('');
+  const [cargandoRecomendacion, setCargandoRecomendacion] = useState(false);
 
   // Obtener el rol del usuario al montar el componente
   useEffect(() => {
@@ -116,6 +121,60 @@ const DetalleParcela = ({ API_URL }) => {
     }
   };
   
+  // Obtener pronóstico de 5 días al cargar la parcela
+  useEffect(() => {
+    const cargarPronostico = async () => {
+      if (parcela && parcela.latitud && parcela.longitud) {
+        try {
+          const datos = await servicioMeteo.obtenerPronostico(parcela.latitud, parcela.longitud);
+          setPronostico(datos.pronostico || []);
+        } catch (err) {
+          setPronostico([]);
+        }
+      }
+    };
+    cargarPronostico();
+  }, [parcela]);
+
+  // Usar endpoint Flask para recomendaciones basadas en clima
+  useEffect(() => {
+    const obtenerRecomendacionClima = async () => {
+      if (pronostico.length > 0 && parcela) {
+        setCargandoRecomendacion(true);
+        try {
+          // Llama directamente al endpoint Flask que creaste
+          const response = await axios.post(
+            `${API_URL}/asistente/recomendar`,
+            {
+              parcela: {
+                id: parcela.id,
+                nombre: parcela.nombre,
+                cultivo: parcela.cultivo_actual,
+                ubicacion: parcela.ubicacion,
+                latitud: parcela.latitud,
+                longitud: parcela.longitud,
+                hectareas: parcela.hectareas,
+                fecha_siembra: parcela.fecha_siembra
+              },
+              pronostico: pronostico
+            }
+          );
+          const recomendaciones = response.data?.recomendaciones;
+          setRecomendacionClima(
+            Array.isArray(recomendaciones)
+              ? recomendaciones
+              : [recomendaciones || 'No se pudo obtener recomendación de la IA.']
+          );
+        } catch (err) {
+          setRecomendacionClima(['No se pudo obtener recomendación de la IA.']);
+        } finally {
+          setCargandoRecomendacion(false);
+        }
+      }
+    };
+    obtenerRecomendacionClima();
+  }, [pronostico, parcela, API_URL]);
+
   // Mostrar spinner mientras carga
   if (loading) {
     return (
@@ -269,6 +328,26 @@ const DetalleParcela = ({ API_URL }) => {
               }} 
             />
           </div>
+          {/* Recomendaciones en formato caja */}
+          <Card className="mb-4 shadow-sm">
+            <Card.Header className="bg-warning text-dark">
+              <h4 className="mb-0">Recomendaciones</h4>
+            </Card.Header>
+            <Card.Body>
+              <p>
+                {cargandoRecomendacion
+                  ? 'Consultando IA...'
+                  : (
+                      Array.isArray(recomendacionClima)
+                        ? recomendacionClima.join(' ')
+                        : (typeof recomendacionClima === 'string'
+                            ? recomendacionClima
+                            : 'Analizando el pronóstico...')
+                    )
+                }
+              </p>
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
     </Container>
