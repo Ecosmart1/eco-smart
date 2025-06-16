@@ -59,9 +59,12 @@ const FormularioParcela = ({ parcelaEditar, onClose, API_URL, redirectUrl }) => 
 const cargarDatosCultivo = async (parcelaId) => {
   try {
     const token = localStorage.getItem('ecosmart_token');
-    
+    const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
     const response = await fetch(`${API_URL}/parcelas/${parcelaId}/cultivo`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'X-User-Id': user.id
+      }
     });
     
     if (response.ok) {

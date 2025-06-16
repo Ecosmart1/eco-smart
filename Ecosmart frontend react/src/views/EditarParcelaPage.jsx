@@ -54,7 +54,10 @@ const EditarParcelaPage = ({ API_URL }) => {
     const cargarParcela = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_URL}/parcelas/${id}`);
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+        const response = await axios.get(`${API_URL}/parcelas/${id}`, {
+          headers: { 'X-User-Id': user.id }
+        });
         setParcela(response.data);
         setLoading(false);
       } catch (err) {

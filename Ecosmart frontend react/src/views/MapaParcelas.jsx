@@ -73,7 +73,10 @@ const MapaParcelas = ({ API_URL }) => {
   useEffect(() => {
     const fetchParcelas = async () => {
       try {
-        const response = await axios.get(`${API_URL}/parcelas`);
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+        const response = await axios.get(`${API_URL}/parcelas`, {
+          headers: { 'X-User-Id': user.id }
+        });
         setParcelas(response.data);
         setLoading(false);
       } catch (err) {

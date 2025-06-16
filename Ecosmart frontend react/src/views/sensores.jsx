@@ -29,7 +29,10 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const fetchParcelas = async () => {
     try {
       setCargandoParcelas(true);
-      const response = await fetch(`${API_URL}/parcelas`);
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      const response = await fetch(`${API_URL}/parcelas`, {
+        headers: { 'X-User-Id': user.id }
+      });
       if (!response.ok) {
         throw new Error('Error al cargar las parcelas');
       }

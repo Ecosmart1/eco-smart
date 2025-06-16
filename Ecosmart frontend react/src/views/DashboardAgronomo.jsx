@@ -28,7 +28,12 @@ import {
   eliminarConversacion 
 } from '../services/servicioOpenrouter.js';
 import Markdown from 'markdown-to-jsx';
+
 import DetectorAnomalias from './DetectorAnomalias';
+
+import DetalleParcela from './DetalleParcela'; // Asegúrate de tener este import si usas rutas anidadas
+
+
 const API_URL = "http://localhost:5000/api";
 
 const DashboardAgronomo = () => {
@@ -1230,16 +1235,37 @@ const formatearFecha = (fechaStr) => {
                 <i className="fas fa-plus"></i> Nueva Parcela
               </button>
             </div>
-            
+
+            {/* UNIFICADO: Todas las tarjetas de parcelas en un solo div */}
             <div className="parcelas-grid">
               {parcelas.slice(0, 6).map(parcela => (
                 <div key={parcela.id} className="parcela-card">
-                  <div className={`parcela-estado-indicator ${parcela.estado}`}></div>
-                  <h3>Plantación: {parcela.cultivo_actual}</h3>
-                  <p>Variedad: {parcela.variedad}</p>
-                  <p>Edad: {parcela.edad}</p>
-                  <p>Ubicación: {parcela.ubicacion}</p>
-                  <p>Hectáreas: {parcela.hectareas} ha</p>
+                  <h2 className="parcela-nombre" style={{ marginBottom: 4 }}>{parcela.nombre}</h2>
+                  <div style={{ marginBottom: 8, color: '#22963e', fontWeight: 500, fontSize: '1em' }}>
+                    Dueño: {parcela.usuario_nombre ? parcela.usuario_nombre : 'Sin asignar'}
+                    {parcela.usuario_email && (
+                      <span style={{ color: '#888', fontSize: '0.95em' }}> ({parcela.usuario_email})</span>
+                    )}
+                  </div>
+                  {parcela.cultivo && (
+                    <div style={{ marginTop: 4, fontSize: '0.95em', color: '#444' }}>
+                      <div className={`parcela-estado-indicator ${parcela.estado}`}></div>
+                      <h3><b>Plantación:</b> {parcela.cultivo_actual}</h3>
+                      <div><b>Ubicación:</b> {parcela.ubicacion}</div>
+                      <div><b>Coordenadas:</b> {parcela.latitud && parcela.longitud ? `${parcela.latitud}, ${parcela.longitud}` : '-'}</div>
+                      <div><b>Hectáreas:</b> {parcela.hectareas} ha</div>
+                      <div><b>Fecha de siembra:</b> {parcela.fecha_siembra
+                        ? (typeof parcela.fecha_siembra === 'string'
+                            ? new Date(parcela.fecha_siembra).toLocaleDateString()
+                            : new Date(parcela.fecha_siembra).toLocaleDateString())
+                        : '-'}</div>
+                      <div><b>Fecha de creación parcela:</b> {parcela.fecha_creacion
+                        ? (typeof parcela.fecha_creacion === 'string'
+                            ? new Date(parcela.fecha_creacion).toLocaleDateString()
+                            : new Date(parcela.fecha_creacion).toLocaleDateString())
+                        : '-'}</div>
+                    </div>
+                  )}
                   <div className="parcela-btn-container">
                     <Link to={`/dashboard/agronomo/parcelas/${parcela.id}`}>
                       <button className="parcela-btn">Ver Detalles</button>

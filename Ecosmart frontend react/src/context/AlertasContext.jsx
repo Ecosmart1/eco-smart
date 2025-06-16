@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from "react";
 
 const AlertasContext = createContext();
 
@@ -6,32 +6,31 @@ export const useAlertas = () => useContext(AlertasContext);
 
 export const AlertasProvider = ({ children }) => {
   const [alertasActivas, setAlertasActivas] = useState(0);
-  const [usuario, setUsuario] = useState(null);
 
-  useEffect(() => {
-    const usuarioGuardado = localStorage.getItem('ecosmart_user');
-    if (!usuarioGuardado) return;
-    const usuarioObj = JSON.parse(usuarioGuardado);
-    setUsuario(usuarioObj);
+  // Esta función trae la cantidad de alertas activas para un usuario
+  const fetchAlertasActivas = useCallback((usuarioId) => {
+    fetch(`http://localhost:5000/api/alertas?user_id=${usuarioId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAlertasActivas(data.length);
+        } else {
+          setAlertasActivas(0);
+        }
+      })
+      .catch(() => setAlertasActivas(0));
   }, []);
 
-  const fetchAlertasActivas = () => {
-    if (!usuario) return;
-    fetch(`http://localhost:5000/api/alertas?usuario_id=${usuario.id}`)
+  // Esta función trae el total de alertas activas del sistema
+  const fetchAlertasActivasTotales = useCallback(() => {
+    fetch('http://localhost:5000/api/alertas')
       .then(res => res.json())
       .then(data => setAlertasActivas(Array.isArray(data) ? data.length : 0))
       .catch(() => setAlertasActivas(0));
-  };
-
-  useEffect(() => {
-    fetchAlertasActivas();
-    // Opcional: polling cada 30s
-    const interval = setInterval(fetchAlertasActivas, 30000);
-    return () => clearInterval(interval);
-  }, [usuario]);
+  }, []);
 
   return (
-    <AlertasContext.Provider value={{ alertasActivas, fetchAlertasActivas }}>
+    <AlertasContext.Provider value={{ alertasActivas, fetchAlertasActivas, fetchAlertasActivasTotales }}>
       {children}
     </AlertasContext.Provider>
   );
