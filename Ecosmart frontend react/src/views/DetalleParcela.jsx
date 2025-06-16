@@ -334,18 +334,23 @@ const DetalleParcela = ({ API_URL }) => {
               <h4 className="mb-0">Recomendaciones</h4>
             </Card.Header>
             <Card.Body>
-              <p>
-                {cargandoRecomendacion
-                  ? 'Consultando IA...'
-                  : (
-                      Array.isArray(recomendacionClima)
-                        ? recomendacionClima.join(' ')
-                        : (typeof recomendacionClima === 'string'
-                            ? recomendacionClima
-                            : 'Analizando el pronóstico...')
-                    )
-                }
-              </p>
+              {cargandoRecomendacion ? (
+                <p>Consultando IA...</p>
+              ) : (
+                Array.isArray(recomendacionClima) && recomendacionClima.length > 0 ? (
+                  <ul style={{ paddingLeft: 20 }}>
+                    {recomendacionClima.map((rec, idx) => (
+                      <li key={idx} style={{ marginBottom: 8 }}>{rec}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    {typeof recomendacionClima === 'string'
+                      ? recomendacionClima
+                      : 'Analizando el pronóstico...'}
+                  </p>
+                )
+              )}
             </Card.Body>
           </Card>
         </Col>
