@@ -411,18 +411,18 @@ const DetectorAnomalias = ({ parcelaId = null, mostrarResumen = false }) => {
                     >
                       {anomalia.severidad.toUpperCase()}
                     </span>
-                    <button 
-  className="btn-delete-card"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    eliminarAnomalia(anomalia.id);
-  }}
-  title="Eliminar esta anomalía"
-  disabled={loading}
->
-  <i className="fas fa-times"></i>
-</button>
+                  <button 
+                  className="btn-delete-card"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    eliminarAnomalia(anomalia.id);
+                  }}
+                  title="Eliminar esta anomalía"
+                  disabled={loading}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
                   </div>
                 </div>
                 

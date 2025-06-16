@@ -80,18 +80,30 @@ export const servicioRangos = {
       throw error;
     }
   },
-
-  // Obtener parcelas disponibles
-  async obtenerParcelas() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/parcelas`);
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
+// Obtener parcelas disponibles
+async obtenerParcelas() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/parcelas`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': '1',           
+        'X-User-Rol': 'agronomo'    // ← AGREGAR ESTO
       }
-      return response.json();
-    } catch (error) {
-      console.error('Error al obtener parcelas:', error);
-      throw error;
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
     }
+    
+    const data = await response.json();
+    console.log('📊 Parcelas recibidas del backend:', data);
+    
+    // ✅ CORRECCIÓN: El endpoint devuelve array directo
+    return Array.isArray(data) ? data : [];
+    
+  } catch (error) {
+    console.error('Error al obtener parcelas:', error);
+    throw error;
   }
+}
 };
