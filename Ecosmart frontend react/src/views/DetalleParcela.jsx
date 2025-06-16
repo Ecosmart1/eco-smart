@@ -11,7 +11,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { FaArrowLeft, FaEdit, FaTrash, FaSeedling } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaSeedling, FaMountain, FaMap } from 'react-icons/fa';
 import L from 'leaflet';
 import './DetalleParcela.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
@@ -41,6 +41,7 @@ const defaultIcon = new Icon({
 });
 
 const API_URL = "http://localhost:5000/api";
+const OPENWEATHERMAP_API_KEY = "1b6ee1662a615e3930de913f12f852be"; // <-- PON AQUÍ TU API KEY
 
 const DetalleParcela = () => {
   const { id } = useParams();
@@ -53,6 +54,7 @@ const DetalleParcela = () => {
   const [pronostico, setPronostico] = useState([]);
   const [recomendacionClima, setRecomendacionClima] = useState('');
   const [cargandoRecomendacion, setCargandoRecomendacion] = useState(false);
+  const [showOWMHeatmap, setShowOWMHeatmap] = useState(false);
 
   // Obtener el rol del usuario al montar el componente
   useEffect(() => {
@@ -337,8 +339,15 @@ const DetalleParcela = () => {
           
           {/* Mapa */}
           <Card className="mb-4 shadow-sm">
-            <Card.Header className="bg-primary text-white">
+            <Card.Header className="bg-primary text-white d-flex justify-content-between align-items-center">
               <h4 className="mb-0">Ubicación</h4>
+              <Button
+                variant={showOWMHeatmap ? "secondary" : "success"}
+                size="sm"
+                onClick={() => setShowOWMHeatmap(v => !v)}
+              >
+                {showOWMHeatmap ? <> <FaMap /> Mapa base</> : (<><FaMountain /> Mapa Topográfico</>)}
+              </Button>
             </Card.Header>
             <Card.Body className="p-0">
               {parcela.latitud && parcela.longitud ? (
@@ -359,6 +368,15 @@ const DetalleParcela = () => {
                         {parcela.hectareas && `Área: ${parcela.hectareas} ha`}
                       </Popup>
                     </Marker>
+                    {showOWMHeatmap && (
+                       <TileLayer
+  url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+  attribution='Map data: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors'
+/>
+
+
+
+                    )}
                   </MapContainer>
                 </div>
               ) : (
