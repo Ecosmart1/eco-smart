@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, send_file, current_app, Blueprint
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -22,6 +22,7 @@ import re
 from servicios.notificaciones import enviar_correo_alerta
 
 from servicios.detector_anomalias import detector
+
 
 
 
@@ -83,6 +84,51 @@ def debug_database():
             'database_connected': False
         }), 500
 
+@app.route('/api/asistente/recomendar', methods=['POST', 'OPTIONS'])
+@cross_origin()
+def recomendar_asistente_clima():
+    """
+    Genera recomendaciones para una parcela basadas en el pronóstico del clima y datos de la parcela.
+    Espera un JSON con 'parcela' y 'pronostico' en el body.
+    """
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-User-Id')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        return response
+
+    try:
+        data = request.get_json()
+        parcela = data.get('parcela', {})
+        pronostico = data.get('pronostico', [])
+        cultivo = parcela.get('cultivo', parcela.get('cultivo_actual', 'cultivo'))
+        nombre = parcela.get('nombre', 'Parcela')
+        recomendaciones = []
+
+        # Ejemplo simple de lógica basada en pronóstico
+        if not pronostico or not isinstance(pronostico, list):
+            return jsonify({"recomendaciones": ["No se pudo analizar el pronóstico del clima."]})
+
+        # Buscar días con lluvia y temperaturas extremas
+        dias_lluvia = [dia for dia in pronostico if 'lluvia' in str(dia.get('condicion', '')).lower() or float(dia.get('probabilidadLluvia', '0').replace('%', '')) > 60]
+        dias_calor = [dia for dia in pronostico if float(dia.get('maxima', 0)) > 32]
+        dias_frio = [dia for dia in pronostico if float(dia.get('minima', 100)) < 5]
+
+        if dias_lluvia:
+            recomendaciones.append(f"Se pronostica lluvia en los próximos días para {nombre}. Ajuste el riego para evitar exceso de agua en el cultivo de {cultivo}.")
+        if dias_calor:
+            recomendaciones.append(f"Se esperan temperaturas altas. Considere sombrear o regar temprano el cultivo de {cultivo}.")
+        if dias_frio:
+            recomendaciones.append(f"Posibles heladas. Proteja el cultivo de {cultivo} en {nombre} durante las noches frías.")
+        if not recomendaciones:
+            recomendaciones.append(f"Condiciones climáticas estables para {nombre}. Mantenga el monitoreo regular del cultivo de {cultivo}.")
+
+        return jsonify({"recomendaciones": recomendaciones})
+
+    except Exception as e:
+        return jsonify({"recomendaciones": [f"Error generando recomendación: {str(e)}"]}), 500
+    
 
 @app.route('/api/parcelas/recomendaciones', methods=['GET', 'POST', 'OPTIONS'])
 def recomendaciones_parcelas():
