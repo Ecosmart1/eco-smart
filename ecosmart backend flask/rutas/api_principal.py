@@ -10,7 +10,7 @@ import threading
 import pandas as pd
 import json
 from json import JSONDecodeError
-from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo, AlertaSensor
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo, AlertaSensor,RangoParametro
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
@@ -20,6 +20,10 @@ import smtplib
 from email.mime.text import MIMEText
 import re
 from servicios.notificaciones import enviar_correo_alerta
+
+from servicios.detector_anomalias import detector
+
+
 
 
 
@@ -3671,12 +3675,383 @@ def marcar_multiples_alertas_informes():
         current_app.logger.error(f"Error al marcar múltiples alertas: {e}")
         return jsonify({'error': str(e)}), 500
     
-    
-    
-    
-    
-    
 
+
+    try:
+        parcela_id = request.args.get('parcela_id')
+        anomalias = detector.detectar_anomalias_basicas(parcela_id)
+        
+        return jsonify({
+            'success': True,
+            'anomalias': anomalias,
+            'total': len(anomalias)
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener anomalías: {str(e)}'
+        }), 500
+# AGREGAR ESTE ENDPOINT PARA ANOMALÍAS CON NOMBRES DE PARCELA
+@app.route('/api/anomalias', methods=['GET'])
+def obtener_anomalias_con_nombres():
+    try:
+        parcela_id = request.args.get('parcela_id')
+        
+        # Usar el detector existente
+        anomalias_basicas = detector.detectar_anomalias_basicas(parcela_id)
+        
+        # Enriquecer con nombres de parcela
+        anomalias_enriquecidas = []
+        for anomalia in anomalias_basicas:
+            # Buscar el nombre de la parcela
+            parcela = Parcela.query.get(anomalia.get('parcela_id'))
+            parcela_nombre = parcela.nombre if parcela else f"Parcela {anomalia.get('parcela_id', 'Desconocida')}"
+            
+            # Agregar el nombre a la anomalía
+            anomalia_enriquecida = {
+                **anomalia,  # Copiar todos los datos existentes
+                'parcela_nombre': parcela_nombre  # Agregar el nombre
+            }
+            anomalias_enriquecidas.append(anomalia_enriquecida)
+        
+        return jsonify({
+            'success': True,
+            'anomalias': anomalias_enriquecidas,
+            'total': len(anomalias_enriquecidas)
+        }), 200
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener anomalías: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener anomalías: {str(e)}',
+            'anomalias': []
+        }), 500
+@app.route('/api/salud-parcela/<int:parcela_id>', methods=['GET'])
+def obtener_salud_parcela(parcela_id):
+    try:
+        salud = detector.obtener_salud_parcela(parcela_id)
+        anomalias = detector.detectar_anomalias_basicas(parcela_id)
+        
+        return jsonify({
+            'success': True,
+            'parcela_id': parcela_id,
+            'salud': salud,
+            'anomalias_count': len(anomalias),
+            'estado': 'optimo' if salud >= 80 else 'alerta' if salud >= 60 else 'critico'
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener salud de parcela: {str(e)}'
+        }), 500
+
+# AGREGAR al final del archivo, antes de la última línea:
+
+@app.route('/api/configuracion/rangos', methods=['GET'])
+def obtener_rangos():
+    """Obtiene todos los rangos configurados"""
+    try:
+        rangos = RangoParametro.query.filter_by(activo=True).all()
+        return jsonify({
+            'success': True,
+            'rangos': [rango.to_dict() for rango in rangos]
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener rangos: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener rangos: {str(e)}',
+            'rangos': []
+        }), 500
+
+@app.route('/api/configuracion/rangos', methods=['POST'])
+def crear_o_actualizar_rango():
+    """Crea o actualiza un rango de parámetro"""
+    try:
+        data = request.json
+        
+        # Validar datos requeridos
+        campos_requeridos = ['tipo_parametro', 'valor_minimo', 'valor_maximo']
+        for campo in campos_requeridos:
+            if campo not in data:
+                return jsonify({
+                    'success': False,
+                    'message': f'Campo requerido: {campo}'
+                }), 400
+        
+        # Verificar si ya existe un rango similar
+        query = RangoParametro.query.filter_by(
+            tipo_parametro=data['tipo_parametro'],
+            cultivo=data.get('cultivo'),
+            parcela_id=data.get('parcela_id'),
+            activo=True
+        )
+        
+        rango_existente = query.first()
+        
+        if rango_existente:
+            # Actualizar rango existente
+            rango_existente.valor_minimo = data['valor_minimo']
+            rango_existente.valor_maximo = data['valor_maximo']
+            rango_existente.alerta_baja = data.get('alerta_baja')
+            rango_existente.alerta_alta = data.get('alerta_alta')
+            rango_existente.critico_bajo = data.get('critico_bajo')
+            rango_existente.critico_alto = data.get('critico_alto')
+            rango = rango_existente
+            accion = 'actualizado'
+        else:
+            # Crear nuevo rango
+            rango = RangoParametro(
+                tipo_parametro=data['tipo_parametro'],
+                cultivo=data.get('cultivo'),
+                parcela_id=data.get('parcela_id'),
+                valor_minimo=data['valor_minimo'],
+                valor_maximo=data['valor_maximo'],
+                alerta_baja=data.get('alerta_baja'),
+                alerta_alta=data.get('alerta_alta'),
+                critico_bajo=data.get('critico_bajo'),
+                critico_alto=data.get('critico_alto')
+            )
+            db.session.add(rango)
+            accion = 'creado'
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Rango {accion} exitosamente',
+            'rango': rango.to_dict()
+        }), 200 if accion == 'actualizado' else 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al crear/actualizar rango: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al procesar rango: {str(e)}'
+        }), 500
+
+@app.route('/api/configuracion/rangos/<int:rango_id>', methods=['DELETE'])
+def eliminar_rango(rango_id):
+    """Elimina un rango (marcado como inactivo)"""
+    try:
+        rango = RangoParametro.query.get(rango_id)
+        if not rango:
+            return jsonify({
+                'success': False,
+                'message': 'Rango no encontrado'
+            }), 404
+        
+        rango.activo = False
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rango eliminado exitosamente'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al eliminar rango: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al eliminar rango: {str(e)}'
+        }), 500
+
+@app.route('/api/configuracion/rangos/cultivos', methods=['GET'])
+def obtener_cultivos_disponibles():
+    """Obtiene lista de cultivos disponibles para configurar rangos"""
+    try:
+        # Obtener cultivos únicos de las parcelas
+        cultivos_parcelas = db.session.query(Parcela.cultivo_actual).filter(
+            Parcela.cultivo_actual.isnot(None),
+            Parcela.cultivo_actual != ''
+        ).distinct().all()
+        
+        cultivos = [cultivo[0] for cultivo in cultivos_parcelas if cultivo[0]]
+        
+        # Agregar cultivos comunes si no están
+        cultivos_comunes = ['Tomate', 'Maíz', 'Trigo', 'Papaya', 'Lechuga']
+        for cultivo in cultivos_comunes:
+            if cultivo not in cultivos:
+                cultivos.append(cultivo)
+        
+        return jsonify({
+            'success': True,
+            'cultivos': sorted(cultivos)
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener cultivos: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener cultivos: {str(e)}'
+        }), 500
+# AGREGAR al final de api_principal.py (antes de if __name__ == '__main__':):
+
+# REEMPLAZAR el endpoint individual:
+
+@app.route('/api/anomalias/<int:anomalia_id>', methods=['DELETE'])
+def eliminar_anomalia(anomalia_id):
+    """Eliminar una anomalía específica"""
+    try:
+        current_app.logger.info(f"Eliminando anomalía ID: {anomalia_id}")
+        
+        # Buscar la lectura por ID
+        lectura = LecturaSensor.query.get(anomalia_id)
+        
+        if not lectura:
+            return jsonify({
+                'success': False,
+                'message': f'Anomalía con ID {anomalia_id} no encontrada'
+            }), 404
+        
+        # Eliminar la lectura
+        db.session.delete(lectura)
+        db.session.commit()
+        
+        current_app.logger.info(f"Anomalía {anomalia_id} eliminada exitosamente")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Anomalía eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando anomalía {anomalia_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+    """Eliminar una anomalía específica"""
+    try:
+        # Buscar la anomalía por ID (usando la tabla de lecturas)
+        anomalia = LecturaSensor.query.get(anomalia_id)
+        
+        if not anomalia:
+            return jsonify({
+                'success': False,
+                'message': 'Anomalía no encontrada'
+            }), 404
+        
+        # Eliminar la anomalía
+        db.session.delete(anomalia)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Anomalía eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando anomalía: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error eliminando anomalía: {str(e)}'
+        }), 500
+
+@app.route('/api/anomalias/eliminar-multiples', methods=['POST'])
+def eliminar_anomalias_multiples():
+    """Eliminar múltiples anomalías"""
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return jsonify({
+                'success': False,
+                'message': 'No se proporcionaron IDs'
+            }), 400
+        
+        # Eliminar anomalías por IDs
+        anomalias_eliminadas = LecturaSensor.query.filter(LecturaSensor.id.in_(ids)).delete()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{anomalias_eliminadas} anomalías eliminadas exitosamente',
+            'eliminadas': anomalias_eliminadas
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando anomalías múltiples: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error eliminando anomalías: {str(e)}'
+        }), 500
+
+# REEMPLAZAR el endpoint en api_principal.py:
+
+@app.route('/api/anomalias/limpiar-todas', methods=['DELETE'])
+def limpiar_todas_anomalias():
+    """Limpiar todas las anomalías detectadas"""
+    try:
+        # Obtener anomalías del detector
+        anomalias = detector.detectar_anomalias_basicas()
+        
+        if not anomalias:
+            return jsonify({
+                'success': True,
+                'message': 'No hay anomalías para limpiar',
+                'eliminadas': 0
+            })
+        
+        # 🔧 EXTRAER SOLO LOS NÚMEROS DE LOS IDs
+        ids_numericos = []
+        for anomalia in anomalias:
+            anomalia_id = anomalia['id']
+            
+            # Si el ID es string como 'anomalia_2889', extraer solo '2889'
+            if isinstance(anomalia_id, str) and 'anomalia_' in anomalia_id:
+                try:
+                    numero_id = int(anomalia_id.replace('anomalia_', ''))
+                    ids_numericos.append(numero_id)
+                except ValueError:
+                    current_app.logger.warning(f"No se pudo convertir ID: {anomalia_id}")
+                    continue
+            else:
+                # Si ya es un número, usarlo directamente
+                try:
+                    numero_id = int(anomalia_id)
+                    ids_numericos.append(numero_id)
+                except (ValueError, TypeError):
+                    current_app.logger.warning(f"ID inválido: {anomalia_id}")
+                    continue
+        
+        if not ids_numericos:
+            return jsonify({
+                'success': False,
+                'message': 'No se pudieron procesar los IDs de anomalías'
+            }), 400
+        
+        current_app.logger.info(f"Eliminando anomalías con IDs: {ids_numericos}")
+        
+        # Eliminar las anomalías por ID numérico
+        anomalias_eliminadas = LecturaSensor.query.filter(
+            LecturaSensor.id.in_(ids_numericos)
+        ).delete(synchronize_session=False)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{anomalias_eliminadas} anomalías eliminadas exitosamente',
+            'eliminadas': anomalias_eliminadas
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error limpiando todas las anomalías: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
 
 
 if __name__ == '__main__':

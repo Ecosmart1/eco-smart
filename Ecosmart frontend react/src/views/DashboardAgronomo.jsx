@@ -28,7 +28,7 @@ import {
   eliminarConversacion 
 } from '../services/servicioOpenrouter.js';
 import Markdown from 'markdown-to-jsx';
-
+import DetectorAnomalias from './DetectorAnomalias';
 const API_URL = "http://localhost:5000/api";
 
 const DashboardAgronomo = () => {
@@ -930,6 +930,10 @@ const formatearFecha = (fechaStr) => {
                 )}
               </div>
             </div>
+          </div>
+           {/*Widget de Anomalías  */}
+          <div className="col-lg-12 mb-4">
+            <DetectorAnomalias mostrarResumen={true} />
           </div>
 
           <div className="ecosmart-panel estado-cultivos-panel">
