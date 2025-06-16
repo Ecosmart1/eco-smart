@@ -30,29 +30,40 @@ const DashboardTecnico = () => {
   const [parcelasReales, setParcelasReales] = useState([]);
 
   // Verificar autenticación al cargar
-  useEffect(() => {
-    const usuarioGuardado = localStorage.getItem('ecosmart_user');
-    const tokenGuardado = localStorage.getItem('ecosmart_token');
+  // REEMPLAZAR el useEffect completo en DashboardTecnico.jsx:
+
+useEffect(() => {
+  console.log('🔍 DASHBOARD DEBUG: useEffect ejecutado');
+  
+  const usuarioGuardado = localStorage.getItem('ecosmart_user');
+  
+  console.log('🔍 DASHBOARD DEBUG: Usuario en localStorage:', usuarioGuardado ? 'Existe' : 'No existe');
+  
+  if (!usuarioGuardado) {
+    console.log('🔍 DASHBOARD DEBUG: No hay usuario, redirigiendo a login...');
+    navigate('/login');
+    return;
+  }
+  
+  try {
+    const usuarioObj = JSON.parse(usuarioGuardado);
+    console.log('🔍 DASHBOARD DEBUG: Usuario parseado:', usuarioObj);
+    console.log('🔍 DASHBOARD DEBUG: Rol del usuario:', usuarioObj.rol);
     
-    if (!usuarioGuardado || !tokenGuardado) {
+    if (usuarioObj.rol !== 'tecnico') {
+      console.log('🔍 DASHBOARD DEBUG: Usuario no es técnico, redirigiendo...');
       navigate('/login');
       return;
     }
     
-    try {
-      const usuarioObj = JSON.parse(usuarioGuardado);
-      if (usuarioObj.rol !== 'tecnico') {
-        navigate('/login');
-        return;
-      }
-      
-      setUsuario(usuarioObj);
-      cargarDashboardData();
-    } catch (error) {
-      console.error('Error al verificar usuario:', error);
-      navigate('/login');
-    }
-  }, [navigate]);
+    console.log('🔍 DASHBOARD DEBUG: Usuario técnico válido, cargando dashboard...');
+    setUsuario(usuarioObj);
+    cargarDashboardData();
+  } catch (error) {
+    console.error('🔍 DASHBOARD DEBUG: Error al verificar usuario:', error);
+    navigate('/login');
+  }
+}, [navigate]);
 
   // Cargar todos los datos del dashboard
   const cargarDashboardData = async () => {

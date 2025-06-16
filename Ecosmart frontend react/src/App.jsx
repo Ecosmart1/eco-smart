@@ -300,6 +300,16 @@ function App() {
   </div>
 } />
 
+
+<Route path="/dashboard/agronomo/sensores" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <SensoresPanel API_URL={API_URL} />
+    </div>
+  </div>
+} />
+
 <Route path="/dashboard/agronomo/parcelas/editar/:id" element={
   <div className="app-container">
     <HeaderAgronomo activeItem="parcelas" />

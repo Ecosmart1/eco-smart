@@ -90,6 +90,15 @@ const HeaderAgronomo = ({ activeItem }) => {
         >
           Asistente IA
         </Link>
+          <Link 
+    to="/dashboard/agronomo/sensores" 
+    className={`nav-item ${activeItem === 'sensores' ? 'active' : ''}`}
+  >
+    <i className="fas fa-microchip"></i>
+    <span>Sensores</span>
+  </Link>
+
+        
         <Link 
   to="/dashboard/agricultor/informes" 
   className={activeItem === 'informes' ? 'nav-item active' : 'nav-item'}

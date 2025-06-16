@@ -28,7 +28,7 @@ from servicios.detector_anomalias import detector
 
 
 app = Flask(__name__)
-# ...existing code...
+
 
 CORS(app, resources={
     r"/api/*": {
@@ -38,7 +38,7 @@ CORS(app, resources={
     }
 })
 
-# ...existing code... # Permite solicitudes CORS para la API
+
 
 #base de datos
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
@@ -371,9 +371,13 @@ def obtener_usuarios():
     except Exception as e:
         current_app.logger.error(f"Error al listar usuarios: {str(e)}")
         return jsonify({'error': 'Error al procesar la solicitud'}), 500
+
+
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
     try:
+        print("🔍 DEBUG: Login iniciado")
+        
         if request.content_type and 'application/json' in request.content_type:
             data = request.get_json(force=True)
         else:
@@ -383,14 +387,31 @@ def login_usuario():
                 content = request.data.decode('latin-1')
             data = json.loads(content)
 
+        print(f"🔍 DEBUG: Datos recibidos: {data}")
+
         if 'email' not in data or 'password' not in data:
             return jsonify({'error': 'Faltan credenciales'}), 400
 
         email = data['email'].strip().lower()
+        print(f"🔍 DEBUG: Buscando email: '{email}'")
+        
         usuario = Usuario.query.filter_by(email=email).first()
+        print(f"🔍 DEBUG: Usuario encontrado: {usuario is not None}")
+        
+        if usuario:
+            print(f"🔍 DEBUG: Usuario ID: {usuario.id}, Nombre: {usuario.nombre}, Rol: {usuario.rol}")
+            print(f"🔍 DEBUG: Verificando contraseña...")
+            
+            password_valida = check_password_hash(usuario.password, data['password'])
+            print(f"🔍 DEBUG: Contraseña válida: {password_valida}")
+        else:
+            print("🔍 DEBUG: Usuario no encontrado en la base de datos")
 
         if not usuario or not check_password_hash(usuario.password, data['password']):
+            print("🔍 DEBUG: Credenciales incorrectas")
             return jsonify({'error': 'Credenciales incorrectas'}), 401
+
+        print(f"🔍 DEBUG: Login exitoso para {usuario.email}")
 
         try:
             registrar_log(usuario.id, 'login', 'usuario', usuario.id)
@@ -405,8 +426,10 @@ def login_usuario():
         })
 
     except Exception as e:
+        print(f"🔍 DEBUG: Error general: {str(e)}")
         current_app.logger.error(f"Error en login: {str(e)}")
         return jsonify({'error': 'Error al procesar la solicitud'}), 500
+
 
 
 @app.route('/api/recomendaciones/cultivo', methods=['POST', 'OPTIONS'])
