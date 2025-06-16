@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import HeaderAgricultor from './headeragricultor';
 import './AlertasAgricultor.css';
 import { useAlertas } from '../context/AlertasContext';
 
@@ -10,26 +9,19 @@ const TickIcon = () => (
   </svg>
 );
 
-const AlertasUsuario = () => {
+const AlertasTecnico = () => {
   const [alertas, setAlertas] = useState([]);
   const [historial, setHistorial] = useState([]);
-  const [usuario, setUsuario] = useState(null);
-  const { fetchAlertasActivas } = useAlertas();
+  const { fetchAlertasActivasTotales } = useAlertas();
 
   useEffect(() => {
-    // Obtener usuario desde localStorage
-    const usuarioGuardado = localStorage.getItem('ecosmart_user');
-    if (!usuarioGuardado) return;
-    const usuarioObj = JSON.parse(usuarioGuardado);
-    setUsuario(usuarioObj);
-
-    // Traer alertas activas
+    // Traer todas las alertas activas del sistema
     fetch(`http://localhost:5000/api/alertas`)
       .then(res => res.json())
       .then(data => setAlertas(Array.isArray(data) ? data : []))
       .catch(() => setAlertas([]));
 
-    // Traer historial de alertas (inactivas)
+    // Traer historial de alertas (inactivas) del sistema
     fetch(`http://localhost:5000/api/alertas?inactivas=1`)
       .then(res => res.json())
       .then(data => setHistorial(Array.isArray(data) ? data : []))
@@ -44,7 +36,7 @@ const AlertasUsuario = () => {
       .then(res => {
         if (res.ok) {
           setAlertas(alertas.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(); // Actualiza el número en el header
+          fetchAlertasActivasTotales(); // Actualiza el número en el header
           // Opcional: recargar historial
           fetch(`http://localhost:5000/api/alertas?inactivas=1`)
             .then(res => res.json())
@@ -62,7 +54,7 @@ const AlertasUsuario = () => {
         if (res.ok) {
           setAlertas(alertas.filter(a => a.id !== alertaId));
           setHistorial(historial.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(); // Actualiza el número en el header
+          fetchAlertasActivasTotales(); // Actualiza el número en el header
         }
       });
   };
@@ -72,7 +64,7 @@ const AlertasUsuario = () => {
       <div className="alertas-usuario-content">
         <h2>Alertas actuales</h2>
         {alertas.length === 0 ? (
-          <div className="alerta-vacia">No hay alertas activas para tu cuenta.</div>
+          <div className="alerta-vacia">No hay alertas activas en el sistema.</div>
         ) : (
           <ul className="alertas-usuario-lista">
             {alertas.map(alerta => (
@@ -86,6 +78,23 @@ const AlertasUsuario = () => {
                   <strong>{alerta.mensaje}</strong>
                   <div className="alerta-info-extra">
                     <span><b>Parcela:</b> {alerta.parcela}</span>
+                    {/* Mostrar dueño si existe */}
+                    {alerta.usuario_nombre && (
+                      <span style={{
+                        display: 'block',
+                        marginTop: 2,
+                        background: '#1e7e34',
+                        color: '#fff',
+                        borderRadius: 5,
+                        padding: '2px 8px',
+                        fontSize: '0.97em'
+                      }}>
+                        Dueño: {alerta.usuario_nombre}
+                        {alerta.usuario_email && (
+                          <span style={{ color: '#d4f3d4', fontSize: '0.95em' }}> ({alerta.usuario_email})</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                   <div className="alerta-acciones">
                     <button
@@ -126,6 +135,23 @@ const AlertasUsuario = () => {
                   <strong>{alerta.mensaje}</strong>
                   <div className="alerta-info-extra">
                     <span><b>Parcela:</b> {alerta.parcela}</span>
+                    {/* Mostrar dueño si existe */}
+                    {alerta.usuario_nombre && (
+                      <span style={{
+                        display: 'block',
+                        marginTop: 2,
+                        background: '#1e7e34',
+                        color: '#fff',
+                        borderRadius: 5,
+                        padding: '2px 8px',
+                        fontSize: '0.97em'
+                      }}>
+                        Dueño: {alerta.usuario_nombre}
+                        {alerta.usuario_email && (
+                          <span style={{ color: '#d4f3d4', fontSize: '0.95em' }}> ({alerta.usuario_email})</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                   <div className="alerta-acciones">
                     <button
@@ -145,4 +171,4 @@ const AlertasUsuario = () => {
   );
 };
 
-export default AlertasUsuario;
+export default AlertasTecnico;

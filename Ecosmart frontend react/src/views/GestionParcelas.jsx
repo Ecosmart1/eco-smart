@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Button, Alert, Spinner } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaSeedling, FaRuler, FaCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaSeedling, FaRuler, FaCalendarAlt, FaCheckCircle, FaUserCircle } from 'react-icons/fa';
 import './GestionParcelas.css';
 
 const GestionParcelas = ({ API_URL }) => {
@@ -198,17 +198,35 @@ const GestionParcelas = ({ API_URL }) => {
               </div>
               <div className="parcela-content">
                 <div className="parcela-info">
+                  {/* Mostrar dueño solo si el usuario es agrónomo */}
+                  {userRole === 'agronomo' && (
+                    <p>
+                      <FaUserCircle />
+                      <strong>Dueño:</strong>
+                      <span style={{ display: 'inline-block', width: 8 }}></span>
+                      {parcela.usuario_nombre ? parcela.usuario_nombre : 'Sin asignar'}
+                      {parcela.usuario_email && (
+                        <span style={{ color: '#888', fontSize: '0.95em' }}> ({parcela.usuario_email})</span>
+                      )}
+                    </p>
+                  )}
                   <p>
                     <FaSeedling /> 
-                    <strong>Cultivo:</strong> {parcela.cultivo_actual || 'Sin cultivo actual'}
+                    <strong>Cultivo:</strong>
+                    <span style={{ display: 'inline-block', width: 8 }}></span>
+                    {parcela.cultivo_actual || 'Sin cultivo actual'}
                   </p>
                   <p>
                     <FaRuler /> 
-                    <strong>Área : </strong> {parcela.hectareas || 0} ha
+                    <strong>Área:</strong>
+                    <span style={{ display: 'inline-block', width: 8 }}></span>
+                    {parcela.hectareas || 0} ha
                   </p>
                   <p>
                     <FaCalendarAlt /> 
-                    <strong>Fecha siembra : </strong> {parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}
+                    <strong>Fecha siembra:</strong>
+                    <span style={{ display: 'inline-block', width: 8 }}></span>
+                    {parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}
                   </p>
                 </div>
                 <div className="parcela-actions">

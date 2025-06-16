@@ -735,74 +735,70 @@ def exportar_csv():
 
 @app.route('/api/parcelas', methods=['GET'])
 def listar_parcelas():
-    """Listar todas las parcelas con su cultivo único"""
-    try:
-        # Obtener usuario activo desde headers
-        user_id = request.headers.get('X-User-Id')
-        if not user_id:
-            return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
-
+    user_id = request.headers.get('X-User-Id')
+    user = Usuario.query.get(user_id)
+    if user and user.rol == 'agronomo':
+        parcelas = Parcela.query.all()
+    else:
         parcelas = Parcela.query.filter_by(usuario_id=user_id).all()
-        parcelas_data = []
+    parcelas_data = []
+    
+    for parcela in parcelas:
+        # Obtener el cultivo único de la parcela
+        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        usuario_dueno = Usuario.query.get(parcela.usuario_id) if parcela.usuario_id else None
         
-        for parcela in parcelas:
-            # Obtener el cultivo único de la parcela
-            cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
-            
-            parcela_info = {
-                'id': parcela.id,
-                'nombre': parcela.nombre,
-                'ubicacion': parcela.ubicacion,
-                'hectareas': parcela.hectareas,
-                'latitud': parcela.latitud,
-                'longitud': parcela.longitud,
-                'fecha_creacion': parcela.fecha_creacion,
-                'cultivo_actual': parcela.cultivo_actual,
-                'fecha_siembra': parcela.fecha_siembra,
-                
-                # NUEVO: Información detallada del cultivo único
-                'cultivo': None
+        parcela_info = {
+            'id': parcela.id,
+            'nombre': parcela.nombre,
+            'ubicacion': parcela.ubicacion,
+            'hectareas': parcela.hectareas,
+            'latitud': parcela.latitud,
+            'longitud': parcela.longitud,
+            'fecha_creacion': parcela.fecha_creacion,
+            'cultivo_actual': parcela.cultivo_actual,
+            'fecha_siembra': parcela.fecha_siembra,
+            'usuario_id': parcela.usuario_id,
+            # NUEVO:
+            'usuario_nombre': usuario_dueno.nombre if usuario_dueno else None,
+            'usuario_email': usuario_dueno.email if usuario_dueno else None,
+            # NUEVO: Información detallada del cultivo único
+            'cultivo': None
+        }
+        
+        # Agregar detalles del cultivo si existe
+        if cultivo:
+            parcela_info['cultivo'] = {
+                'id': cultivo.id,
+                'nombre': cultivo.nombre,
+                'variedad': cultivo.variedad,
+                'etapa_desarrollo': cultivo.etapa_desarrollo,
+                'fecha_siembra': cultivo.fecha_siembra,
+                'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+                'edad_dias': cultivo.calcular_edad_dias(),
+                'progreso_cosecha': round(cultivo.progreso_cosecha(), 1),
+                'activo': cultivo.activo,
+                'fecha_cosecha': cultivo.fecha_cosecha
             }
             
-            # Agregar detalles del cultivo si existe
-            if cultivo:
-                parcela_info['cultivo'] = {
-                    'id': cultivo.id,
-                    'nombre': cultivo.nombre,
-                    'variedad': cultivo.variedad,
-                    'etapa_desarrollo': cultivo.etapa_desarrollo,
-                    'fecha_siembra': cultivo.fecha_siembra,
-                    'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
-                    'edad_dias': cultivo.calcular_edad_dias(),
-                    'progreso_cosecha': round(cultivo.progreso_cosecha(), 1),
-                    'activo': cultivo.activo,
-                    'fecha_cosecha': cultivo.fecha_cosecha
-                }
-                
-                # Actualizar datos de la parcela con info del cultivo
-                if not parcela.cultivo_actual and cultivo.nombre:
-                    parcela_info['cultivo_actual'] = cultivo.nombre
-                if not parcela.fecha_siembra and cultivo.fecha_siembra:
-                    parcela_info['fecha_siembra'] = cultivo.fecha_siembra.date()
-            
-            parcelas_data.append(parcela_info)
+            # Actualizar datos de la parcela con info del cultivo
+            if not parcela.cultivo_actual and cultivo.nombre:
+                parcela_info['cultivo_actual'] = cultivo.nombre
+            if not parcela.fecha_siembra and cultivo.fecha_siembra:
+                parcela_info['fecha_siembra'] = cultivo.fecha_siembra.date()
         
-        # Registrar log
-        user_id = request.headers.get('X-User-Id')
-        if user_id:
-            try:
-                registrar_log(user_id, 'listar_parcelas', 'parcela', None)
-            except Exception as e:
-                current_app.logger.error(f"Error al registrar log: {e}")
-        
-        return jsonify(parcelas_data)
+        parcelas_data.append(parcela_info)
     
-    except Exception as e:
-        current_app.logger.error(f"Error al listar parcelas: {str(e)}")
-        return jsonify({'error': f"Error al obtener parcelas: {str(e)}"}), 500
-
-# ...existing code...
-# Endpoint para obtener los datos de los sensores
+    # Registrar log
+    user_id = request.headers.get('X-User-Id')
+    if user_id:
+        try:
+            registrar_log(user_id, 'listar_parcelas', 'parcela', None)
+        except Exception as e:
+            current_app.logger.error(f"Error al registrar log: {e}")
+    
+    return jsonify(parcelas_data)
+    
 @app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
     """Devuelve la lista de todos los sensores"""
@@ -1661,24 +1657,34 @@ def agregar_parcela():
 
 @app.route('/api/parcelas/<int:id>', methods=['GET'])
 def obtener_parcela(id):
-    user_id = request.headers.get('X-User-Id')
-    if not user_id:
-        return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
-    parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
-    if not parcela:
-        return jsonify({'error': 'Parcela no encontrada'}), 404
-    
-    # Devolver la información de la parcela
+    parcela = Parcela.query.get_or_404(id)
+    usuario = Usuario.query.get(parcela.usuario_id) if parcela.usuario_id else None
+    cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
     return jsonify({
-        "id": parcela.id,
-        "nombre": parcela.nombre,
-        "ubicacion": parcela.ubicacion,
-        "hectareas": parcela.hectareas,
-        "latitud": parcela.latitud,
-        "longitud": parcela.longitud,
-        "fecha_creacion": parcela.fecha_creacion.isoformat() if parcela.fecha_creacion else None,
-        "cultivo_actual": parcela.cultivo_actual,
-        "fecha_siembra": parcela.fecha_siembra.isoformat() if parcela.fecha_siembra else None
+        'id': parcela.id,
+        'nombre': parcela.nombre,
+        'ubicacion': parcela.ubicacion,
+        'hectareas': parcela.hectareas,
+        'latitud': parcela.latitud,
+        'longitud': parcela.longitud,
+        'fecha_creacion': parcela.fecha_creacion,
+        'cultivo_actual': parcela.cultivo_actual,
+        'fecha_siembra': parcela.fecha_siembra,
+        'usuario_id': parcela.usuario_id,
+        'usuario_nombre': usuario.nombre if usuario else None,
+        'usuario_email': usuario.email if usuario else None,
+        # NUEVO: detalles del cultivo activo
+        'variedad': cultivo.variedad if cultivo else None,
+        'cultivo': {
+            'id': cultivo.id if cultivo else None,
+            'nombre': cultivo.nombre if cultivo else None,
+            'variedad': cultivo.variedad if cultivo else None,
+            'etapa_desarrollo': cultivo.etapa_desarrollo if cultivo else None,
+            'edad_dias': cultivo.calcular_edad_dias() if cultivo else None,
+            'progreso_cosecha': round(cultivo.progreso_cosecha(), 1) if cultivo else None,
+            'activo': cultivo.activo,
+            'fecha_cosecha': cultivo.fecha_cosecha.isoformat() if cultivo.fecha_cosecha else None
+        } if cultivo else None
     })
 
 @app.route('/api/parcelas/<int:id>', methods=['PUT'])
@@ -2556,66 +2562,60 @@ def obtener_datos_sensores():
         else:  # '24h' por defecto
             desde = desde - timedelta(hours=24)
         
-        # Consultar usando el nombre correcto del campo parcela
-        datos_humedad = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Humedad',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
+        # Consultar todos los tipos de sensores
+        tipos_sensores = ['Temperatura', 'Humedad', 'pH del suelo', 'Nutrientes']
+        resultado = {}
         
-        datos_temperatura = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Temperatura',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
-
-        datos_ph = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'pH del suelo',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
+        for tipo in tipos_sensores:
+            datos = LecturaSensor.query.filter(
+                LecturaSensor.parcela == parcela_id,
+                LecturaSensor.tipo == tipo,
+                LecturaSensor.timestamp >= desde
+            ).order_by(LecturaSensor.timestamp).all()
+            
+            # Formatear datos según el tipo
+            if tipo == 'Nutrientes':
+                datos_formateados = []
+                for d in datos:
+                    try:
+                        valor_obj = json.loads(d.valor)
+                        datos_formateados.append({
+                            "timestamp": d.timestamp.isoformat(),
+                            "valor": valor_obj
+                        })
+                    except (JSONDecodeError, TypeError, ValueError):
+                        try:
+                            # Si falla el JSON, intentar como float
+                            datos_formateados.append({
+                                "timestamp": d.timestamp.isoformat(),
+                                "valor": float(d.valor)
+                            })
+                        except:
+                            continue
+            else:
+                datos_formateados = []
+                for d in datos:
+                    try:
+                        datos_formateados.append({
+                            "timestamp": d.timestamp.isoformat(),
+                            "valor": float(d.valor)
+                        })
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Mapear nombres para compatibilidad
+            if tipo == 'Temperatura':
+                resultado['temperatura'] = datos_formateados
+            elif tipo == 'Humedad':
+                resultado['humedad'] = datos_formateados
+            elif tipo == 'pH del suelo':
+                resultado['ph'] = datos_formateados
+            elif tipo == 'Nutrientes':
+                resultado['nutrientes'] = datos_formateados
         
-        datos_nutrientes = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Nutrientes',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
-        
-        # Formatear resultado, convirtiendo de string a float para datos numéricos
-        resultado = {
-            "humedad": [],
-            "temperatura": [],
-            "ph": [],
-            "nutrientes": []
-        }
-
-        resultado["humedad"] = [
-            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
-            for d in datos_humedad
-        ]
-        resultado["temperatura"] = [
-            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
-            for d in datos_temperatura
-        ]
-        resultado["ph"] = [
-            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
-            for d in datos_ph
-        ]
-
-        # En lugar de float(d.valor), parseamos JSON:
-        for d in datos_nutrientes:
-            try:
-                valor_obj = json.loads(d.valor)
-            except (JSONDecodeError, TypeError, ValueError):
-                # Si no es JSON, caemos a un número simple
-                valor_obj = float(d.valor)
-            resultado["nutrientes"].append({
-                "timestamp": d.timestamp.isoformat(),
-                "valor": valor_obj
-            })
-
+        # Registrar log
         user_id = request.headers.get('X-User-Id')
-        if user_id:  # Verificar que existe antes de usar
+        if user_id:
             try:
                 registrar_log(user_id, 'consulta_datos_sensores', 'parcela', 
                              parcela_id, detalles=f"periodo={periodo}")
@@ -2941,13 +2941,34 @@ def obtener_alertas():
     resultado = []
     for alerta in alertas:
         parcela = Parcela.query.get(alerta.parcela)
+
+        # --- Lógica para decodificar valor ---
+        valor = alerta.valor
+        if isinstance(valor, str):
+            try:
+                valor_json = json.loads(valor)
+                # Si es un dict, extrae el campo relevante (ejemplo: para nutrientes)
+                if isinstance(valor_json, dict):
+                    # Si es pH, humedad o temperatura, probablemente no sea dict
+                    # Si tiene solo un valor, extrae ese valor
+                    if len(valor_json) == 1:
+                        valor = list(valor_json.values())[0]
+                    else:
+                        valor = valor_json
+                else:
+                    valor = valor_json
+            except Exception:
+                pass  # Si falla, deja el valor original
+        # -------------------------------------
+
         resultado.append({
             "id": alerta.id,
             "mensaje": alerta.mensaje,
             "timestamp": alerta.timestamp.strftime("%d/%m/%Y %H:%M"),
             "parcela": parcela.nombre if parcela else "Desconocida",
             "tipo": alerta.tipo,
-            "severidad": alerta.severidad
+            "severidad": alerta.severidad,
+            "valor": valor,  # <-- valor ya procesado
         })
     return jsonify(resultado)
 
@@ -3044,7 +3065,7 @@ def crear_alerta():
             
     except Exception as e:
         db.session.rollback()
-        print(f"Error al crear alerta: {str(e)}")
+        current_app.logger.error(f"Error al crear alerta: {str(e)}")
         return jsonify({'error': f"Error al crear alerta: {str(e)}"}), 500
 
 
@@ -3092,6 +3113,9 @@ def listar_cultivos():
                 'nombre': cultivo.nombre,
                 'variedad': cultivo.variedad,
                 'etapa_desarrollo': cultivo.etapa_desarrollo,
+                'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
+                'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+                'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
                 'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
                 'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
                 'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
@@ -3198,8 +3222,18 @@ def obtener_resumen_informes():
         # Obtener promedios por tipo de sensor
         temp_data = query_base.filter(LecturaSensor.tipo == 'Temperatura').all()
         humedad_data = query_base.filter(LecturaSensor.tipo == 'Humedad').all()
+        temperatura_promedio=0
+        humedad_promedio = 0
         
-        temperatura_promedio = 0
+        if temp_data:
+            valores_temp = [float(d.valor) for d in temp_data if d.valor]
+            temperatura_promedio = round(sum(valores_temp) / len(valores_temp), 1) if valores_temp else 0
+        
+        
+        # Obtener promedios por tipo de sensor
+        temp_data = query_base.filter(LecturaSensor.tipo == 'Temperatura').all()
+        humedad_data = query_base.filter(LecturaSensor.tipo == 'Humedad').all()
+        temperatura_promedio=0
         humedad_promedio = 0
         
         if temp_data:

@@ -11,7 +11,7 @@ const HeaderAgronomo = ({ activeItem }) => {
 
   const menuRef = useRef();
   const alertasRef = useRef();
-  const { alertasActivas, fetchAlertasActivas } = useAlertas();
+  const { alertasActivas, fetchAlertasActivasTotales } = useAlertas();
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -28,8 +28,8 @@ const HeaderAgronomo = ({ activeItem }) => {
   }, [navigate]);
 
   useEffect(() => {
-    if (usuario) fetchAlertasActivas(usuario.id);
-  }, [usuario, fetchAlertasActivas]);
+    fetchAlertasActivasTotales();
+  }, [fetchAlertasActivasTotales]);
 
   const cerrarSesion = () => {
     localStorage.removeItem('ecosmart_user');
@@ -59,7 +59,7 @@ const HeaderAgronomo = ({ activeItem }) => {
     if (!menuAbierto) setAlertasAbierto(false);
   };
 
-  // CAMBIO: Al hacer click en la campana, navega a la página de alertas
+  // Al hacer click en la campana, navega a la página de todas las alertas
   const handleCampanaClick = () => {
     navigate('/dashboard/agronomo/alertas');
   };

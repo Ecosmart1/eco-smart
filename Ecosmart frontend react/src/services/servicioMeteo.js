@@ -1,7 +1,7 @@
 // src/services/servicioMeteo.js
 
 // Reemplaza esta API_KEY con tu clave de OpenWeatherMap
-const API_KEY = 'f1e5aaeee1e83d94db0f58641cf010fe';
+const API_KEY = '1b6ee1662a615e3930de913f12f852be';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 // Lista de iconos para mapear las condiciones climáticas

@@ -38,7 +38,9 @@ const defaultIcon = new Icon({
   shadowSize: [41, 41]
 });
 
-const DetalleParcela = ({ API_URL }) => {
+const API_URL = "http://localhost:5000/api";
+
+const DetalleParcela = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [parcela, setParcela] = useState(null);
@@ -182,7 +184,15 @@ const DetalleParcela = ({ API_URL }) => {
       
       {/* Título de la parcela */}
       <h2 className="mb-4">{parcela.nombre}</h2>
-      
+
+      {userRole === 'agronomo' && (
+        <div style={{ marginBottom: 18, marginTop: -18, color: '#22963e', fontWeight: 500, fontSize: '1.08em' }}>
+          Dueño: {parcela.usuario_nombre ? parcela.usuario_nombre : 'Sin asignar'}
+          {parcela.usuario_email && (
+            <span style={{ color: '#888', fontSize: '0.95em' }}> ({parcela.usuario_email})</span>
+          )}
+        </div>
+      )}
       <Row>
         {/* Columna izquierda - Información general y mapa */}
         <Col lg={7}>
@@ -219,6 +229,48 @@ const DetalleParcela = ({ API_URL }) => {
                     <td><strong>Coordenadas:</strong></td>
                     <td>{parcela.latitud}, {parcela.longitud}</td>
                   </tr>
+                  {/* Mostrar dueño y detalles de cultivo solo para agrónomo */}
+                  {userRole === 'agronomo' && (
+                    <>
+                      <tr>
+                        <td><strong>Etapa:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.etapa_desarrollo}</td>
+                      </tr>
+                    
+                      <tr>
+                        <td><strong>Variedad:</strong></td>
+                        <td>{parcela.variedad || (parcela.cultivo && parcela.cultivo.variedad) || '-'}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Edad:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.edad_dias ? `${parcela.cultivo.edad_dias} días` : (parcela.edad || '-')}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Coordenadas:</strong></td>
+                        <td>{parcela.latitud && parcela.longitud ? `${parcela.latitud}, ${parcela.longitud}` : '-'}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Hectáreas:</strong></td>
+                        <td>{parcela.hectareas ? `${parcela.hectareas} ha` : '-'}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Fecha de creación parcela:</strong></td>
+                        <td>
+                          {parcela.fecha_creacion
+                            ? (typeof parcela.fecha_creacion === 'string'
+                                ? new Date(parcela.fecha_creacion).toLocaleDateString()
+                                : new Date(parcela.fecha_creacion).toLocaleDateString())
+                            : '-'}
+                        </td>
+                      </tr>
+                      
+                      
+                      <tr>
+                        <td><strong>Progreso cosecha:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.progreso_cosecha}%</td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </Table>
             </Card.Body>
@@ -264,10 +316,12 @@ const DetalleParcela = ({ API_URL }) => {
           {/* Pronóstico del clima */}
           <div className="mb-4">
             <MeteorologiaWidget 
-              ubicacion={{ 
-                lat: parcela.latitud, 
-                lon: parcela.longitud 
-              }} 
+              ubicacion={
+                parcela.latitud && parcela.longitud &&
+                !isNaN(Number(parcela.latitud)) && !isNaN(Number(parcela.longitud))
+                  ? { lat: Number(String(parcela.latitud).replace(',', '.')), lon: Number(String(parcela.longitud).replace(',', '.')) }
+                  : parcela.ubicacion // fallback a string ciudad
+              }
             />
           </div>
         </Col>
