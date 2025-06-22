@@ -910,7 +910,7 @@ const formatearFecha = (fechaStr) => {
                       </div>
                       <div className="alerta-card-info">
                         <h3>{alerta.tipo}</h3>
-                        <p>Parcela: {obtenerNombreParcela(alerta.parcela)}</p>
+                        <p>{obtenerNombreParcela(alerta.parcela)}</p>
                         <p>Valor: {alerta.valor} {alerta.tipo.toLowerCase().includes('temperatura') ? '°C' : 
                                   alerta.tipo.toLowerCase().includes('humedad') ? '%' : ''}</p>
                         <p>Fecha: {formatearFecha(alerta.timestamp)}</p>

@@ -146,7 +146,7 @@ const HeaderAgronomo = ({ activeItem }) => {
                 <i className="fas fa-user"></i>
                 Mi Perfil
               </Link>
-              <Link to="/configuracion" className="dropdown-item">
+              <Link to="/agronomo/configuracion" className="dropdown-item">
                 <i className="fas fa-cog"></i>
                 Configuración
               </Link>

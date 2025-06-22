@@ -12,6 +12,7 @@ function AjusteParametros() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [usuario, setUsuario] = useState(undefined);
+  const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +23,18 @@ function AjusteParametros() {
       setUsuario(null);
     }
   }, []);
+
+  useEffect(() => {
+      const usuarioGuardado = localStorage.getItem('ecosmart_user');
+      if (usuarioGuardado) {
+        try {
+          const usuario = JSON.parse(usuarioGuardado);
+          setUserRole(usuario.rol || '');
+        } catch (err) {
+          console.error('Error al parsear datos de usuario:', err);
+        }
+      }
+    }, []);
 
   useEffect(() => {
     if (usuario === null) {
@@ -338,7 +351,16 @@ function AjusteParametros() {
           <button onClick={guardarCambios} disabled={guardando}>
             {guardando ? 'Guardando...' : 'Guardar Cambios'}
           </button>
-          <Link to="/dashboard/agricultor/sensores" className="boton-volver">Volver a Sensores</Link>
+          {userRole === 'agricultor' && (
+            <Link to="/dashboard/agricultor/sensores" className="boton-volver">Volver a Sensores</Link>
+          )}
+          {userRole === 'agronomo' && (
+            <Link to="/dashboard/agronomo/sensores" className="boton-volver">Volver a Sensores</Link>
+          )}
+          {userRole === 'tecnico' && (
+            <Link to="/dashboard/tecnico/sensores" className="boton-volver">Volver a Sensores</Link>
+          )}
+
         </div>
         
         {mensaje && <div className="mensaje">{mensaje}</div>}

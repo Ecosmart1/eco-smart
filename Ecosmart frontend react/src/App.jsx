@@ -320,7 +320,7 @@ function App() {
 } />
         
         {/* ===== CONFIGURACIÓN GENERAL ===== */}
-        <Route path="/configuracion" element={
+        <Route path="/tecnico/configuracion" element={
           <div className="app-container">
             <HeaderTecnico />
             <div className="content-container">
@@ -328,6 +328,26 @@ function App() {
             </div>
           </div>
         } />
+
+    
+    <Route path="/agricultor/configuracion" element={
+          <div className="app-container">
+            <HeaderAgricultor />
+            <div className="content-container">
+              <Configuracion />
+            </div>
+          </div>
+        } />
+
+    <Route path="/agronomo/configuracion" element={
+          <div className="app-container">
+            <HeaderAgronomo />
+            <div className="content-container">
+              <Configuracion />
+            </div>
+          </div>
+        } />
+
       </Routes>
     </Router>
     </AlertasProvider>
