@@ -221,9 +221,12 @@ useEffect(() => {
       console.log('Datos a enviar:', parcelaData);
 
       let response;
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      const token = localStorage.getItem('ecosmart_token');
       const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': '1' // TODO: Obtener del contexto de usuario autenticado
+        'X-User-Id': user.id,
+        'Authorization': `Bearer ${token}`
       };
 
       if (parcelaEditar) {
