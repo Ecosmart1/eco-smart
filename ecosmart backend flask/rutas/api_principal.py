@@ -1797,12 +1797,73 @@ def actualizar_parcela(id):
     elif fecha_siembra == '' or fecha_siembra is None:
         parcela.fecha_siembra = None
     
+    cultivo_data = data.get('cultivo')
+    if cultivo_data:
+        from datetime import datetime
+        # Buscar cultivo activo
+        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        # Parsear fecha_siembra
+        fecha_siembra_cultivo = None
+        if cultivo_data.get('fecha_siembra'):
+            try:
+                fecha_siembra_cultivo = datetime.fromisoformat(cultivo_data['fecha_siembra'])
+            except Exception:
+                fecha_siembra_cultivo = datetime.now()
+        # Si existe, actualizar
+        if cultivo:
+            cultivo.nombre = cultivo_data.get('nombre', cultivo.nombre)
+            cultivo.variedad = cultivo_data.get('variedad', cultivo.variedad)
+            cultivo.etapa_desarrollo = cultivo_data.get('etapa_desarrollo', cultivo.etapa_desarrollo)
+            cultivo.fecha_siembra = fecha_siembra_cultivo or cultivo.fecha_siembra
+            cultivo.dias_cosecha_estimados = cultivo_data.get('dias_cosecha_estimados', cultivo.dias_cosecha_estimados)
+            parcela.cultivo_actual = cultivo.nombre
+
+        else:
+            # Si no existe, crear uno nuevo
+            nuevo_cultivo = DetalleCultivo(
+                parcela_id=parcela.id,
+                nombre=cultivo_data.get('nombre'),
+                variedad=cultivo_data.get('variedad'),
+                etapa_desarrollo=cultivo_data.get('etapa_desarrollo', 'siembra'),
+                fecha_siembra=fecha_siembra_cultivo or datetime.now(),
+                dias_cosecha_estimados=cultivo_data.get('dias_cosecha_estimados'),
+                activo=True
+            )
+            db.session.add(nuevo_cultivo)
+            parcela.cultivo_actual = nuevo_cultivo.nombre
+            if nuevo_cultivo.fecha_siembra:
+                parcela.fecha_siembra = nuevo_cultivo.fecha_siembra.date()
+
     # Guardar los cambios
     try:
         db.session.commit()
         user_id = request.headers.get('X-User-Id')
         registrar_log(user_id, 'actualizar_parcela', 'parcela', id, detalles=str(data))
-        return jsonify({'mensaje': 'Parcela actualizada correctamente'})
+        
+        # Obtener el cultivo actualizado
+        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        return jsonify({
+            'mensaje': 'Parcela actualizada correctamente',
+            'parcela': {
+                'id': parcela.id,
+                'nombre': parcela.nombre,
+                'ubicacion': parcela.ubicacion,
+                'hectareas': parcela.hectareas,
+                'latitud': parcela.latitud,
+                'longitud': parcela.longitud,
+                'cultivo_actual': parcela.cultivo_actual,
+                'fecha_siembra': parcela.fecha_siembra,
+                'cultivo': {
+                    'id': cultivo.id if cultivo else None,
+                    'nombre': cultivo.nombre if cultivo else None,
+                    'variedad': cultivo.variedad if cultivo else None,
+                    'etapa_desarrollo': cultivo.etapa_desarrollo if cultivo else None,
+                    'fecha_siembra': cultivo.fecha_siembra if cultivo else None,
+                    'dias_cosecha_estimados': cultivo.dias_cosecha_estimados if cultivo else None,
+                    'activo': cultivo.activo if cultivo else None
+                } if cultivo else None
+            }
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
