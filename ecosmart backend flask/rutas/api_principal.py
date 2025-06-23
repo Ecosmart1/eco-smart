@@ -1774,18 +1774,25 @@ def obtener_parcela(id):
             'fecha_cosecha': cultivo.fecha_cosecha.isoformat() if cultivo.fecha_cosecha else None
         } if cultivo else None
     })
-
 @app.route('/api/parcelas/<int:id>', methods=['PUT'])
 def actualizar_parcela(id):
     user_id = request.headers.get('X-User-Id')
     if not user_id:
         return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
-    parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
+    user_rol = request.headers.get('X-User-Rol', '')
+
+    if user_rol == 'agronomo':
+        # Agrónomo puede editar cualquier parcela
+        parcela = Parcela.query.filter_by(id=id).first()
+    else:
+        # Otros roles solo pueden editar sus propias parcelas
+        parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
+
     if not parcela:
         return jsonify({'error': 'Parcela no encontrada'}), 404
     
     # Obtener los datos de la solicitud
-    data = request.json
+    data = request.get_json()
     
     # Actualizar los campos de la parcela
     parcela.nombre = data.get('nombre', parcela.nombre)
@@ -1793,38 +1800,32 @@ def actualizar_parcela(id):
     parcela.hectareas = data.get('hectareas', parcela.hectareas)
     parcela.latitud = data.get('latitud', parcela.latitud)
     parcela.longitud = data.get('longitud', parcela.longitud)
-    parcela.cultivo_actual = data.get('cultivo_actual', parcela.cultivo_actual)
-    
+
     # Manejar la fecha de siembra (si viene como string, convertirla)
     fecha_siembra = data.get('fecha_siembra')
     if fecha_siembra:
         try:
             from datetime import datetime
             if isinstance(fecha_siembra, str):
-                # Intentar diferentes formatos
                 try:
                     parcela.fecha_siembra = datetime.fromisoformat(fecha_siembra)
                 except ValueError:
-                    # Formato alternativo que puede venir del frontend
                     parcela.fecha_siembra = datetime.strptime(fecha_siembra, '%Y-%m-%d')
         except Exception as e:
             print(f"Error al procesar fecha: {str(e)}")
     elif fecha_siembra == '' or fecha_siembra is None:
         parcela.fecha_siembra = None
-    
+
     cultivo_data = data.get('cultivo')
     if cultivo_data:
         from datetime import datetime
-        # Buscar cultivo activo
         cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
-        # Parsear fecha_siembra
         fecha_siembra_cultivo = None
         if cultivo_data.get('fecha_siembra'):
             try:
                 fecha_siembra_cultivo = datetime.fromisoformat(cultivo_data['fecha_siembra'])
             except Exception:
                 fecha_siembra_cultivo = datetime.now()
-        # Si existe, actualizar
         if cultivo:
             cultivo.nombre = cultivo_data.get('nombre', cultivo.nombre)
             cultivo.variedad = cultivo_data.get('variedad', cultivo.variedad)
@@ -1832,9 +1833,7 @@ def actualizar_parcela(id):
             cultivo.fecha_siembra = fecha_siembra_cultivo or cultivo.fecha_siembra
             cultivo.dias_cosecha_estimados = cultivo_data.get('dias_cosecha_estimados', cultivo.dias_cosecha_estimados)
             parcela.cultivo_actual = cultivo.nombre
-
         else:
-            # Si no existe, crear uno nuevo
             nuevo_cultivo = DetalleCultivo(
                 parcela_id=parcela.id,
                 nombre=cultivo_data.get('nombre'),
@@ -1849,13 +1848,10 @@ def actualizar_parcela(id):
             if nuevo_cultivo.fecha_siembra:
                 parcela.fecha_siembra = nuevo_cultivo.fecha_siembra.date()
 
-    # Guardar los cambios
     try:
         db.session.commit()
         user_id = request.headers.get('X-User-Id')
         registrar_log(user_id, 'actualizar_parcela', 'parcela', id, detalles=str(data))
-        
-        # Obtener el cultivo actualizado
         cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
         return jsonify({
             'mensaje': 'Parcela actualizada correctamente',
