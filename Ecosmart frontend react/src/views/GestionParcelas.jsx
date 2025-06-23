@@ -64,29 +64,36 @@ const GestionParcelas = ({ API_URL }) => {
     }
   };
 
-  // Función para eliminar parcela
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
-      try {
-        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
-        await axios.delete(`${API_URL}/parcelas/${id}`, {
-          headers: { 'X-User-Id': user.id }
-        });
-        // Actualizar la lista de parcelas localmente (sin recargar)
-        setParcelas(parcelas.filter(parcela => parcela.id !== id));
-        // Mostrar mensaje de éxito
-        setSuccessMessage('Parcela eliminada exitosamente');
-        
-        // Ocultar el mensaje después de 5 segundos
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 5000);
-      } catch (err) {
-        console.error('Error al eliminar parcela:', err);
-        setError('Error al eliminar la parcela. Intente nuevamente.');
-      }
+ const handleDelete = async (id) => {
+  if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
+    try {
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      
+      console.log('🔍 DEBUG Frontend: Eliminando parcela', id, 'Usuario:', user.id);
+      
+      await axios.delete(`${API_URL}/parcelas/${id}`, {
+        headers: { 
+          'X-User-Id': user.id,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ DEBUG Frontend: Parcela eliminada exitosamente');
+      
+      setParcelas(parcelas.filter(parcela => parcela.id !== id));
+      setSuccessMessage('Parcela eliminada exitosamente');
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+    } catch (err) {
+      console.error('❌ DEBUG Frontend Error:', err);
+      console.error('Status:', err.response?.status);
+      console.error('Data:', err.response?.data);
+      setError(`Error al eliminar la parcela: ${err.response?.data?.error || err.message}`);
     }
-  };
+  }
+};
 
   // Función para determinar la ruta base según el rol del usuario
   const getBaseRoute = () => {
