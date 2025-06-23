@@ -335,3 +335,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   padding-bottom: 10px;
   border-bottom: 2px solid #28a745;
 }
+
+.checkbox-cultivo-visible input[type="checkbox"] {
+  accent-color: #43a047 !important; /* Verde visible */
+  width: 1.5em;
+  height: 1.5em;
+  min-width: 1.5em;
+  min-height: 1.5em;
+  background: #e8f5e9 !important; /* Fondo verde claro */
+  border: 2px solid #43a047 !important;
+  box-shadow: 0 0 0 2px #43a04733;
+  cursor: pointer;
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.checkbox-cultivo-visible input[type="checkbox"]:checked {
+  background: #43a047 !important; /* Fondo verde fuerte al marcar */
+  border-color: #388e3c !important;
+  box-shadow: 0 0 0 3px #a5d6a7;
+}
+
+.checkbox-cultivo-visible input[type="checkbox"]:focus {
+  outline: 2px solid #388e3c; 
+  box-shadow: 0 0 0 3px #a5d6a7;
+}
+
+.checkbox-cultivo-visible label {
+  font-weight: bold;
+  color: #22963e;
+  font-size: 1.1rem;
+  margin-left: 0.5em;
+}
