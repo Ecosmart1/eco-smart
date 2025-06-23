@@ -380,7 +380,7 @@ useEffect(() => {
             </h5>
           </Card.Header>
           <Card.Body>
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3 checkbox-cultivo-visible">
               <Form.Check
                 type="checkbox"
                 name="tiene_cultivo"

@@ -94,7 +94,7 @@ useEffect(() => {
       const response = await fetch(`${API_URL}/parcelas`, {
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': '1' // Agregar user ID para logs
+          'X-User-Id': user.id // Agregar user ID para logs
         }
       });
       

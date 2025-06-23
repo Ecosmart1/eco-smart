@@ -1458,12 +1458,12 @@ def iniciar_simulacion():
 
 @app.route('/api/simulacion/detener', methods=['POST'])
 def detener_simulacion():
-    """Detiene la simulación en segundo plano"""
-    global simulacion_activa, hilo_simulacion
-    
+    """Detiene la simulación en segundo plano y genera alertas finales"""
+    global simulacion_activa, hilo_simulacion, ultimos_datos, parametros_configurables
+
     if not simulacion_activa:
         return jsonify({"mensaje": "La simulación no está en ejecución"})
-    
+
     # Registrar log solo si existe el ID de usuario
     user_id = request.headers.get('X-User-Id')
     if user_id:
@@ -1471,13 +1471,28 @@ def detener_simulacion():
             registrar_log(user_id, 'detener_simulacion', 'simulacion', None)
         except Exception as e:
             current_app.logger.error(f"Error al registrar log al detener simulación: {e}")
-            # No detener la ejecución por errores de log
-    
+
     simulacion_activa = False
     if hilo_simulacion and hilo_simulacion.is_alive():
         hilo_simulacion.join(timeout=2.0)
         hilo_simulacion = None
-    
+
+    # --- NUEVO: Generar alertas finales al detener manualmente ---
+    try:
+        # Obtener la parcela de simulación si existe
+        parcela_id = app.config.get('PARCELA_SIMULACION', None)
+        # Si no hay una parcela específica, intenta usar la primera disponible
+        if not parcela_id:
+            parcelas_disponibles = Parcela.query.all()
+            if parcelas_disponibles:
+                parcela_id = parcelas_disponibles[0].id
+        # Solo si hay datos y parcela, guardar alertas
+        if parcela_id and ultimos_datos:
+            guardar_alertas_finales(parcela_id, ultimos_datos, parametros_configurables)
+    except Exception as e:
+        current_app.logger.error(f"Error generando alertas al detener simulación: {e}")
+    # ------------------------------------------------------------
+
     return jsonify({"mensaje": "Simulación detenida"})
 
 @app.route('/api/simulacion/estado', methods=['GET'])
