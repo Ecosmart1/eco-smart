@@ -150,10 +150,7 @@ const HeaderAgronomo = ({ activeItem }) => {
                 <i className="fas fa-cog"></i>
                 Configuración
               </Link>
-              <Link to="/dashboard/agronomo/reportes" className="dropdown-item">
-                <i className="fas fa-chart-bar"></i>
-                Reportes
-              </Link>
+
               <div className="dropdown-divider"></div>
               <div className="dropdown-item logout" onClick={cerrarSesion}>
                 <i className="fas fa-sign-out-alt"></i>

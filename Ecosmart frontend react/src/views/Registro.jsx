@@ -143,6 +143,7 @@ const toggleConfirmPasswordVisibility = () => {
           <h2>Registrarse</h2>
           
           <form className="registro-form" onSubmit={handleSubmit}>
+
             <div className="form-group">
               <label htmlFor="nombres">Nombres</label>
               <input
@@ -156,7 +157,7 @@ const toggleConfirmPasswordVisibility = () => {
               />
               {errors.nombres && <span className="error-message">{errors.nombres}</span>}
             </div>
-            
+            <hr />
             <div className="form-group">
               <label htmlFor="apellidoPaterno">Apellido Paterno</label>
               <input
