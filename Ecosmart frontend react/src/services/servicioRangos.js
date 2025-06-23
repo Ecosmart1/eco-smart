@@ -81,13 +81,13 @@ export const servicioRangos = {
     }
   },
 // Obtener parcelas disponibles
-async obtenerParcelas() {
+async obtenerParcelas(user) {
   try {
     const response = await fetch(`${API_BASE_URL}/parcelas`, {
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Id': '1',           
-        'X-User-Rol': 'agronomo'    // ← AGREGAR ESTO
+        'X-User-Id': user.id,           
+        'X-User-Rol': 'agronomo'
       }
     });
     
@@ -98,7 +98,6 @@ async obtenerParcelas() {
     const data = await response.json();
     console.log('📊 Parcelas recibidas del backend:', data);
     
-    // ✅ CORRECCIÓN: El endpoint devuelve array directo
     return Array.isArray(data) ? data : [];
     
   } catch (error) {
