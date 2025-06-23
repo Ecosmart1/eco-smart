@@ -142,15 +142,10 @@ const HeaderAgronomo = ({ activeItem }) => {
           
           {menuAbierto && (
             <div className="user-dropdown-menu">
-              <Link to="/dashboard/agronomo/perfil" className="dropdown-item">
-                <i className="fas fa-user"></i>
-                Mi Perfil
-              </Link>
               <Link to="/agronomo/configuracion" className="dropdown-item">
                 <i className="fas fa-cog"></i>
                 Configuración
               </Link>
-
               <div className="dropdown-divider"></div>
               <div className="dropdown-item logout" onClick={cerrarSesion}>
                 <i className="fas fa-sign-out-alt"></i>

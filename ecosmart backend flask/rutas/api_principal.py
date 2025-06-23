@@ -23,6 +23,7 @@ from servicios.notificaciones import enviar_correo_alerta
 
 from servicios.detector_anomalias import detector
 import jwt
+from sqlalchemy import text
 
 
 
@@ -42,7 +43,7 @@ CORS(app, resources={
 SECRET_KEY="ecosmart"
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -1901,21 +1902,111 @@ def actualizar_parcela(id):
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
 
+
 @app.route('/api/parcelas/<int:id>', methods=['DELETE'])
 def eliminar_parcela(id):
-    user_id = request.headers.get('X-User-Id')
-    if not user_id:
-        return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
-    parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
-    if not parcela:
-        return jsonify({'error': 'Parcela no encontrada'}), 404
-    # Primero eliminar todas las lecturas de sensores asociadas
-    LecturaSensor.query.filter_by(parcela=id).delete()
-    
-    # Luego eliminar la parcela
-    db.session.delete(parcela)
-    db.session.commit()
-    return jsonify({'mensaje': 'Parcela eliminada correctamente'})
+    try:
+        user_id = request.headers.get('X-User-Id')
+        print(f"🔍 DEBUG: Eliminando parcela {id}, usuario: {user_id}")
+        
+        if not user_id:
+            return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+        
+        # Verificar usuario (corregir warning SQLAlchemy)
+        usuario = db.session.get(Usuario, user_id)
+        if not usuario:
+            return jsonify({'error': 'Usuario no encontrado'}), 403
+        
+        # Buscar parcela (corregir warning SQLAlchemy)
+        parcela = db.session.get(Parcela, id)
+        if not parcela:
+            return jsonify({'error': 'Parcela no encontrada'}), 404
+        
+        # Verificar permisos
+        if usuario.rol != 'agronomo' and parcela.usuario_id != int(user_id):
+            return jsonify({'error': 'Sin permisos para eliminar esta parcela'}), 403
+        
+        print(f"🔍 DEBUG: Eliminando parcela '{parcela.nombre}'")
+        
+        # ELIMINACIÓN USANDO LA ESTRUCTURA REAL DE TU BD
+        datos_eliminados = {}
+        
+        try:
+            # 1. Eliminar lecturas de sensores
+            # Tabla real: lecturas_sensores
+            lecturas_eliminadas = LecturaSensor.query.filter_by(parcela=id).delete()
+            datos_eliminados['lecturas_sensores'] = lecturas_eliminadas
+            print(f"✅ DEBUG: {lecturas_eliminadas} lecturas de sensores eliminadas")
+            
+            # 2. 🔧 ELIMINAR ALERTAS - Tabla real: alerta_sensor
+            try:
+                alertas_eliminadas = AlertaSensor.query.filter_by(parcela=id).delete()
+                datos_eliminados['alerta_sensor'] = alertas_eliminadas
+                print(f"✅ DEBUG: {alertas_eliminadas} alertas eliminadas")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando alertas: {e}")
+                datos_eliminados['alerta_sensor'] = f"Error: {e}"
+            
+            # 3. Eliminar cultivos - Tabla real: cultivos
+            try:
+                cultivos_eliminados = DetalleCultivo.query.filter_by(parcela_id=id).delete()
+                datos_eliminados['cultivos'] = cultivos_eliminados
+                print(f"✅ DEBUG: {cultivos_eliminados} cultivos eliminados")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando cultivos: {e}")
+                datos_eliminados['cultivos'] = f"Error: {e}"
+            
+            # 4. Eliminar rangos - Tabla real: rangos_parametros
+            try:
+                rangos_eliminados = RangoParametro.query.filter_by(parcela_id=id).delete()
+                datos_eliminados['rangos_parametros'] = rangos_eliminados
+                print(f"✅ DEBUG: {rangos_eliminados} rangos eliminados")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando rangos: {e}")
+                datos_eliminados['rangos_parametros'] = f"Error: {e}"
+            
+            # 5. Eliminar logs (verificar si tiene las columnas correctas)
+            try:
+                # Tu modelo LogAccionUsuario no tiene entidad_tipo/entidad_id
+                # Solo tiene 'entidad' y 'entidad_id'
+                logs_eliminados = LogAccionUsuario.query.filter_by(
+                    entidad='parcela', 
+                    entidad_id=id
+                ).delete()
+                datos_eliminados['logs'] = logs_eliminados
+                print(f"✅ DEBUG: {logs_eliminados} logs eliminados")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando logs: {e}")
+                datos_eliminados['logs'] = f"Error: {e}"
+            
+            # 6. FINALMENTE eliminar la parcela
+            db.session.delete(parcela)
+            datos_eliminados['parcela'] = 1
+            
+            # COMMIT TODO JUNTO
+            db.session.commit()
+            
+            print(f"✅ DEBUG: Parcela {id} eliminada exitosamente")
+            print(f"📊 DEBUG: Resumen eliminación: {datos_eliminados}")
+            
+            return jsonify({
+                'mensaje': 'Parcela y TODAS sus alertas eliminadas correctamente',
+                'parcela_id': id,
+                'parcela_nombre': parcela.nombre,
+                'datos_eliminados': datos_eliminados
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ ERROR en eliminación: {e}")
+            return jsonify({'error': f'Error al eliminar parcela: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"❌ ERROR general: {e}")
+        return jsonify({'error': 'Error en el servidor'}), 500
+
+
+
 
 
 @app.route('/api/debug/sensores/<int:parcela_id>', methods=['GET'])

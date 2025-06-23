@@ -114,17 +114,51 @@ const DetalleParcela = () => {
   }, [id, API_URL]);
   
   // Función para eliminar parcela
-  const handleDelete = async () => {
-    if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
-      try {
-        await axios.delete(`${API_URL}/parcelas/${id}`);
-        navigate(`${getBaseRoute()}/parcelas`);
-      } catch (err) {
-        console.error('Error al eliminar parcela:', err);
-        setError('Error al eliminar la parcela. Intente nuevamente más tarde.');
+  // Función para eliminar parcela (CORREGIDA)
+const handleDelete = async () => {
+  if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
+    try {
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      
+      if (!user.id) {
+        setError('Error: Usuario no autenticado');
+        return;
+      }
+      
+      console.log('🔍 DEBUG: Eliminando parcela desde DetalleParcela:', id, 'Usuario:', user.id, 'Rol:', user.rol);
+      
+      // 🔧 AGREGAR HEADERS NECESARIOS
+      await axios.delete(`${API_URL}/parcelas/${id}`, {
+        headers: { 
+          'X-User-Id': user.id,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ DEBUG: Parcela eliminada exitosamente desde DetalleParcela');
+      
+      // Navegar de vuelta a la lista
+      navigate(`${getBaseRoute()}/parcelas`, {
+        state: { successMessage: 'Parcela eliminada exitosamente' }
+      });
+      
+    } catch (err) {
+      console.error('❌ DEBUG: Error al eliminar parcela desde DetalleParcela:', err);
+      console.error('Status:', err.response?.status);
+      console.error('Data:', err.response?.data);
+      
+      // Manejo específico para error 403
+      if (err.response?.status === 403) {
+        const errorMessage = err.response?.data?.detalle || 
+                           'No tienes permisos para eliminar esta parcela. Solo el propietario o un agrónomo pueden eliminarla.';
+        setError(errorMessage);
+      } else {
+        const errorMessage = err.response?.data?.error || err.message || 'Error desconocido';
+        setError(`Error al eliminar la parcela: ${errorMessage}`);
       }
     }
-  };
+  }
+};
   
   // Obtener pronóstico de 5 días al cargar la parcela
   useEffect(() => {
