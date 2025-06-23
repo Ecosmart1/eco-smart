@@ -166,7 +166,7 @@ useEffect(() => {
     e.preventDefault();
     setGuardando(true);
     setError('');
-    
+
     try {
       // Validaciones básicas
       if (!formData.nombre.trim()) {
@@ -204,31 +204,30 @@ useEffect(() => {
         longitud: formData.longitud ? parseFloat(formData.longitud) : null
       };
 
-      // Agregar datos de cultivo si está habilitado
       if (formData.tiene_cultivo) {
         const cultivoNombre = formData.cultivo.nombre === 'Otro' ? 
           formData.cultivo.otro_cultivo.trim() : formData.cultivo.nombre;
-        
         parcelaData.cultivo = {
           nombre: cultivoNombre,
           variedad: formData.cultivo.variedad.trim() || null,
           etapa_desarrollo: formData.cultivo.etapa_desarrollo,
-          fecha_siembra: formData.cultivo.fecha_siembra + 'T08:00:00', // Agregar hora por defecto
+          fecha_siembra: formData.cultivo.fecha_siembra + 'T08:00:00',
           dias_cosecha_estimados: parseInt(formData.cultivo.dias_cosecha_estimados)
         };
       }
 
       console.log('Datos a enviar:', parcelaData);
 
-      let response;
       const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
       const token = localStorage.getItem('ecosmart_token');
       const headers = {
         'Content-Type': 'application/json',
         'X-User-Id': user.id,
+        'X-User-Rol': user.rol,
         'Authorization': `Bearer ${token}`
       };
 
+      let response;
       if (parcelaEditar) {
         response = await axios.put(`${API_URL}/parcelas/${parcelaEditar.id}`, parcelaData, { headers });
       } else {
