@@ -332,7 +332,11 @@ const DashboardTecnico = () => {
 
         {/* Tarjetas de estadísticas principales */}
         <div className="stats-grid">
-          <div className="stat-card usuarios">
+          <div
+  className="stat-card usuarios"
+  onClick={() => navigate('/dashboard/tecnico/Usuarios')}
+  style={{ cursor: 'pointer' }}
+>
             <div className="stat-icon">
               <i className="fas fa-users"></i>
             </div>

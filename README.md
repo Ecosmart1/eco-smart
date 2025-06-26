@@ -142,7 +142,7 @@ pip install -r requirements.txt
 # Crea la estructura de la base de datos (solo la primera vez):
 python interprete.py
 
-python Sensores/simulador_sensores.py
+python3 rutas/api_principal.py
 ```
 
 #### 3. Frontend (React)
@@ -159,7 +159,6 @@ npm run dev
 
 - Accede a [http://localhost:5173](http://localhost:5173) para la interfaz web.
 - El backend responde en [http://localhost:5000](http://localhost:5000) y muestra un mensaje de estado.
-- Usa el panel de control para iniciar/detener la simulación y cambiar condiciones.
 
 ---
 
@@ -171,17 +170,20 @@ npm run dev
 - **Permisos en scripts Linux/Mac:**  
   Usa `chmod +x start-ecostmart.sh` antes de ejecutarlo.
 
+- **Permisos en scripts Windows**
+  Usa `powershell -ExecutionPolicy Bypass -File .\start-ecosmart.ps1`
+
 - **El backend no responde:**  
-  Asegúrate de que el archivo `simulador_sensores.py` esté corriendo y que el entorno virtual esté activado.
+  Asegúrate de que el archivo `api_principal.py` esté corriendo y que el entorno virtual esté activado.
 
 ---
 
 ## 👥 Equipo de trabajo
 
-- **Víctor Quezada** @victors101
-- **Mauricio Oyarce** @ElShuky
-- **Juan Vásquez** @jnachovf
-- **Vicente Zapata** @vizxnt
+- **Víctor Quezada** [@victors101](https://github.com/victors101)
+- **Mauricio Oyarce** [@ElShuky](https://github.com/ElShuky)
+- **Juan Vásquez** [@jnachovf](https://github.com/jnachovf)
+- **Vicente Zapata** [@vizxnt](https://github.com/vizxnt)
 
 ---
 
