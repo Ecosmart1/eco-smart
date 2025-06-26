@@ -180,10 +180,10 @@ npm run dev
 
 ## 👥 Equipo de trabajo
 
-- **Víctor Quezada** @victors101
-- **Mauricio Oyarce** @ElShuky
-- **Juan Vásquez** @jnachovf
-- **Vicente Zapata** @vizxnt
+- **Víctor Quezada** [@victors101](https://github.com/victors101)
+- **Mauricio Oyarce** [@ElShuky](https://github.com/ElShuky)
+- **Juan Vásquez** [@jnachovf](https://github.com/jnachovf)
+- **Vicente Zapata** [@vizxnt](https://github.com/vizxnt)
 
 ---
 
