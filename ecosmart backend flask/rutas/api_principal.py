@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, send_file, current_app, Blueprint
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -10,7 +10,7 @@ import threading
 import pandas as pd
 import json
 from json import JSONDecodeError
-from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo, AlertaSensor
+from modelos.models import db, Usuario, LecturaSensor , Parcela, Conversacion, Mensaje, LogAccionUsuario, DetalleCultivo, AlertaSensor,RangoParametro
 from werkzeug.security import generate_password_hash, check_password_hash
 from servicios.openrouter import send_to_deepseek
 from servicios.logs import registrar_log, registrar_accion
@@ -21,10 +21,15 @@ from email.mime.text import MIMEText
 import re
 from servicios.notificaciones import enviar_correo_alerta
 
+from servicios.detector_anomalias import detector
+from sqlalchemy import text
+
+
+
 
 
 app = Flask(__name__)
-# ...existing code...
+
 
 CORS(app, resources={
     r"/api/*": {
@@ -34,17 +39,13 @@ CORS(app, resources={
     }
 })
 
-# ...existing code... # Permite solicitudes CORS para la API
+
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
-
-# ...existing code...
-
-# Agregar este endpoint antes de la línea "if __name__ == '__main__':"
 
 @app.route('/api/debug/database', methods=['GET'])
 def debug_database():
@@ -83,11 +84,52 @@ def debug_database():
             'database_connected': False
         }), 500
 
-# ...existing code...
+@app.route('/api/asistente/recomendar', methods=['POST', 'OPTIONS'])
+@cross_origin()
+def recomendar_asistente_clima():
+    """
+    Genera recomendaciones para una parcela basadas en el pronóstico del clima y datos de la parcela.
+    Espera un JSON con 'parcela' y 'pronostico' en el body.
+    """
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-User-Id')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        return response
 
+    try:
+        data = request.get_json()
+        parcela = data.get('parcela', {})
+        pronostico = data.get('pronostico', [])
+        cultivo = parcela.get('cultivo', parcela.get('cultivo_actual', 'cultivo'))
+        nombre = parcela.get('nombre', 'Parcela')
+        recomendaciones = []
 
+        # Ejemplo simple de lógica basada en pronóstico
+        if not pronostico or not isinstance(pronostico, list):
+            return jsonify({"recomendaciones": ["No se pudo analizar el pronóstico del clima."]})
 
-# ...existing code...
+        # Buscar días con lluvia y temperaturas extremas
+        dias_lluvia = [dia for dia in pronostico if 'lluvia' in str(dia.get('condicion', '')).lower() or float(dia.get('probabilidadLluvia', '0').replace('%', '')) > 60]
+        dias_calor = [dia for dia in pronostico if float(dia.get('maxima', 0)) > 32]
+        dias_frio = [dia for dia in pronostico if float(dia.get('minima', 100)) < 5]
+
+        if dias_lluvia:
+            recomendaciones.append(f"Se pronostica lluvia en los próximos días para {nombre}. Ajuste el riego para evitar exceso de agua en el cultivo de {cultivo}.")
+        if dias_calor:
+            recomendaciones.append(f"Se esperan temperaturas altas. Considere sombrear o regar temprano el cultivo de {cultivo}.")
+        if dias_frio:
+            recomendaciones.append(f"Posibles heladas. Proteja el cultivo de {cultivo} en {nombre} durante las noches frías.")
+        if not recomendaciones:
+            recomendaciones.append(f"Condiciones climáticas estables para {nombre}. Mantenga el monitoreo regular del cultivo de {cultivo}.")
+
+        return jsonify({"recomendaciones": recomendaciones})
+
+    except Exception as e:
+        return jsonify({"recomendaciones": [f"Error generando recomendación: {str(e)}"]}), 500
+    
+
 @app.route('/api/parcelas/recomendaciones', methods=['GET', 'POST', 'OPTIONS'])
 def recomendaciones_parcelas():
     if request.method == 'OPTIONS':
@@ -375,9 +417,13 @@ def obtener_usuarios():
     except Exception as e:
         current_app.logger.error(f"Error al listar usuarios: {str(e)}")
         return jsonify({'error': 'Error al procesar la solicitud'}), 500
+
+
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
     try:
+        print("🔍 DEBUG: Login iniciado")
+        
         if request.content_type and 'application/json' in request.content_type:
             data = request.get_json(force=True)
         else:
@@ -387,14 +433,31 @@ def login_usuario():
                 content = request.data.decode('latin-1')
             data = json.loads(content)
 
+        print(f"🔍 DEBUG: Datos recibidos: {data}")
+
         if 'email' not in data or 'password' not in data:
             return jsonify({'error': 'Faltan credenciales'}), 400
 
         email = data['email'].strip().lower()
+        print(f"🔍 DEBUG: Buscando email: '{email}'")
+        
         usuario = Usuario.query.filter_by(email=email).first()
+        print(f"🔍 DEBUG: Usuario encontrado: {usuario is not None}")
+        
+        if usuario:
+            print(f"🔍 DEBUG: Usuario ID: {usuario.id}, Nombre: {usuario.nombre}, Rol: {usuario.rol}")
+            print(f"🔍 DEBUG: Verificando contraseña...")
+            
+            password_valida = check_password_hash(usuario.password, data['password'])
+            print(f"🔍 DEBUG: Contraseña válida: {password_valida}")
+        else:
+            print("🔍 DEBUG: Usuario no encontrado en la base de datos")
 
         if not usuario or not check_password_hash(usuario.password, data['password']):
+            print("🔍 DEBUG: Credenciales incorrectas")
             return jsonify({'error': 'Credenciales incorrectas'}), 401
+
+        print(f"🔍 DEBUG: Login exitoso para {usuario.email}")
 
         try:
             registrar_log(usuario.id, 'login', 'usuario', usuario.id)
@@ -409,8 +472,10 @@ def login_usuario():
         })
 
     except Exception as e:
+        print(f"🔍 DEBUG: Error general: {str(e)}")
         current_app.logger.error(f"Error en login: {str(e)}")
         return jsonify({'error': 'Error al procesar la solicitud'}), 500
+
 
 
 @app.route('/api/recomendaciones/cultivo', methods=['POST', 'OPTIONS'])
@@ -743,69 +808,70 @@ def exportar_csv():
 
 @app.route('/api/parcelas', methods=['GET'])
 def listar_parcelas():
-    """Listar todas las parcelas con su cultivo único"""
-    try:
+    user_id = request.headers.get('X-User-Id')
+    user = Usuario.query.get(user_id)
+    if user and user.rol == 'agronomo':
         parcelas = Parcela.query.all()
-        parcelas_data = []
+    else:
+        parcelas = Parcela.query.filter_by(usuario_id=user_id).all()
+    parcelas_data = []
+    
+    for parcela in parcelas:
+        # Obtener el cultivo único de la parcela
+        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        usuario_dueno = Usuario.query.get(parcela.usuario_id) if parcela.usuario_id else None
         
-        for parcela in parcelas:
-            # Obtener el cultivo único de la parcela
-            cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
-            
-            parcela_info = {
-                'id': parcela.id,
-                'nombre': parcela.nombre,
-                'ubicacion': parcela.ubicacion,
-                'hectareas': parcela.hectareas,
-                'latitud': parcela.latitud,
-                'longitud': parcela.longitud,
-                'fecha_creacion': parcela.fecha_creacion,
-                'cultivo_actual': parcela.cultivo_actual,
-                'fecha_siembra': parcela.fecha_siembra,
-                
-                # NUEVO: Información detallada del cultivo único
-                'cultivo': None
+        parcela_info = {
+            'id': parcela.id,
+            'nombre': parcela.nombre,
+            'ubicacion': parcela.ubicacion,
+            'hectareas': parcela.hectareas,
+            'latitud': parcela.latitud,
+            'longitud': parcela.longitud,
+            'fecha_creacion': parcela.fecha_creacion,
+            'cultivo_actual': parcela.cultivo_actual,
+            'fecha_siembra': parcela.fecha_siembra,
+            'usuario_id': parcela.usuario_id,
+            # NUEVO:
+            'usuario_nombre': usuario_dueno.nombre if usuario_dueno else None,
+            'usuario_email': usuario_dueno.email if usuario_dueno else None,
+            # NUEVO: Información detallada del cultivo único
+            'cultivo': None
+        }
+        
+        # Agregar detalles del cultivo si existe
+        if cultivo:
+            parcela_info['cultivo'] = {
+                'id': cultivo.id,
+                'nombre': cultivo.nombre,
+                'variedad': cultivo.variedad,
+                'etapa_desarrollo': cultivo.etapa_desarrollo,
+                'fecha_siembra': cultivo.fecha_siembra,
+                'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+                'edad_dias': cultivo.calcular_edad_dias(),
+                'progreso_cosecha': round(cultivo.progreso_cosecha(), 1),
+                'activo': cultivo.activo,
+                'fecha_cosecha': cultivo.fecha_cosecha
             }
             
-            # Agregar detalles del cultivo si existe
-            if cultivo:
-                parcela_info['cultivo'] = {
-                    'id': cultivo.id,
-                    'nombre': cultivo.nombre,
-                    'variedad': cultivo.variedad,
-                    'etapa_desarrollo': cultivo.etapa_desarrollo,
-                    'fecha_siembra': cultivo.fecha_siembra,
-                    'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
-                    'edad_dias': cultivo.calcular_edad_dias(),
-                    'progreso_cosecha': round(cultivo.progreso_cosecha(), 1),
-                    'activo': cultivo.activo,
-                    'fecha_cosecha': cultivo.fecha_cosecha
-                }
-                
-                # Actualizar datos de la parcela con info del cultivo
-                if not parcela.cultivo_actual and cultivo.nombre:
-                    parcela_info['cultivo_actual'] = cultivo.nombre
-                if not parcela.fecha_siembra and cultivo.fecha_siembra:
-                    parcela_info['fecha_siembra'] = cultivo.fecha_siembra.date()
-            
-            parcelas_data.append(parcela_info)
+            # Actualizar datos de la parcela con info del cultivo
+            if not parcela.cultivo_actual and cultivo.nombre:
+                parcela_info['cultivo_actual'] = cultivo.nombre
+            if not parcela.fecha_siembra and cultivo.fecha_siembra:
+                parcela_info['fecha_siembra'] = cultivo.fecha_siembra.date()
         
-        # Registrar log
-        user_id = request.headers.get('X-User-Id')
-        if user_id:
-            try:
-                registrar_log(user_id, 'listar_parcelas', 'parcela', None)
-            except Exception as e:
-                current_app.logger.error(f"Error al registrar log: {e}")
-        
-        return jsonify(parcelas_data)
+        parcelas_data.append(parcela_info)
     
-    except Exception as e:
-        current_app.logger.error(f"Error al listar parcelas: {str(e)}")
-        return jsonify({'error': f"Error al obtener parcelas: {str(e)}"}), 500
-
-# ...existing code...
-# Endpoint para obtener los datos de los sensores
+    # Registrar log
+    user_id = request.headers.get('X-User-Id')
+    if user_id:
+        try:
+            registrar_log(user_id, 'listar_parcelas', 'parcela', None)
+        except Exception as e:
+            current_app.logger.error(f"Error al registrar log: {e}")
+    
+    return jsonify(parcelas_data)
+    
 @app.route('/api/sensores', methods=['GET'])
 def obtener_sensores():
     """Devuelve la lista de todos los sensores"""
@@ -1308,31 +1374,26 @@ def guardar_alertas_finales(parcela_id, datos, parametros):
                     # Importar la función para enviar correos
                     from servicios.notificaciones import enviar_correo_alerta
                     
-                    # MODIFICACIÓN: Enviar a TODOS los usuarios, no solo al asociado a la parcela
-                    # Obtener todos los usuarios con email configurado
-                    usuarios = Usuario.query.filter(Usuario.email.isnot(None)).all()
-                    
-                    if usuarios:
-                        print(f"DEBUG: Se encontraron {len(usuarios)} usuarios con email configurado")
-                        
-                        # Enviar notificaciones a todos los usuarios
-                        for usuario in usuarios:
-                            print(f"DEBUG: Enviando alertas a {usuario.email}")
-                            
-                            # Enviar una notificación por cada alerta crítica
-                            for alerta_data in alertas_a_notificar:
-                                try:
-                                    resultado = enviar_correo_alerta(usuario.email, alerta_data, datos_parcela)
-                                    if resultado:
-                                        print(f"✅ Alerta {alerta_data['id']} enviada a {usuario.email}")
-                                    else:
-                                        print(f"❌ Error al enviar alerta {alerta_data['id']} a {usuario.email}")
-                                except Exception as e:
-                                    print(f"Error al enviar correo individual: {str(e)}")
+                   
+                # Obtener solo el usuario asociado a la parcela
+                usuario_id = parcela.usuario_id if hasattr(parcela, 'usuario_id') else None
+                if usuario_id:
+                    usuario = Usuario.query.get(usuario_id)
+                    if usuario and usuario.email:
+                        print(f"DEBUG: Enviando alertas solo a {usuario.email}")
+                        for alerta_data in alertas_a_notificar:
+                            try:
+                                resultado = enviar_correo_alerta(usuario.email, alerta_data, datos_parcela)
+                                if resultado:
+                                    print(f"✅ Alerta {alerta_data['id']} enviada a {usuario.email}")
+                                else:
+                                    print(f"❌ Error al enviar alerta {alerta_data['id']} a {usuario.email}")
+                            except Exception as e:
+                                print(f"Error al enviar correo individual: {str(e)}")
                     else:
-                        print("DEBUG: No se encontraron usuarios con email configurado")
+                        print("DEBUG: Usuario asociado a la parcela no tiene email configurado")
                 else:
-                    print(f"DEBUG: No se encontró la parcela con ID {parcela_id}")
+                    print("DEBUG: No se encontró usuario asociado a la parcela")
                         
             except Exception as email_error:
                 import traceback
@@ -1397,12 +1458,12 @@ def iniciar_simulacion():
 
 @app.route('/api/simulacion/detener', methods=['POST'])
 def detener_simulacion():
-    """Detiene la simulación en segundo plano"""
-    global simulacion_activa, hilo_simulacion
-    
+    """Detiene la simulación en segundo plano y genera alertas finales"""
+    global simulacion_activa, hilo_simulacion, ultimos_datos, parametros_configurables
+
     if not simulacion_activa:
         return jsonify({"mensaje": "La simulación no está en ejecución"})
-    
+
     # Registrar log solo si existe el ID de usuario
     user_id = request.headers.get('X-User-Id')
     if user_id:
@@ -1410,13 +1471,28 @@ def detener_simulacion():
             registrar_log(user_id, 'detener_simulacion', 'simulacion', None)
         except Exception as e:
             current_app.logger.error(f"Error al registrar log al detener simulación: {e}")
-            # No detener la ejecución por errores de log
-    
+
     simulacion_activa = False
     if hilo_simulacion and hilo_simulacion.is_alive():
         hilo_simulacion.join(timeout=2.0)
         hilo_simulacion = None
-    
+
+    # --- NUEVO: Generar alertas finales al detener manualmente ---
+    try:
+        # Obtener la parcela de simulación si existe
+        parcela_id = app.config.get('PARCELA_SIMULACION', None)
+        # Si no hay una parcela específica, intenta usar la primera disponible
+        if not parcela_id:
+            parcelas_disponibles = Parcela.query.all()
+            if parcelas_disponibles:
+                parcela_id = parcelas_disponibles[0].id
+        # Solo si hay datos y parcela, guardar alertas
+        if parcela_id and ultimos_datos:
+            guardar_alertas_finales(parcela_id, ultimos_datos, parametros_configurables)
+    except Exception as e:
+        current_app.logger.error(f"Error generando alertas al detener simulación: {e}")
+    # ------------------------------------------------------------
+
     return jsonify({"mensaje": "Simulación detenida"})
 
 @app.route('/api/simulacion/estado', methods=['GET'])
@@ -1568,15 +1644,19 @@ def agregar_parcela():
     """Agregar una nueva parcela con su cultivo único"""
     try:
         data = request.json
-        
-        # Crear parcela
+        user_id = request.headers.get('X-User-Id')
+        if not user_id:
+            return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+
+        # Crear parcela y asignar usuario_id
         nueva_parcela = Parcela(
             nombre=data['nombre'],
             ubicacion=data.get('ubicacion'),
             hectareas=data.get('hectareas'),
             latitud=data.get('latitud'),
             longitud=data.get('longitud'),
-            fecha_creacion=datetime.now(UTC)
+            fecha_creacion=datetime.now(UTC),
+            usuario_id=user_id  # Asignar usuario activo
         )
         
         db.session.add(nueva_parcela)
@@ -1663,99 +1743,56 @@ def agregar_parcela():
         current_app.logger.error(f"Error al crear parcela: {str(e)}")
         return jsonify({'error': f"Error al crear parcela: {str(e)}"}), 500
 
-# ...existing code...
-# ...existing code...
-#endoints para la API de conversaciones
-# Endpoint para listar todas las conversaciones de un usuario
-# Endpoint para obtener conversaciones de un usuario
-@app.route('/api/conversaciones/<user_id>', methods=['GET'])
-def obtener_conversaciones(user_id):
-    try:
-        # Verificar que el usuario exista
-        usuario = Usuario.query.get_or_404(user_id)
-        
-        # Obtener conversaciones
-        conversaciones = Conversacion.query.filter_by(usuario_id=user_id).order_by(Conversacion.created_at.desc()).all()
-        
-        # Construir resultado directamente sin usar get_last_message
-        resultado = []
-        for conv in conversaciones:
-            # Buscar el último mensaje manualmente
-            ultimo_mensaje = db.session.query(Mensaje).filter_by(
-                conversacion_id=conv.id
-            ).order_by(Mensaje.timestamp.desc()).first()
-            
-            resultado.append({
-                'id': conv.id,
-                'created_at': conv.created_at.isoformat(),
-                'last_message': ultimo_mensaje.content if ultimo_mensaje else ""
-            })
-        
-        return jsonify(resultado)
-        
-    except Exception as e:
-        current_app.logger.error(f"Error en obtener_conversaciones: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-#Endpoin para eliminar una parcela
-@app.route('/api/parcelas/<int:id>', methods=['DELETE'])
-def eliminar_parcela(id):
-    try:
-        parcela = Parcela.query.get(id)
-        if not parcela:
-            return jsonify({'error': 'Parcela no encontrada'}), 404
-        
-        # Primero eliminar todas las lecturas de sensores asociadas
-        LecturaSensor.query.filter_by(parcela=id).delete()
-        
-        # Luego eliminar la parcela
-        db.session.delete(parcela)
-        db.session.commit()
-        
-        # Registrar log solo si existe el ID de usuario
-        user_id = request.headers.get('X-User-Id')
-        if user_id:
-            try:
-                registrar_log(user_id, 'eliminar_parcela', 'parcela', id)
-            except Exception as e:
-                current_app.logger.error(f"Error al registrar log: {e}")
-                # No detenemos la ejecución por errores de log
-        
-        return jsonify({'mensaje': 'Parcela eliminada correctamente'})
-    
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error al eliminar parcela: {str(e)}")
-        return jsonify({'error': f"Error al eliminar parcela: {str(e)}"}), 500
-
-# Endpoint para obtener una parcela específica por ID
 @app.route('/api/parcelas/<int:id>', methods=['GET'])
 def obtener_parcela(id):
-    parcela = Parcela.query.get(id)
-    if not parcela:
-        return jsonify({'error': 'Parcela no encontrada'}), 404
-    
-    # Devolver la información de la parcela
+    parcela = Parcela.query.get_or_404(id)
+    usuario = Usuario.query.get(parcela.usuario_id) if parcela.usuario_id else None
+    cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
     return jsonify({
-        "id": parcela.id,
-        "nombre": parcela.nombre,
-        "ubicacion": parcela.ubicacion,
-        "hectareas": parcela.hectareas,
-        "latitud": parcela.latitud,
-        "longitud": parcela.longitud,
-        "fecha_creacion": parcela.fecha_creacion.isoformat() if parcela.fecha_creacion else None,
-        "cultivo_actual": parcela.cultivo_actual,
-        "fecha_siembra": parcela.fecha_siembra.isoformat() if parcela.fecha_siembra else None
+        'id': parcela.id,
+        'nombre': parcela.nombre,
+        'ubicacion': parcela.ubicacion,
+        'hectareas': parcela.hectareas,
+        'latitud': parcela.latitud,
+        'longitud': parcela.longitud,
+        'fecha_creacion': parcela.fecha_creacion,
+        'cultivo_actual': parcela.cultivo_actual,
+        'fecha_siembra': parcela.fecha_siembra,
+        'usuario_id': parcela.usuario_id,
+        'usuario_nombre': usuario.nombre if usuario else None,
+        'usuario_email': usuario.email if usuario else None,
+        # NUEVO: detalles del cultivo activo
+        'variedad': cultivo.variedad if cultivo else None,
+        'cultivo': {
+            'id': cultivo.id if cultivo else None,
+            'nombre': cultivo.nombre if cultivo else None,
+            'variedad': cultivo.variedad if cultivo else None,
+            'etapa_desarrollo': cultivo.etapa_desarrollo if cultivo else None,
+            'edad_dias': cultivo.calcular_edad_dias() if cultivo else None,
+            'progreso_cosecha': round(cultivo.progreso_cosecha(), 1) if cultivo else None,
+            'activo': cultivo.activo,
+            'fecha_cosecha': cultivo.fecha_cosecha.isoformat() if cultivo.fecha_cosecha else None
+        } if cultivo else None
     })
-
-# Endpoint para actualizar una parcela existente
 @app.route('/api/parcelas/<int:id>', methods=['PUT'])
 def actualizar_parcela(id):
-    parcela = Parcela.query.get(id)
+    user_id = request.headers.get('X-User-Id')
+    if not user_id:
+        return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+    user_rol = request.headers.get('X-User-Rol', '')
+
+    if user_rol == 'agronomo':
+        # Agrónomo puede editar cualquier parcela
+        parcela = Parcela.query.filter_by(id=id).first()
+    else:
+        # Otros roles solo pueden editar sus propias parcelas
+        parcela = Parcela.query.filter_by(id=id, usuario_id=user_id).first()
+
     if not parcela:
         return jsonify({'error': 'Parcela no encontrada'}), 404
     
     # Obtener los datos de la solicitud
-    data = request.json
+    data = request.get_json()
     
     # Actualizar los campos de la parcela
     parcela.nombre = data.get('nombre', parcela.nombre)
@@ -1763,35 +1800,191 @@ def actualizar_parcela(id):
     parcela.hectareas = data.get('hectareas', parcela.hectareas)
     parcela.latitud = data.get('latitud', parcela.latitud)
     parcela.longitud = data.get('longitud', parcela.longitud)
-    parcela.cultivo_actual = data.get('cultivo_actual', parcela.cultivo_actual)
-    
+
     # Manejar la fecha de siembra (si viene como string, convertirla)
     fecha_siembra = data.get('fecha_siembra')
     if fecha_siembra:
         try:
             from datetime import datetime
             if isinstance(fecha_siembra, str):
-                # Intentar diferentes formatos
                 try:
                     parcela.fecha_siembra = datetime.fromisoformat(fecha_siembra)
                 except ValueError:
-                    # Formato alternativo que puede venir del frontend
                     parcela.fecha_siembra = datetime.strptime(fecha_siembra, '%Y-%m-%d')
         except Exception as e:
             print(f"Error al procesar fecha: {str(e)}")
     elif fecha_siembra == '' or fecha_siembra is None:
         parcela.fecha_siembra = None
-    
-    # Guardar los cambios
+
+    cultivo_data = data.get('cultivo')
+    if cultivo_data:
+        from datetime import datetime
+        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        fecha_siembra_cultivo = None
+        if cultivo_data.get('fecha_siembra'):
+            try:
+                fecha_siembra_cultivo = datetime.fromisoformat(cultivo_data['fecha_siembra'])
+            except Exception:
+                fecha_siembra_cultivo = datetime.now()
+        if cultivo:
+            cultivo.nombre = cultivo_data.get('nombre', cultivo.nombre)
+            cultivo.variedad = cultivo_data.get('variedad', cultivo.variedad)
+            cultivo.etapa_desarrollo = cultivo_data.get('etapa_desarrollo', cultivo.etapa_desarrollo)
+            cultivo.fecha_siembra = fecha_siembra_cultivo or cultivo.fecha_siembra
+            cultivo.dias_cosecha_estimados = cultivo_data.get('dias_cosecha_estimados', cultivo.dias_cosecha_estimados)
+            parcela.cultivo_actual = cultivo.nombre
+        else:
+            nuevo_cultivo = DetalleCultivo(
+                parcela_id=parcela.id,
+                nombre=cultivo_data.get('nombre'),
+                variedad=cultivo_data.get('variedad'),
+                etapa_desarrollo=cultivo_data.get('etapa_desarrollo', 'siembra'),
+                fecha_siembra=fecha_siembra_cultivo or datetime.now(),
+                dias_cosecha_estimados=cultivo_data.get('dias_cosecha_estimados'),
+                activo=True
+            )
+            db.session.add(nuevo_cultivo)
+            parcela.cultivo_actual = nuevo_cultivo.nombre
+            if nuevo_cultivo.fecha_siembra:
+                parcela.fecha_siembra = nuevo_cultivo.fecha_siembra.date()
+
     try:
         db.session.commit()
         user_id = request.headers.get('X-User-Id')
         registrar_log(user_id, 'actualizar_parcela', 'parcela', id, detalles=str(data))
-    
-        return jsonify({'mensaje': 'Parcela actualizada correctamente'})
+        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        return jsonify({
+            'mensaje': 'Parcela actualizada correctamente',
+            'parcela': {
+                'id': parcela.id,
+                'nombre': parcela.nombre,
+                'ubicacion': parcela.ubicacion,
+                'hectareas': parcela.hectareas,
+                'latitud': parcela.latitud,
+                'longitud': parcela.longitud,
+                'cultivo_actual': parcela.cultivo_actual,
+                'fecha_siembra': parcela.fecha_siembra,
+                'cultivo': {
+                    'id': cultivo.id if cultivo else None,
+                    'nombre': cultivo.nombre if cultivo else None,
+                    'variedad': cultivo.variedad if cultivo else None,
+                    'etapa_desarrollo': cultivo.etapa_desarrollo if cultivo else None,
+                    'fecha_siembra': cultivo.fecha_siembra if cultivo else None,
+                    'dias_cosecha_estimados': cultivo.dias_cosecha_estimados if cultivo else None,
+                    'activo': cultivo.activo if cultivo else None
+                } if cultivo else None
+            }
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar parcela: {str(e)}'}), 500
+
+
+@app.route('/api/parcelas/<int:id>', methods=['DELETE'])
+def eliminar_parcela(id):
+    try:
+        user_id = request.headers.get('X-User-Id')
+        print(f"🔍 DEBUG: Eliminando parcela {id}, usuario: {user_id}")
+        
+        if not user_id:
+            return jsonify({'error': 'No autorizado, falta X-User-Id'}), 403
+        
+        # Verificar usuario (corregir warning SQLAlchemy)
+        usuario = db.session.get(Usuario, user_id)
+        if not usuario:
+            return jsonify({'error': 'Usuario no encontrado'}), 403
+        
+        # Buscar parcela (corregir warning SQLAlchemy)
+        parcela = db.session.get(Parcela, id)
+        if not parcela:
+            return jsonify({'error': 'Parcela no encontrada'}), 404
+        
+        # Verificar permisos
+        if usuario.rol != 'agronomo' and parcela.usuario_id != int(user_id):
+            return jsonify({'error': 'Sin permisos para eliminar esta parcela'}), 403
+        
+        print(f"🔍 DEBUG: Eliminando parcela '{parcela.nombre}'")
+        
+        # ELIMINACIÓN USANDO LA ESTRUCTURA REAL DE TU BD
+        datos_eliminados = {}
+        
+        try:
+            # 1. Eliminar lecturas de sensores
+            # Tabla real: lecturas_sensores
+            lecturas_eliminadas = LecturaSensor.query.filter_by(parcela=id).delete()
+            datos_eliminados['lecturas_sensores'] = lecturas_eliminadas
+            print(f"✅ DEBUG: {lecturas_eliminadas} lecturas de sensores eliminadas")
+            
+            # 2. 🔧 ELIMINAR ALERTAS - Tabla real: alerta_sensor
+            try:
+                alertas_eliminadas = AlertaSensor.query.filter_by(parcela=id).delete()
+                datos_eliminados['alerta_sensor'] = alertas_eliminadas
+                print(f"✅ DEBUG: {alertas_eliminadas} alertas eliminadas")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando alertas: {e}")
+                datos_eliminados['alerta_sensor'] = f"Error: {e}"
+            
+            # 3. Eliminar cultivos - Tabla real: cultivos
+            try:
+                cultivos_eliminados = DetalleCultivo.query.filter_by(parcela_id=id).delete()
+                datos_eliminados['cultivos'] = cultivos_eliminados
+                print(f"✅ DEBUG: {cultivos_eliminados} cultivos eliminados")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando cultivos: {e}")
+                datos_eliminados['cultivos'] = f"Error: {e}"
+            
+            # 4. Eliminar rangos - Tabla real: rangos_parametros
+            try:
+                rangos_eliminados = RangoParametro.query.filter_by(parcela_id=id).delete()
+                datos_eliminados['rangos_parametros'] = rangos_eliminados
+                print(f"✅ DEBUG: {rangos_eliminados} rangos eliminados")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando rangos: {e}")
+                datos_eliminados['rangos_parametros'] = f"Error: {e}"
+            
+            # 5. Eliminar logs (verificar si tiene las columnas correctas)
+            try:
+                # Tu modelo LogAccionUsuario no tiene entidad_tipo/entidad_id
+                # Solo tiene 'entidad' y 'entidad_id'
+                logs_eliminados = LogAccionUsuario.query.filter_by(
+                    entidad='parcela', 
+                    entidad_id=id
+                ).delete()
+                datos_eliminados['logs'] = logs_eliminados
+                print(f"✅ DEBUG: {logs_eliminados} logs eliminados")
+            except Exception as e:
+                print(f"⚠️ DEBUG: Error eliminando logs: {e}")
+                datos_eliminados['logs'] = f"Error: {e}"
+            
+            # 6. FINALMENTE eliminar la parcela
+            db.session.delete(parcela)
+            datos_eliminados['parcela'] = 1
+            
+            # COMMIT TODO JUNTO
+            db.session.commit()
+            
+            print(f"✅ DEBUG: Parcela {id} eliminada exitosamente")
+            print(f"📊 DEBUG: Resumen eliminación: {datos_eliminados}")
+            
+            return jsonify({
+                'mensaje': 'Parcela y TODAS sus alertas eliminadas correctamente',
+                'parcela_id': id,
+                'parcela_nombre': parcela.nombre,
+                'datos_eliminados': datos_eliminados
+            })
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ ERROR en eliminación: {e}")
+            return jsonify({'error': f'Error al eliminar parcela: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"❌ ERROR general: {e}")
+        return jsonify({'error': 'Error en el servidor'}), 500
+
+
+
+
 
 @app.route('/api/debug/sensores/<int:parcela_id>', methods=['GET'])
 def debug_sensores_parcela(parcela_id):
@@ -1859,11 +2052,7 @@ def obtener_mensajes(conv_id):
         return jsonify({
             'id': conversacion.id,
             'created_at': conversacion.created_at.isoformat(),
-            'messages': [{
-                'sender': msg.sender,
-                'content': msg.content,
-                'timestamp': msg.created_at.isoformat()
-            } for msg in mensajes]
+            'last_message': ultimo_mensaje.content if ultimo_mensaje else ""
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2052,7 +2241,7 @@ import random
 def obtener_recomendaciones_parcelas():
     """Devuelve recomendaciones para las parcelas basadas en los datos de los sensores"""
     try:
-        # Get user_id from headers for logging
+        # Get user_id from headers
         user_id = request.headers.get('X-User-Id')
         
         # Get optional parameters
@@ -2436,7 +2625,7 @@ def obtener_datos_sensores_recientes(parcela_id):
             LecturaSensor.tipo == 'Temperatura',
             LecturaSensor.timestamp >= desde
         ).order_by(LecturaSensor.timestamp.desc()).first()
-        
+
         ph = LecturaSensor.query.filter(
             LecturaSensor.parcela == parcela_id,
             LecturaSensor.tipo == 'pH del suelo',
@@ -2600,7 +2789,7 @@ def obtener_datos_sensores():
         periodo = request.args.get('periodo', '24h')
         
         # Calcular fecha desde usando UTC
-        desde = datetime.now(UTC)
+        desde = datetime.now(UTC) - timedelta(hours=24)
         if periodo == '7d':
             desde = desde - timedelta(days=7)
         elif periodo == '30d':
@@ -2608,66 +2797,60 @@ def obtener_datos_sensores():
         else:  # '24h' por defecto
             desde = desde - timedelta(hours=24)
         
-        # Consultar usando el nombre correcto del campo parcela
-        datos_humedad = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Humedad',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
+        # Consultar todos los tipos de sensores
+        tipos_sensores = ['Temperatura', 'Humedad', 'pH del suelo', 'Nutrientes']
+        resultado = {}
         
-        datos_temperatura = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Temperatura',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
-
-        datos_ph = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'pH del suelo',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
+        for tipo in tipos_sensores:
+            datos = LecturaSensor.query.filter(
+                LecturaSensor.parcela == parcela_id,
+                LecturaSensor.tipo == tipo,
+                LecturaSensor.timestamp >= desde
+            ).order_by(LecturaSensor.timestamp).all()
+            
+            # Formatear datos según el tipo
+            if tipo == 'Nutrientes':
+                datos_formateados = []
+                for d in datos:
+                    try:
+                        valor_obj = json.loads(d.valor)
+                        datos_formateados.append({
+                            "timestamp": d.timestamp.isoformat(),
+                            "valor": valor_obj
+                        })
+                    except (JSONDecodeError, TypeError, ValueError):
+                        try:
+                            # Si falla el JSON, intentar como float
+                            datos_formateados.append({
+                                "timestamp": d.timestamp.isoformat(),
+                                "valor": float(d.valor)
+                            })
+                        except:
+                            continue
+            else:
+                datos_formateados = []
+                for d in datos:
+                    try:
+                        datos_formateados.append({
+                            "timestamp": d.timestamp.isoformat(),
+                            "valor": float(d.valor)
+                        })
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Mapear nombres para compatibilidad
+            if tipo == 'Temperatura':
+                resultado['temperatura'] = datos_formateados
+            elif tipo == 'Humedad':
+                resultado['humedad'] = datos_formateados
+            elif tipo == 'pH del suelo':
+                resultado['ph'] = datos_formateados
+            elif tipo == 'Nutrientes':
+                resultado['nutrientes'] = datos_formateados
         
-        datos_nutrientes = LecturaSensor.query.filter(
-            LecturaSensor.parcela == parcela_id,
-            LecturaSensor.tipo == 'Nutrientes',
-            LecturaSensor.timestamp >= desde
-        ).order_by(LecturaSensor.timestamp).all()
-        
-        # Formatear resultado, convirtiendo de string a float para datos numéricos
-        resultado = {
-            "humedad": [],
-            "temperatura": [],
-            "ph": [],
-            "nutrientes": []
-        }
-
-        resultado["humedad"] = [
-            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
-            for d in datos_humedad
-        ]
-        resultado["temperatura"] = [
-            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
-            for d in datos_temperatura
-        ]
-        resultado["ph"] = [
-            {"timestamp": d.timestamp.isoformat(), "valor": float(d.valor)}
-            for d in datos_ph
-        ]
-
-        # En lugar de float(d.valor), parseamos JSON:
-        for d in datos_nutrientes:
-            try:
-                valor_obj = json.loads(d.valor)
-            except (JSONDecodeError, TypeError, ValueError):
-                # Si no es JSON, caemos a un número simple
-                valor_obj = float(d.valor)
-            resultado["nutrientes"].append({
-                "timestamp": d.timestamp.isoformat(),
-                "valor": valor_obj
-            })
-
+        # Registrar log
         user_id = request.headers.get('X-User-Id')
-        if user_id:  # Verificar que existe antes de usar
+        if user_id:
             try:
                 registrar_log(user_id, 'consulta_datos_sensores', 'parcela', 
                              parcela_id, detalles=f"periodo={periodo}")
@@ -2993,13 +3176,34 @@ def obtener_alertas():
     resultado = []
     for alerta in alertas:
         parcela = Parcela.query.get(alerta.parcela)
+
+        # --- Lógica para decodificar valor ---
+        valor = alerta.valor
+        if isinstance(valor, str):
+            try:
+                valor_json = json.loads(valor)
+                # Si es un dict, extrae el campo relevante (ejemplo: para nutrientes)
+                if isinstance(valor_json, dict):
+                    # Si es pH, humedad o temperatura, probablemente no sea dict
+                    # Si tiene solo un valor, extrae ese valor
+                    if len(valor_json) == 1:
+                        valor = list(valor_json.values())[0]
+                    else:
+                        valor = valor_json
+                else:
+                    valor = valor_json
+            except Exception:
+                pass  # Si falla, deja el valor original
+        # -------------------------------------
+
         resultado.append({
             "id": alerta.id,
             "mensaje": alerta.mensaje,
             "timestamp": alerta.timestamp.strftime("%d/%m/%Y %H:%M"),
             "parcela": parcela.nombre if parcela else "Desconocida",
             "tipo": alerta.tipo,
-            "severidad": alerta.severidad
+            "severidad": alerta.severidad,
+            "valor": valor,  # <-- valor ya procesado
         })
     return jsonify(resultado)
 
@@ -3096,7 +3300,7 @@ def crear_alerta():
             
     except Exception as e:
         db.session.rollback()
-        print(f"Error al crear alerta: {str(e)}")
+        current_app.logger.error(f"Error al crear alerta: {str(e)}")
         return jsonify({'error': f"Error al crear alerta: {str(e)}"}), 500
 
 
@@ -3144,6 +3348,9 @@ def listar_cultivos():
                 'nombre': cultivo.nombre,
                 'variedad': cultivo.variedad,
                 'etapa_desarrollo': cultivo.etapa_desarrollo,
+                'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
+                'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
+                'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
                 'fecha_siembra': cultivo.fecha_siembra.isoformat() if cultivo.fecha_siembra else None,
                 'dias_cosecha_estimados': cultivo.dias_cosecha_estimados,
                 'edad_dias': cultivo.calcular_edad_dias() if hasattr(cultivo, 'calcular_edad_dias') else None,
@@ -3250,8 +3457,18 @@ def obtener_resumen_informes():
         # Obtener promedios por tipo de sensor
         temp_data = query_base.filter(LecturaSensor.tipo == 'Temperatura').all()
         humedad_data = query_base.filter(LecturaSensor.tipo == 'Humedad').all()
+        temperatura_promedio=0
+        humedad_promedio = 0
         
-        temperatura_promedio = 0
+        if temp_data:
+            valores_temp = [float(d.valor) for d in temp_data if d.valor]
+            temperatura_promedio = round(sum(valores_temp) / len(valores_temp), 1) if valores_temp else 0
+        
+        
+        # Obtener promedios por tipo de sensor
+        temp_data = query_base.filter(LecturaSensor.tipo == 'Temperatura').all()
+        humedad_data = query_base.filter(LecturaSensor.tipo == 'Humedad').all()
+        temperatura_promedio=0
         humedad_promedio = 0
         
         if temp_data:
@@ -3679,12 +3896,383 @@ def marcar_multiples_alertas_informes():
         current_app.logger.error(f"Error al marcar múltiples alertas: {e}")
         return jsonify({'error': str(e)}), 500
     
-    
-    
-    
-    
-    
 
+
+    try:
+        parcela_id = request.args.get('parcela_id')
+        anomalias = detector.detectar_anomalias_basicas(parcela_id)
+        
+        return jsonify({
+            'success': True,
+            'anomalias': anomalias,
+            'total': len(anomalias)
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener anomalías: {str(e)}'
+        }), 500
+# AGREGAR ESTE ENDPOINT PARA ANOMALÍAS CON NOMBRES DE PARCELA
+@app.route('/api/anomalias', methods=['GET'])
+def obtener_anomalias_con_nombres():
+    try:
+        parcela_id = request.args.get('parcela_id')
+        
+        # Usar el detector existente
+        anomalias_basicas = detector.detectar_anomalias_basicas(parcela_id)
+        
+        # Enriquecer con nombres de parcela
+        anomalias_enriquecidas = []
+        for anomalia in anomalias_basicas:
+            # Buscar el nombre de la parcela
+            parcela = Parcela.query.get(anomalia.get('parcela_id'))
+            parcela_nombre = parcela.nombre if parcela else f"Parcela {anomalia.get('parcela_id', 'Desconocida')}"
+            
+            # Agregar el nombre a la anomalía
+            anomalia_enriquecida = {
+                **anomalia,  # Copiar todos los datos existentes
+                'parcela_nombre': parcela_nombre  # Agregar el nombre
+            }
+            anomalias_enriquecidas.append(anomalia_enriquecida)
+        
+        return jsonify({
+            'success': True,
+            'anomalias': anomalias_enriquecidas,
+            'total': len(anomalias_enriquecidas)
+        }), 200
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener anomalías: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener anomalías: {str(e)}',
+            'anomalias': []
+        }), 500
+@app.route('/api/salud-parcela/<int:parcela_id>', methods=['GET'])
+def obtener_salud_parcela(parcela_id):
+    try:
+        salud = detector.obtener_salud_parcela(parcela_id)
+        anomalias = detector.detectar_anomalias_basicas(parcela_id)
+        
+        return jsonify({
+            'success': True,
+            'parcela_id': parcela_id,
+            'salud': salud,
+            'anomalias_count': len(anomalias),
+            'estado': 'optimo' if salud >= 80 else 'alerta' if salud >= 60 else 'critico'
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener salud de parcela: {str(e)}'
+        }), 500
+
+# AGREGAR al final del archivo, antes de la última línea:
+
+@app.route('/api/configuracion/rangos', methods=['GET'])
+def obtener_rangos():
+    """Obtiene todos los rangos configurados"""
+    try:
+        rangos = RangoParametro.query.filter_by(activo=True).all()
+        return jsonify({
+            'success': True,
+            'rangos': [rango.to_dict() for rango in rangos]
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener rangos: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener rangos: {str(e)}',
+            'rangos': []
+        }), 500
+
+@app.route('/api/configuracion/rangos', methods=['POST'])
+def crear_o_actualizar_rango():
+    """Crea o actualiza un rango de parámetro"""
+    try:
+        data = request.json
+        
+        # Validar datos requeridos
+        campos_requeridos = ['tipo_parametro', 'valor_minimo', 'valor_maximo']
+        for campo in campos_requeridos:
+            if campo not in data:
+                return jsonify({
+                    'success': False,
+                    'message': f'Campo requerido: {campo}'
+                }), 400
+        
+        # Verificar si ya existe un rango similar
+        query = RangoParametro.query.filter_by(
+            tipo_parametro=data['tipo_parametro'],
+            cultivo=data.get('cultivo'),
+            parcela_id=data.get('parcela_id'),
+            activo=True
+        )
+        
+        rango_existente = query.first()
+        
+        if rango_existente:
+            # Actualizar rango existente
+            rango_existente.valor_minimo = data['valor_minimo']
+            rango_existente.valor_maximo = data['valor_maximo']
+            rango_existente.alerta_baja = data.get('alerta_baja')
+            rango_existente.alerta_alta = data.get('alerta_alta')
+            rango_existente.critico_bajo = data.get('critico_bajo')
+            rango_existente.critico_alto = data.get('critico_alto')
+            rango = rango_existente
+            accion = 'actualizado'
+        else:
+            # Crear nuevo rango
+            rango = RangoParametro(
+                tipo_parametro=data['tipo_parametro'],
+                cultivo=data.get('cultivo'),
+                parcela_id=data.get('parcela_id'),
+                valor_minimo=data['valor_minimo'],
+                valor_maximo=data['valor_maximo'],
+                alerta_baja=data.get('alerta_baja'),
+                alerta_alta=data.get('alerta_alta'),
+                critico_bajo=data.get('critico_bajo'),
+                critico_alto=data.get('critico_alto')
+            )
+            db.session.add(rango)
+            accion = 'creado'
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Rango {accion} exitosamente',
+            'rango': rango.to_dict()
+        }), 200 if accion == 'actualizado' else 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al crear/actualizar rango: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al procesar rango: {str(e)}'
+        }), 500
+
+@app.route('/api/configuracion/rangos/<int:rango_id>', methods=['DELETE'])
+def eliminar_rango(rango_id):
+    """Elimina un rango (marcado como inactivo)"""
+    try:
+        rango = RangoParametro.query.get(rango_id)
+        if not rango:
+            return jsonify({
+                'success': False,
+                'message': 'Rango no encontrado'
+            }), 404
+        
+        rango.activo = False
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rango eliminado exitosamente'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al eliminar rango: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al eliminar rango: {str(e)}'
+        }), 500
+
+@app.route('/api/configuracion/rangos/cultivos', methods=['GET'])
+def obtener_cultivos_disponibles():
+    """Obtiene lista de cultivos disponibles para configurar rangos"""
+    try:
+        # Obtener cultivos únicos de las parcelas
+        cultivos_parcelas = db.session.query(Parcela.cultivo_actual).filter(
+            Parcela.cultivo_actual.isnot(None),
+            Parcela.cultivo_actual != ''
+        ).distinct().all()
+        
+        cultivos = [cultivo[0] for cultivo in cultivos_parcelas if cultivo[0]]
+        
+        # Agregar cultivos comunes si no están
+        cultivos_comunes = ['Tomate', 'Maíz', 'Trigo', 'Papaya', 'Lechuga']
+        for cultivo in cultivos_comunes:
+            if cultivo not in cultivos:
+                cultivos.append(cultivo)
+        
+        return jsonify({
+            'success': True,
+            'cultivos': sorted(cultivos)
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener cultivos: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al obtener cultivos: {str(e)}'
+        }), 500
+# AGREGAR al final de api_principal.py (antes de if __name__ == '__main__':):
+
+# REEMPLAZAR el endpoint individual:
+
+@app.route('/api/anomalias/<int:anomalia_id>', methods=['DELETE'])
+def eliminar_anomalia(anomalia_id):
+    """Eliminar una anomalía específica"""
+    try:
+        current_app.logger.info(f"Eliminando anomalía ID: {anomalia_id}")
+        
+        # Buscar la lectura por ID
+        lectura = LecturaSensor.query.get(anomalia_id)
+        
+        if not lectura:
+            return jsonify({
+                'success': False,
+                'message': f'Anomalía con ID {anomalia_id} no encontrada'
+            }), 404
+        
+        # Eliminar la lectura
+        db.session.delete(lectura)
+        db.session.commit()
+        
+        current_app.logger.info(f"Anomalía {anomalia_id} eliminada exitosamente")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Anomalía eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando anomalía {anomalia_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
+    """Eliminar una anomalía específica"""
+    try:
+        # Buscar la anomalía por ID (usando la tabla de lecturas)
+        anomalia = LecturaSensor.query.get(anomalia_id)
+        
+        if not anomalia:
+            return jsonify({
+                'success': False,
+                'message': 'Anomalía no encontrada'
+            }), 404
+        
+        # Eliminar la anomalía
+        db.session.delete(anomalia)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Anomalía eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando anomalía: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error eliminando anomalía: {str(e)}'
+        }), 500
+
+@app.route('/api/anomalias/eliminar-multiples', methods=['POST'])
+def eliminar_anomalias_multiples():
+    """Eliminar múltiples anomalías"""
+    try:
+        data = request.get_json()
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return jsonify({
+                'success': False,
+                'message': 'No se proporcionaron IDs'
+            }), 400
+        
+        # Eliminar anomalías por IDs
+        anomalias_eliminadas = LecturaSensor.query.filter(LecturaSensor.id.in_(ids)).delete()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{anomalias_eliminadas} anomalías eliminadas exitosamente',
+            'eliminadas': anomalias_eliminadas
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando anomalías múltiples: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error eliminando anomalías: {str(e)}'
+        }), 500
+
+# REEMPLAZAR el endpoint en api_principal.py:
+
+@app.route('/api/anomalias/limpiar-todas', methods=['DELETE'])
+def limpiar_todas_anomalias():
+    """Limpiar todas las anomalías detectadas"""
+    try:
+        # Obtener anomalías del detector
+        anomalias = detector.detectar_anomalias_basicas()
+        
+        if not anomalias:
+            return jsonify({
+                'success': True,
+                'message': 'No hay anomalías para limpiar',
+                'eliminadas': 0
+            })
+        
+        # 🔧 EXTRAER SOLO LOS NÚMEROS DE LOS IDs
+        ids_numericos = []
+        for anomalia in anomalias:
+            anomalia_id = anomalia['id']
+            
+            # Si el ID es string como 'anomalia_2889', extraer solo '2889'
+            if isinstance(anomalia_id, str) and 'anomalia_' in anomalia_id:
+                try:
+                    numero_id = int(anomalia_id.replace('anomalia_', ''))
+                    ids_numericos.append(numero_id)
+                except ValueError:
+                    current_app.logger.warning(f"No se pudo convertir ID: {anomalia_id}")
+                    continue
+            else:
+                # Si ya es un número, usarlo directamente
+                try:
+                    numero_id = int(anomalia_id)
+                    ids_numericos.append(numero_id)
+                except (ValueError, TypeError):
+                    current_app.logger.warning(f"ID inválido: {anomalia_id}")
+                    continue
+        
+        if not ids_numericos:
+            return jsonify({
+                'success': False,
+                'message': 'No se pudieron procesar los IDs de anomalías'
+            }), 400
+        
+        current_app.logger.info(f"Eliminando anomalías con IDs: {ids_numericos}")
+        
+        # Eliminar las anomalías por ID numérico
+        anomalias_eliminadas = LecturaSensor.query.filter(
+            LecturaSensor.id.in_(ids_numericos)
+        ).delete(synchronize_session=False)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{anomalias_eliminadas} anomalías eliminadas exitosamente',
+            'eliminadas': anomalias_eliminadas
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error limpiando todas las anomalías: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500
 
 
 if __name__ == '__main__':

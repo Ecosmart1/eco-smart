@@ -65,7 +65,7 @@ function HeaderTecnico() {
         </div>
         <div className="user-info">
           <span className="user-name">{user ? user.nombre : 'Invitado'}</span>
-          <Link to="/configuracion" className="user-role">Configuración</Link>
+          <Link to="/tecnico/configuracion" className="user-role">Configuración</Link>
         </div>
       </div>
     </div>

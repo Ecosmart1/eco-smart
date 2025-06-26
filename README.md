@@ -6,7 +6,7 @@
 
 ## 📌 Descripción
 
-**EcoSmart** es una plataforma web de agricultura inteligente que permite a agricultores y técnicos monitorear cultivos, gestionar sensores, recibir alertas en tiempo real y tomar decisiones basadas en datos simulados o reales.
+**EcoSmart** es una plataforma web de agricultura inteligente que permite a agricultores, técnicos y agrónomos monitorear cultivos, gestionar sensores, recibir alertas en tiempo real y tomar decisiones basadas en datos simulados o reales.
 
 La plataforma entrega recomendaciones automáticas y visualiza información clave como humedad, temperatura, pH del suelo y nutrientes. Su objetivo es mejorar la eficiencia en el uso de recursos y optimizar el rendimiento de los cultivos.
 
@@ -16,7 +16,10 @@ Entre sus funciones principales se incluyen:
 - Simulación de sensores agrícolas para pruebas sin hardware real.
 - Sistema de alertas y condiciones adversas simuladas.
 - Panel de control interactivo para iniciar/detener simulaciones y cambiar condiciones.
-- Código modular y fácil de desplegar en cualquier entorno.
+- Recomendaciones automáticas y personalizadas usando IA.
+- Gestión de parcelas y cultivos.
+- Análisis histórico y tendencias de datos.
+- Chat con asistente virtual para consultas y recomendaciones.
 
 ---
 
@@ -30,20 +33,27 @@ EcoSmart/
 │   │   ├── simulador_sensores.py   # Backend principal Flask
 │   │   ├── Sensor.py               # Lógica de sensores y red
 │   │   └── __init__.py
+│   ├── rutas/
+│   │   └── api_principal.py        # Endpoints principales de la API
+│   ├── modelos/
+│   │   └── models.py               # Modelos SQLAlchemy
+│   ├── servicios/
+│   │   └── openrouter.py           # Integración IA
 │   ├── requirements.txt            # Dependencias Python
 │   └── .gitignore
 │
 ├── Ecosmart frontend react/
 │   ├── src/
-|   |   ├──services/               #Exportacion de datos 
-|   |   |──views/                  #Vistas de la pagina 
+│   │   ├── services/               # Servicios de datos y API
+│   │   ├── views/                  # Vistas de la aplicación
+│   │   ├── context/                # Contextos globales (ej: Alertas)
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   ├── App.css
 │   │   └── index.css
 │   ├── package.json
 │   ├── vite.config.js
-│   └── .gitignore
+│   └── ...
 │
 ├── start-ecosmart.ps1              # Script de inicio para Windows
 ├── start-ecostmart.sh              # Script de inicio para Linux/Mac
@@ -70,6 +80,7 @@ EcoSmart/
 
 - **[Node.js](https://nodejs.org/)** (v18 o superior)
 - **[Python](https://www.python.org/downloads/)** (v3.10 o superior)
+- **[PostgreSQL](https://www.postgresql.org/download/)** (v13 o superior)
 - **[Git](https://git-scm.com/)**
 - **Permisos para ejecutar scripts** (`.sh` en Linux/Mac, `.ps1` en Windows)
 
@@ -97,6 +108,12 @@ Estos scripts:
 - Instalan dependencias del backend y frontend.
 - Verifican Node.js y npm (e instalan si es posible en Linux).
 - Inician el backend Flask y el frontend React en terminales separadas.
+- **Recuerda:** Antes de usar la plataforma por primera vez, debes crear la estructura de la base de datos ejecutando el archivo `/modelos/models.py` desde el entorno virtual del backend:
+  ```bash
+  cd "ecosmart backend flask"
+  source venv/bin/activate  # o .\venv\Scripts\activate en Windows
+  python interprete.py
+  ```
 
 ---
 
@@ -121,6 +138,10 @@ python -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
+
+# Crea la estructura de la base de datos (solo la primera vez):
+python interprete.py
+
 python Sensores/simulador_sensores.py
 ```
 
@@ -157,10 +178,10 @@ npm run dev
 
 ## 👥 Equipo de trabajo
 
-- **Víctor Quezada** — UX/UI  
-- **Mauricio Oyarce** — Backend  
-- **Juan Vásquez** — Frontend  
-- **Vicente Zapata** — IA
+- **Víctor Quezada** @victors101
+- **Mauricio Oyarce** @ElShuky
+- **Juan Vásquez** @jnachovf
+- **Vicente Zapata** @vizxnt
 
 ---
 

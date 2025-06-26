@@ -33,6 +33,89 @@ const DashboardAgricultor = () => {
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [mostrarGraficosPopup, setMostrarGraficosPopup] = useState(false);
+
+  // Estados para popup de comparación de sensores
+  const [mostrarCompararPopup, setMostrarCompararPopup] = useState(false);
+  const [compararConfig, setCompararConfig] = useState([
+    {
+      parcela: null,
+      tipo: 'temperatura',
+      rango: '24h',
+      datos: { temperatura: [], humedad: [], ph: [], nutrientes: [] }
+    },
+    {
+      parcela: null,
+      tipo: 'humedad',
+      rango: '24h',
+      datos: { temperatura: [], humedad: [], ph: [], nutrientes: [] }
+    }
+  ]);
+
+  // Función para abrir/cerrar popup comparar
+  const toggleCompararPopup = () => setMostrarCompararPopup(prev => !prev);
+
+  // Cargar datos para cada lado del popup de comparación
+  useEffect(() => {
+    compararConfig.forEach((cfg, idx) => {
+      if (!cfg.parcela) return;
+      // Usar la misma lógica de fetchDatosSensores
+      const fetchDatos = async () => {
+        try {
+          let periodo;
+          switch(cfg.rango) {
+            case '7d': periodo = '7d'; break;
+            case '30d': periodo = '30d'; break;
+            default: periodo = '24h'; break;
+          }
+          const parcelaId = cfg.parcela;
+          const response = await fetch(
+            `${API_URL}/sensores/datos?parcela=${parcelaId}&periodo=${periodo}`,
+            { headers: getAuthHeaders() }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            setCompararConfig(prev => {
+              const nuevo = [...prev];
+              nuevo[idx] = {
+                ...nuevo[idx],
+                datos: {
+                  humedad: data.humedad || [],
+                  temperatura: data.temperatura || [],
+                  ph: data.ph || [],
+                  nutrientes: data.nutrientes || []
+                }
+              };
+              return nuevo;
+            });
+          } else {
+            setCompararConfig(prev => {
+              const nuevo = [...prev];
+              nuevo[idx] = {
+                ...nuevo[idx],
+                datos: { temperatura: [], humedad: [], ph: [], nutrientes: [] }
+              };
+              return nuevo;
+            });
+          }
+        } catch {
+          setCompararConfig(prev => {
+            const nuevo = [...prev];
+            nuevo[idx] = {
+              ...nuevo[idx],
+              datos: { temperatura: [], humedad: [], ph: [], nutrientes: [] }
+            };
+            return nuevo;
+          });
+        }
+      };
+      fetchDatos();
+    });
+    // eslint-disable-next-line
+  }, [
+    compararConfig[0].parcela, compararConfig[0].tipo, compararConfig[0].rango,
+    compararConfig[1].parcela, compararConfig[1].tipo, compararConfig[1].rango
+  ]);
+
   const [recomendaciones, setRecomendaciones] = useState([]);
   const [cargandoRecomendaciones, setCargandoRecomendaciones] = useState(false);
   const [errorConexion, setErrorConexion] = useState(false);
@@ -418,13 +501,51 @@ const DashboardAgricultor = () => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  // Formatea la fecha para mostrarla amigable
+ 
+   // Formatea la fecha para mostrarla amigable
   const formatearFecha = (fechaStr) => {
     try {
+      if (!fechaStr) return 'Sin fecha';
+      
+      // Si viene en formato "15/06/2025 15:11" (del backend)
+      if (fechaStr.includes('/')) {
+        const [fechaParte, horaParte] = fechaStr.split(' ');
+        const [dia, mes, año] = fechaParte.split('/');
+        
+        // Crear fecha válida: año-mes-dia hora
+        const fechaValida = new Date(`${año}-${mes}-${dia}T${horaParte || '00:00'}:00`);
+        
+        if (isNaN(fechaValida.getTime())) {
+          return fechaStr; // Devolver original si falla
+        }
+        
+        return fechaValida.toLocaleString('es-CL', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      // Para otros formatos ISO
       const fecha = new Date(fechaStr);
-      return fecha.toLocaleString();
+      
+      if (isNaN(fecha.getTime())) {
+        return fechaStr; // Devolver original si no es una fecha válida
+      }
+      
+      return fecha.toLocaleString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
     } catch (error) {
-      return fechaStr;
+      console.error('Error al formatear fecha:', error);
+      return fechaStr; // Devolver original en caso de error
     }
   };
 
@@ -454,6 +575,71 @@ const DashboardAgricultor = () => {
       </div>
     );
   }
+  
+  const renderGraficoComparar = (tipo, datos) => {
+  switch (tipo) {
+    case 'temperatura':
+    case 'humedad':
+    case 'ph':
+      return (
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={datos[tipo]}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaeaea" />
+            <XAxis 
+              dataKey="timestamp" 
+              tickFormatter={formatXAxis} 
+              stroke="#888"
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis 
+              domain={tipo === 'ph' ? [0, 14] : tipo === 'temperatura' ? [0, 40] : [0, 100]}
+              stroke="#888"
+              tick={{ fontSize: 12 }}
+              tickFormatter={(value) => tipo === 'humedad' ? `${value}%` : tipo === 'temperatura' ? `${value}°C` : value}
+            />
+            <Tooltip content={<CustomTooltip unidad={tipo === 'humedad' ? "%" : tipo === 'temperatura' ? "°C" : ""} />} />
+            <Legend />
+            <Line 
+              name={tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+              type="monotone" 
+              dataKey="valor" 
+              stroke={tipo === 'temperatura' ? "#e74c3c" : tipo === 'humedad' ? "#3498db" : "#9b59b6"} 
+              strokeWidth={2}
+              dot={{ r: 3, strokeWidth: 1 }}
+              activeDot={{ r: 5, strokeWidth: 2 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      );
+
+    case 'nutrientes':
+      const datosFiltrados = datos.nutrientes?.filter(d => d.valor?.nitrogeno != null) || [];
+      const dataFormateada = datosFiltrados.map(d => ({
+        timestamp: d.timestamp,
+        nitrogeno: d.valor.nitrogeno,
+        fosforo: d.valor.fosforo,
+        potasio: d.valor.potasio
+      }));
+      return (
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={dataFormateada}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="timestamp" tickFormatter={formatXAxis} />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="nitrogeno" fill="#8bc34a" name="Nitrógeno" />
+            <Bar dataKey="fosforo" fill="#ff9800" name="Fósforo" />
+            <Bar dataKey="potasio" fill="#9c27b0" name="Potasio" />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+
+    default:
+      return <div>No hay datos para mostrar.</div>;
+  }
+};
+
 
   return (
     <div className="dashboard-agricultor">
@@ -542,8 +728,8 @@ const DashboardAgricultor = () => {
                   <span>Cargando alertas...</span>
                 </div>
               ) : alertas.length > 0 ? (
-                alertas.map(alerta => (
-                  <div key={alerta.id} className="alerta-item">
+                                alertas.map(alerta => (
+                  <div key={alerta.id} className={`alerta-item severidad-${alerta.severidad}`}>
                     <div className={`alerta-severidad ${getSeveridadColor(alerta.severidad)}`}></div>
                     <div className="alerta-content">
                       <div className="alerta-header">
@@ -557,7 +743,7 @@ const DashboardAgricultor = () => {
                         <span className="alerta-fecha">{formatearFecha(alerta.timestamp)}</span>
                       </div>
                       <div className="alerta-footer">
-                        <span className="alerta-parcela">Parcela: {getParcelaNombre(alerta.parcela)}</span>
+                        <span className="alerta-parcela">Parcela: {alerta.parcela}</span>
                         <div className="alerta-actions">
                           <button 
                             className="btn-alerta-resolver" 
@@ -566,11 +752,12 @@ const DashboardAgricultor = () => {
                             Resolver
                           </button>
                           <button 
-                            className="btn-alerta-mas"
+                            className="btn-consultar-ia"
                             onClick={() => consultarAsistente('general', alerta.parcela, getParcelaNombre(alerta.parcela))}
-                            title="Consultar con IA"
+                            title="Consultar con IA sobre esta alerta"
                           >
                             <i className="fas fa-robot"></i>
+                            IA
                           </button>
                         </div>
                       </div>
@@ -610,7 +797,7 @@ const DashboardAgricultor = () => {
                 {/* Selector de parcela */}
                 <select 
                   value={parcelaSeleccionada || ''}
-                  onChange={(e) => setParcelaSeleccionada(e.target.value || null)}
+                  onChange={e => setParcelaSeleccionada(e.target.value || null)}
                   className="selector-parcela"
                 >
                   <option value="">Todas las parcelas</option>
@@ -644,6 +831,13 @@ const DashboardAgricultor = () => {
                     onClick={toggleGraficosPopup}
                   >
                     <i className="fas fa-chart-line"></i> Ver más sensores
+                  </button>
+                  <button 
+                    className="btn-graficos"
+                    style={{ marginLeft: 8 }}
+                    onClick={toggleCompararPopup}
+                  >
+                    <i className="fas fa-sliders-h"></i> Comparar 
                   </button>
                 </div>
               </div>
@@ -960,7 +1154,7 @@ const DashboardAgricultor = () => {
                           name="pH"
                           type="monotone" 
                           dataKey="valor" 
-                          stroke="#8884d8" 
+                          stroke="#9b59b6" 
                           strokeWidth={2}
                           dot={{ r: 3, strokeWidth: 1 }}
                           activeDot={{ r: 5, strokeWidth: 2 }}
@@ -1050,6 +1244,92 @@ const DashboardAgricultor = () => {
                 <span>Parcela: {parcelaSeleccionada ? getParcelaNombre(parcelaSeleccionada) : 'Todas'}</span>
               </div>
               <button className="btn-cerrar-secundario" onClick={toggleGraficosPopup}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NUEVO: Popup comparar sensores */}
+      {mostrarCompararPopup && (
+        <div className="graficos-popup-overlay">
+          <div className="graficos-popup-container">
+            <div className="graficos-popup-header">
+              <h2>Comparar Lectura de Sensores</h2>
+              <button className="btn-cerrar" onClick={toggleCompararPopup}>×</button>
+            </div>
+            <div className="graficos-popup-content" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              {[0, 1].map(idx => (
+                <div className="grafico-item" key={idx}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
+                    {/* Selector de parcela */}
+                    <select
+                      value={compararConfig[idx].parcela || ''}
+                      onChange={e => {
+                        const val = e.target.value || null;
+                        setCompararConfig(prev => {
+                          const nuevo = [...prev];
+                          nuevo[idx].parcela = val;
+                          return [...nuevo];
+                        });
+                      }}
+                      className="selector-parcela"
+                      style={{ minWidth: 120 }}
+                    >
+                      <option value="">Seleccione parcela</option>
+                      {parcelas.map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                    </select>
+                    {/* Selector de tipo de gráfico */}
+                    <label>
+                      Sensor:
+                      <select
+                        value={compararConfig[idx].tipo}
+                        onChange={e => {
+                          setCompararConfig(prev => {
+                            const nuevo = [...prev];
+                            nuevo[idx].tipo = e.target.value;
+                            return [...nuevo];
+                          });
+                        }}
+                        className="selector-parcela"
+                        style={{ marginLeft: 8, minWidth: 120 }}
+                      >
+                        <option value="temperatura">Temperatura</option>
+                        <option value="humedad">Humedad</option>
+                        <option value="ph">pH</option>
+                        <option value="nutrientes">Nutrientes</option>
+                      </select>
+                    </label>
+                    {/* Selector de rango de tiempo */}
+                    <label>
+                      Rango:
+                      <select
+                        value={compararConfig[idx].rango}
+                        onChange={e => {
+                          setCompararConfig(prev => {
+                            const nuevo = [...prev];
+                            nuevo[idx].rango = e.target.value;
+                            return [...nuevo];
+                          });
+                        }}
+                        className="selector-parcela"
+                        style={{ marginLeft: 8, minWidth: 90 }}
+                      >
+                        <option value="24h">24h</option>
+                        <option value="7d">7d</option>
+                        <option value="30d">30d</option>
+                      </select>
+                    </label>
+                  </div>
+                  {/* Mostrar el gráfico correspondiente según selección */}
+                  {renderGraficoComparar(compararConfig[idx].tipo, compararConfig[idx].datos)}
+                </div>
+              ))}
+            </div>
+            <div className="graficos-popup-footer">
+              <span style={{ color: '#666', fontSize: 14 }}>Selecciona el sensor, rango y parcela para cada gráfico</span>
+              <button className="btn-cerrar-secundario" onClick={toggleCompararPopup}>Cerrar</button>
             </div>
           </div>
         </div>

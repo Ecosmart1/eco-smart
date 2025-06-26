@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import './sensores.css';
 import "./vistascompartidas.css";
 import SensorService from '../services/serviciossensores';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [sensores, setSensores] = useState([]);
@@ -18,18 +20,23 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   // NUEVO: Estado para condición seleccionada y popup de simulación terminada
   const [condicionSeleccionada, setCondicionSeleccionada] = useState(null);
   const [popupMensaje, setPopupMensaje] = useState('');
+  const [tiempoRestante, setTiempoRestante] = useState(null);
+  const [toastMostrado, setToastMostrado] = useState(false);
 
   // Obtener información del usuario almacenada al iniciar sesión
   const [user, setUser] = useState(() => {
     const userStr = localStorage.getItem('ecosmart_user');
     return userStr ? JSON.parse(userStr) : null;
-  });
+  }); 
 
   // NUEVO: Función para cargar parcelas
   const fetchParcelas = async () => {
     try {
       setCargandoParcelas(true);
-      const response = await fetch(`${API_URL}/parcelas`);
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      const response = await fetch(`${API_URL}/parcelas`, {
+        headers: { 'X-User-Id': user.id }
+      });
       if (!response.ok) {
         throw new Error('Error al cargar las parcelas');
       }
@@ -114,13 +121,13 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   useEffect(() => {
     if (!simulacionActiva) {
       fetchDatosSensores();
-      // Mostrar popup cuando termina la simulación
-      if (condicionSeleccionada) {
-        setPopupMensaje('¡La simulación ha terminado!');
-        setTimeout(() => setPopupMensaje(''), 3000);
+      // Mostrar toast cuando termina la simulación
+      if (condicionSeleccionada) { // Solo muestra el toast si terminó por una condición
+        toast.info('¡La simulación ha terminado!', { position: "top-right", autoClose: 3500 });
       }
     }
-  }, [simulacionActiva]);
+  }, [simulacionActiva, condicionSeleccionada]); // Añadir condicionSeleccionada como dependencia
+
 
   const fetchDatosSensores = async () => {
     try {
@@ -134,13 +141,13 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
       // Detectar si la simulación terminó
       if (data.simulacion_activa === false && simulacionActiva) {
         setSimulacionActiva(false);
-        setPopupMensaje('¡La simulación ha terminado!');
-        setTimeout(() => setPopupMensaje(''), 3000);
       }
     } catch (err) {
       setError(err.message);
     }
   };
+
+  const [simulacionActivaAnterior, setSimulacionActivaAnterior] = useState(simulacionActiva);
 
   // MODIFICADO: Iniciar simulación con parámetros y parcela seleccionada
   const iniciarSimulacionConParametros = async (params = null) => {
@@ -166,27 +173,33 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
       const data = await response.json();
       alert(data.mensaje);
       setSimulacionActiva(true);
+      setTimeout(fetchTiempoRestante, 200); // Fetch inmediato tras iniciar
     } catch (err) {
       setError(err.message);
     }
   };
+
 
   const iniciarSimulacion = () => iniciarSimulacionConParametros();
 
+  // MODIFICADO: Mostrar toast también al detener manualmente
   const detenerSimulacion = async () => {
-    try {
-      const response = await fetch(`${API_URL}/simulacion/detener`, {
-        method: 'POST'
-      });
-      const data = await response.json();
-      alert(data.mensaje); // Solo alert, NO setPopupMensaje aquí
-      setSimulacionActiva(false);
-      return true;
-    } catch (err) {
-      setError(err.message);
-      return false;
-    }
-  };
+  try {
+    const response = await fetch(`${API_URL}/simulacion/detener`, {
+      method: 'POST'
+    });
+    const data = await response.json();
+    alert(data.mensaje); // Puedes quitar este alert si solo quieres el toast
+    setSimulacionActiva(false);
+    setCondicionSeleccionada(null); // Reiniciar la condición seleccionada
+    setTiempoRestante(0); // Reset contador
+    return true;
+  } catch (err) {
+    setError(err.message);
+    return false;
+  }
+};
+
 
   const exportar_csv = async () => {
     try {
@@ -198,30 +211,31 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
 
   // MODIFICADO: simularCondicion ahora marca la condición seleccionada
   const simularCondicion = async (condicion) => {
-    try {
-      setCondicionSeleccionada(condicion);
-      const response = await fetch(`${API_URL}/condiciones/${condicion}`, {
-        method: 'POST'
-      });
-      const data = await response.json();
+  try {
+    setCondicionSeleccionada(condicion); // Añadir esta línea
+    const response = await fetch(`${API_URL}/condiciones/${condicion}`, {
+      method: 'POST'
+    });
+    const data = await response.json();
+    
+    // Actualizar los parámetros locales con los recibidos del servidor
+    if (data.parametros) {
+      setParametros(data.parametros);
       
-      // Actualizar los parámetros locales con los recibidos del servidor
-      if (data.parametros) {
-        setParametros(data.parametros);
-        
-        // También actualizar el servicio para que otros componentes se enteren
-        if (SensorService && typeof SensorService.guardarParametrosDesdeCondicion === 'function') {
-          await SensorService.guardarParametrosDesdeCondicion(data.parametros);
-        } else if (SensorService && typeof SensorService.guardarParametros === 'function') {
-          await SensorService.guardarParametros(data.parametros);
-        }
-      } 
-      
-      alert(data.mensaje);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+      // También actualizar el servicio para que otros componentes se enteren
+      if (SensorService && typeof SensorService.guardarParametrosDesdeCondicion === 'function') {
+        await SensorService.guardarParametrosDesdeCondicion(data.parametros);
+      } else if (SensorService && typeof SensorService.guardarParametros === 'function') {
+        await SensorService.guardarParametros(data.parametros);
+      }
+    } 
+    
+    alert(data.mensaje);
+  } catch (err) {
+    setError(err.message);
+  }
+};
+
 
   // Botón de condición con color destacado si está seleccionada
   const botonCondicion = (cond, label) => (
@@ -233,6 +247,79 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
       {label}
     </button>
   );
+
+  // NUEVO: Función para actualizar el tiempo restante
+  const fetchTiempoRestante = async () => {
+    try {
+      const response = await fetch(`${API_URL}/simulacion/estado`);
+      if (!response.ok) throw new Error('Error al consultar estado de simulación');
+      const data = await response.json();
+      if (data.activa) {
+        setTiempoRestante(data.tiempo_restante_segundos);
+      } else {
+        setTiempoRestante(0);
+      }
+    } catch (e) {
+      setTiempoRestante(0);
+    }
+  };
+
+  // NUEVO: Intervalo para actualizar el contador de tiempo restante
+  useEffect(() => {
+    let interval = null;
+    if (simulacionActiva) {
+      // Polling para tiempo restante y estado de simulación
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_URL}/simulacion/estado`);
+          if (!response.ok) throw new Error('Error al consultar estado de simulación');
+          const data = await response.json();
+          setTiempoRestante(data.tiempo_restante_segundos);
+
+          // Si la simulación terminó en el backend, actualizar estado y mostrar mensaje instantáneo
+          if (data.activa === false && simulacionActiva) {
+            setSimulacionActiva(false);
+          }
+        } catch (e) {
+          setTiempoRestante(0);
+        }
+      }, 1000);
+    } else {
+      setTiempoRestante(0);
+    }
+    return () => clearInterval(interval);
+  }, [simulacionActiva, API_URL]);
+
+  // Mostrar toast y mensaje cuando termina la simulación (natural o manual)
+  useEffect(() => {
+    if (!simulacionActiva && !toastMostrado) {
+      toast.success('¡La simulación ha terminado!', {
+        position: "top-right",
+        autoClose: 3500,
+        style: { background: '#43a047', color: '#fff', fontWeight: 'bold' }
+      });
+      setPopupMensaje('¡La simulación ha terminado!');
+      setTimeout(() => setPopupMensaje(''), 3000);
+      setToastMostrado(true);
+    }
+    if (simulacionActiva) {
+      setToastMostrado(false);
+    }
+  }, [simulacionActiva, toastMostrado]);
+
+  // NUEVO: Detectar transición de simulación activa a inactiva para mostrar mensaje solo en ese caso
+  useEffect(() => {
+    if (simulacionActivaAnterior && !simulacionActiva) {
+      toast.success('¡La simulación ha terminado!', {
+        position: "top-right",
+        autoClose: 3500,
+        style: { background: '#43a047', color: '#fff', fontWeight: 'bold' }
+      });
+      setPopupMensaje('¡La simulación ha terminado!');
+      setTimeout(() => setPopupMensaje(''), 3000);
+    }
+    setSimulacionActivaAnterior(simulacionActiva);
+  }, [simulacionActiva, simulacionActivaAnterior]);
 
   if (loading) {
     return <div className="loading">Cargando sensores...</div>;
@@ -335,6 +422,13 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
                 )}
               </div>
             )}
+
+            {/* NUEVO: Mostrar contador de tiempo restante */}
+            {simulacionActiva && tiempoRestante > 0 && (
+              <div className="contador-tiempo-restante" style={{margin: '10px 0', fontWeight: 'bold', color: '#388e3c'}}>
+                Tiempo restante de simulación: {`${Math.floor(tiempoRestante/60)}:${String(tiempoRestante%60).padStart(2, '0')} min`}
+              </div>
+            )}
           </div>
           {popupMensaje && (
             <div className="popup-simulacion-terminada">
@@ -399,10 +493,9 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 }
 
 export default SensoresPanel;
-
-// --- Agrega esto a tu sensores.css ---

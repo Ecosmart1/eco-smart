@@ -19,6 +19,8 @@ CORS(app)  # Permitir solicitudes CORS para la API
 red_sensores = RedSensores()
 ultimos_datos= {}
 
+simulacion_timepo_inicio= None
+
 # Inicializar sensores predefinidos
 parametros = obtener_parametros_estacion()
 sensores_iniciales = [
@@ -230,7 +232,8 @@ def actualizar_parametros():
 @app.route('/api/simulacion/iniciar', methods=['POST'])
 def iniciar_simulacion():
     """Inicia la simulación continua utilizando la actualización centralizada"""
-    global simulacion_activa, hilo_simulacion, parametros_configurables
+    global simulacion_activa, hilo_simulacion, parametros_configurables, simulacion_tiempo_inicio
+
     
     if simulacion_activa:
         return jsonify({"mensaje": "La simulación ya está en ejecución"})
@@ -267,6 +270,7 @@ def iniciar_simulacion():
             print(f"Error al actualizar sensores: {e}")
     
     simulacion_activa = True
+    simulacion_tiempo_inicio = time.time()  # <-- Guarda el tiempo real de inicio
     hilo_simulacion = threading.Thread(target=simulacion_continua)
     hilo_simulacion.daemon = True
     hilo_simulacion.start()
@@ -280,12 +284,15 @@ def iniciar_simulacion():
 @app.route('/api/simulacion/detener', methods=['POST'])
 def detener_simulacion():
     """Detiene la simulación en segundo plano"""
-    global simulacion_activa, hilo_simulacion
+    global simulacion_activa, hilo_simulacion, simulacion_tiempo_inicio
+
     
     if not simulacion_activa:
         return jsonify({"mensaje": "La simulación no está en ejecución"})
     
     simulacion_activa = False
+    simulacion_tiempo_inicio = None  # <-- Reinicia el tiempo de inicio
+ 
     if hilo_simulacion and hilo_simulacion.is_alive():
         hilo_simulacion.join(timeout=2.0)
         hilo_simulacion = None
@@ -294,17 +301,15 @@ def detener_simulacion():
 
 @app.route('/api/simulacion/estado', methods=['GET'])
 def estado_simulacion():
-    """Devuelve el estado actual de la simulación"""
-    if not simulacion_activa:
+    global simulacion_tiempo_inicio
+    if not simulacion_activa or simulacion_tiempo_inicio is None:
         return jsonify({
             "activa": False,
             "mensaje": "No hay simulación activa"
         })
     
-    # Calcular tiempo restante
     duracion_segundos = parametros_configurables["simulacion"]["duracion"] * 60
-    tiempo_inicio = time.time() - (parametros_configurables["simulacion"]["intervalo"] * 5)  # Aproximado
-    tiempo_restante = max(0, (tiempo_inicio + duracion_segundos) - time.time())
+    tiempo_restante = max(0, (simulacion_tiempo_inicio + duracion_segundos) - time.time())
     
     return jsonify({
         "activa": True,

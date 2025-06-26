@@ -13,7 +13,7 @@ body {
   color: #333;
 }
 
-.ecosmart-dashboard {
+ecosmart-dashboard {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -279,6 +279,21 @@ body {
   border: 1px solid #eaeaea;
 }
 
+.alerta-card button {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  width: 35px !important;
+  height: 35px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 .alerta-card-icon {
   width: 40px;
   height: 40px;
@@ -286,7 +301,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(244, 67, 54, 0.1);
+  background-color: rgba(12, 86, 25, 0.1);
 }
 
 .alerta-card-icon i {
@@ -333,7 +348,7 @@ body {
 }
 
 .alerta-status.optimo {
-  background-color: rgba(34, 150, 62, 0.1);
+  background-color: rgba(7, 78, 24, 0.1);
   color: #22963e;
 }
 
@@ -600,6 +615,7 @@ body {
   border-radius: 4px;
   font-size: 0.8rem;
   cursor: pointer;
+
 }
 
 .btn-alerta-mas {
@@ -612,6 +628,7 @@ body {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  
 }
 
 /* Estilos para meteorología */
@@ -2448,3 +2465,4 @@ body {
 .panel-header {
   position: relative;
 }
+

@@ -40,6 +40,7 @@ class Parcela(db.Model):
     fecha_creacion = db.Column(db.DateTime, nullable=True)
     cultivo_actual = db.Column(db.String(100), nullable=True)
     fecha_siembra = db.Column(db.Date, nullable=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=True)  # Nueva FK
     
     # AGREGAR: Relación con cultivos
     cultivos = db.relationship('DetalleCultivo', backref='parcela', lazy=True, cascade='all, delete-orphan')
@@ -48,7 +49,7 @@ class Parcela(db.Model):
         """Obtiene el cultivo activo actual de la parcela"""
         return DetalleCultivo.query.filter_by(parcela_id=self.id, activo=True).first()
 
-# ...existing code...
+
     
 class Conversacion(db.Model):
     __tablename__ = 'conversaciones'
@@ -133,4 +134,118 @@ class DetalleCultivo(db.Model):
             edad = self.calcular_edad_dias()
             return min(100, (edad / self.dias_cosecha_estimados) * 100)
         return 0
+    
+# AGREGAR al final del archivo, después de la clase DetalleCultivo:
+
+class RangoParametro(db.Model):
+    __tablename__ = 'rangos_parametros'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tipo_parametro = db.Column(db.String(50), nullable=False)  # 'temperatura', 'humedad', 'ph'
+    cultivo = db.Column(db.String(100), nullable=True)  # null = global, específico = por cultivo
+    parcela_id = db.Column(db.Integer, db.ForeignKey('parcelas.id'), nullable=True)  # null = global
+    valor_minimo = db.Column(db.Float, nullable=False)
+    valor_maximo = db.Column(db.Float, nullable=False)
+    alerta_baja = db.Column(db.Float, nullable=True)  # Para alertas tempranas
+    alerta_alta = db.Column(db.Float, nullable=True)
+    critico_bajo = db.Column(db.Float, nullable=True)  # Para alertas críticas
+    critico_alto = db.Column(db.Float, nullable=True)
+    activo = db.Column(db.Boolean, default=True)
+    fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    fecha_modificacion = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    
+    # Relación con parcela
+    parcela = db.relationship('Parcela', backref=db.backref('rangos_parametros', lazy=True))
+    
+    def __repr__(self):
+        return f'<RangoParametro {self.tipo_parametro} {self.cultivo or "Global"}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tipo_parametro': self.tipo_parametro,
+            'cultivo': self.cultivo,
+            'parcela_id': self.parcela_id,
+            'parcela_nombre': self.parcela.nombre if self.parcela else None,
+            'valor_minimo': self.valor_minimo,
+            'valor_maximo': self.valor_maximo,
+            'alerta_baja': self.alerta_baja,
+            'alerta_alta': self.alerta_alta,
+            'critico_bajo': self.critico_bajo,
+            'critico_alto': self.critico_alto,
+            'activo': self.activo,
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'fecha_modificacion': self.fecha_modificacion.isoformat() if self.fecha_modificacion else None
+        }
+    
+    @staticmethod
+    def obtener_rango_para_parametro(tipo_parametro, cultivo=None, parcela_id=None):
+        """
+        Obtiene el rango más específico para un parámetro
+        Prioridad: parcela específica > cultivo específico > global
+        """
+        # 1. Buscar rango específico de parcela
+        if parcela_id:
+            rango_parcela = RangoParametro.query.filter_by(
+                tipo_parametro=tipo_parametro,
+                parcela_id=parcela_id,
+                activo=True
+            ).first()
+            if rango_parcela:
+                return rango_parcela
+        
+        # 2. Buscar rango específico de cultivo
+        if cultivo:
+            rango_cultivo = RangoParametro.query.filter_by(
+                tipo_parametro=tipo_parametro,
+                cultivo=cultivo,
+                parcela_id=None,
+                activo=True
+            ).first()
+            if rango_cultivo:
+                return rango_cultivo
+        
+        # 3. Buscar rango global
+        rango_global = RangoParametro.query.filter_by(
+            tipo_parametro=tipo_parametro,
+            cultivo=None,
+            parcela_id=None,
+            activo=True
+        ).first()
+        
+        return rango_global
+    
+    def determinar_severidad(self, valor):
+        """
+        Determina la severidad de una anomalía basada en el valor
+        """
+        # Valor dentro del rango normal
+        if self.valor_minimo <= valor <= self.valor_maximo:
+            return None  # No hay anomalía
+        
+        # Valor fuera del rango crítico
+        if (self.critico_bajo and valor < self.critico_bajo) or \
+           (self.critico_alto and valor > self.critico_alto):
+            return 'alto'
+        
+        # Valor fuera del rango de alerta
+        if (self.alerta_baja and valor < self.alerta_baja) or \
+           (self.alerta_alta and valor > self.alerta_alta):
+            return 'medio'
+        
+        # Valor fuera del rango normal pero no en alerta
+        return 'medio'
+    
+    def obtener_mensaje_anomalia(self, valor, tipo_parametro):
+        """
+        Genera el mensaje descriptivo de la anomalía
+        """
+        if valor < self.valor_minimo:
+            diferencia = self.valor_minimo - valor
+            return f"{tipo_parametro.title()} muy baja: {valor} (mín. esperado: {self.valor_minimo})"
+        elif valor > self.valor_maximo:
+            diferencia = valor - self.valor_maximo
+            return f"{tipo_parametro.title()} muy alta: {valor} (máx. esperado: {self.valor_maximo})"
+        else:
+            return f"{tipo_parametro.title()} fuera de rango: {valor}"
 

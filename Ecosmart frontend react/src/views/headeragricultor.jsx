@@ -167,7 +167,7 @@ const HeaderAgricultor = ({ activeItem }) => {
           <div className="user-menu-icon">▼</div>
           {menuAbierto && (
             <div className="user-dropdown-menu">
-              <Link to="/configuracion" className="dropdown-item">Configuración</Link>
+              <Link to="/agricultor/configuracion" className="dropdown-item">Configuración</Link>
               <div className="dropdown-divider"></div>
               <div className="dropdown-item" onClick={cerrarSesion}>Cerrar Sesión</div>
             </div>

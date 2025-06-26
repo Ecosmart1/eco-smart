@@ -148,6 +148,7 @@ return (
               autoComplete="current-password"
             />
           </label>
+          <hr />
           <label>
             Nueva contraseña:
             <input

@@ -29,6 +29,11 @@ import {
 } from '../services/servicioOpenrouter.js';
 import Markdown from 'markdown-to-jsx';
 
+import DetectorAnomalias from './DetectorAnomalias';
+
+import DetalleParcela from './DetalleParcela'; // Asegúrate de tener este import si usas rutas anidadas
+
+
 const API_URL = "http://localhost:5000/api";
 
 const DashboardAgronomo = () => {
@@ -752,7 +757,7 @@ const DashboardAgronomo = () => {
   const totalParcelas = parcelas.length;
   const totalAlertas = alertas.length;
   const alertasCriticas = alertas.filter(a => a.severidad === 'critico').length;
-  const alertasModerate = alertas.filter(a => a.severidad === 'alerta').length;
+  const alertasModerate = alertas.filter(a => a.severidad === 'moderado').length;
   const parcelasConAlertas = alertas.length > 0 ? [...new Set(alertas.map(a => a.parcela))].length : 0;
   const parcelasOptimas = totalParcelas - parcelasConAlertas;
 
@@ -789,14 +794,39 @@ const DashboardAgronomo = () => {
   };
 
   // Formatea la fecha para mostrarla amigable
-  const formatearFecha = (fechaStr) => {
-    try {
-      const fecha = new Date(fechaStr);
-      return fecha.toLocaleString();
-    } catch (error) {
-      return fechaStr;
+  // Formatea la fecha para mostrarla amigable
+const formatearFecha = (fechaStr) => {
+  try {
+    if (!fechaStr) return 'Sin fecha';
+    
+    // Si viene en formato "15/06/2025 15:11" (del backend)
+    if (fechaStr.includes('/')) {
+      const [fechaParte, horaParte] = fechaStr.split(' ');
+      const [dia, mes, año] = fechaParte.split('/');
+      
+      // Crear fecha válida: año-mes-dia hora
+      const fechaValida = new Date(`${año}-${mes}-${dia}T${horaParte || '00:00'}:00`);
+      
+      if (isNaN(fechaValida.getTime())) {
+        return fechaStr; // Devolver original si falla
+      }
+      
+      return fechaValida.toLocaleString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
-  };
+    
+    // Para otros formatos
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleString();
+  } catch (error) {
+    return fechaStr; // Devolver original en caso de error
+  }
+};
 
   return (
     <div className="ecosmart-dashboard">
@@ -880,7 +910,7 @@ const DashboardAgronomo = () => {
                       </div>
                       <div className="alerta-card-info">
                         <h3>{alerta.tipo}</h3>
-                        <p>Parcela: {obtenerNombreParcela(alerta.parcela)}</p>
+                        <p>{obtenerNombreParcela(alerta.parcela)}</p>
                         <p>Valor: {alerta.valor} {alerta.tipo.toLowerCase().includes('temperatura') ? '°C' : 
                                   alerta.tipo.toLowerCase().includes('humedad') ? '%' : ''}</p>
                         <p>Fecha: {formatearFecha(alerta.timestamp)}</p>
@@ -905,6 +935,10 @@ const DashboardAgronomo = () => {
                 )}
               </div>
             </div>
+          </div>
+           {/*Widget de Anomalías  */}
+          <div className="col-lg-12 mb-4">
+            <DetectorAnomalias mostrarResumen={true} />
           </div>
 
           <div className="ecosmart-panel estado-cultivos-panel">
@@ -1201,16 +1235,37 @@ const DashboardAgronomo = () => {
                 <i className="fas fa-plus"></i> Nueva Parcela
               </button>
             </div>
-            
+
+            {/* UNIFICADO: Todas las tarjetas de parcelas en un solo div */}
             <div className="parcelas-grid">
               {parcelas.slice(0, 6).map(parcela => (
                 <div key={parcela.id} className="parcela-card">
-                  <div className={`parcela-estado-indicator ${parcela.estado}`}></div>
-                  <h3>Plantación: {parcela.cultivo_actual}</h3>
-                  <p>Variedad: {parcela.variedad}</p>
-                  <p>Edad: {parcela.edad}</p>
-                  <p>Ubicación: {parcela.ubicacion}</p>
-                  <p>Hectáreas: {parcela.hectareas} ha</p>
+                  <h2 className="parcela-nombre" style={{ marginBottom: 4 }}>{parcela.nombre}</h2>
+                  <div style={{ marginBottom: 8, color: '#22963e', fontWeight: 500, fontSize: '1em' }}>
+                    Dueño: {parcela.usuario_nombre ? parcela.usuario_nombre : 'Sin asignar'}
+                    {parcela.usuario_email && (
+                      <span style={{ color: '#888', fontSize: '0.95em' }}> ({parcela.usuario_email})</span>
+                    )}
+                  </div>
+                  {parcela.cultivo && (
+                    <div style={{ marginTop: 4, fontSize: '0.95em', color: '#444' }}>
+                      <div className={`parcela-estado-indicator ${parcela.estado}`}></div>
+                      <h3><b>Plantación:</b> {parcela.cultivo_actual}</h3>
+                      <div><b>Ubicación:</b> {parcela.ubicacion}</div>
+                      <div><b>Coordenadas:</b> {parcela.latitud && parcela.longitud ? `${parcela.latitud}, ${parcela.longitud}` : '-'}</div>
+                      <div><b>Hectáreas:</b> {parcela.hectareas} ha</div>
+                      <div><b>Fecha de siembra:</b> {parcela.fecha_siembra
+                        ? (typeof parcela.fecha_siembra === 'string'
+                            ? new Date(parcela.fecha_siembra).toLocaleDateString()
+                            : new Date(parcela.fecha_siembra).toLocaleDateString())
+                        : '-'}</div>
+                      <div><b>Fecha de creación parcela:</b> {parcela.fecha_creacion
+                        ? (typeof parcela.fecha_creacion === 'string'
+                            ? new Date(parcela.fecha_creacion).toLocaleDateString()
+                            : new Date(parcela.fecha_creacion).toLocaleDateString())
+                        : '-'}</div>
+                    </div>
+                  )}
                   <div className="parcela-btn-container">
                     <Link to={`/dashboard/agronomo/parcelas/${parcela.id}`}>
                       <button className="parcela-btn">Ver Detalles</button>

@@ -59,8 +59,12 @@ class ServicioRecomendaciones {
     }
     
     try {
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
       const response = await fetch(`${API_URL}/parcelas`, {
-        headers: this.getAuthHeaders()
+        headers: {
+          ...this.getAuthHeaders(),
+          'X-User-Id': user.id || ''
+        }
       });
       
       if (response.ok) {

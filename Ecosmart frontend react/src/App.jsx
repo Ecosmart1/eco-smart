@@ -35,7 +35,9 @@ import EstadoCultivos from './views/EstadoCultivos';
 import DetalleCultivo from './views/DetalleCultivo';
 import AlertasAgricultor from './views/AlertasAgricultor';
 import AlertasAgronomo from './views/AlertasAgricultor';
+import AlertasTecnico from './views/AlertasTecnico'; // <-- AGREGA ESTA LÍNEA
 import InformesInteractivos from './views/InformesInteractivos';
+
 
 /**
  * Componente principal de la aplicación
@@ -250,7 +252,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      <AlertasAgronomo />
+      <AlertasTecnico />
     </div>
   </div>
 } />
@@ -259,7 +261,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      <DetalleParcela API_URL={API_URL} />
+      <DetalleParcela />
     </div>
   </div>
 } />
@@ -298,6 +300,16 @@ function App() {
   </div>
 } />
 
+
+<Route path="/dashboard/agronomo/sensores" element={
+  <div className="app-container">
+    <HeaderAgronomo />
+    <div className="content-container">
+      <SensoresPanel API_URL={API_URL} />
+    </div>
+  </div>
+} />
+
 <Route path="/dashboard/agronomo/parcelas/editar/:id" element={
   <div className="app-container">
     <HeaderAgronomo activeItem="parcelas" />
@@ -308,7 +320,7 @@ function App() {
 } />
         
         {/* ===== CONFIGURACIÓN GENERAL ===== */}
-        <Route path="/configuracion" element={
+        <Route path="/tecnico/configuracion" element={
           <div className="app-container">
             <HeaderTecnico />
             <div className="content-container">
@@ -316,6 +328,26 @@ function App() {
             </div>
           </div>
         } />
+
+    
+    <Route path="/agricultor/configuracion" element={
+          <div className="app-container">
+            <HeaderAgricultor />
+            <div className="content-container">
+              <Configuracion />
+            </div>
+          </div>
+        } />
+
+    <Route path="/agronomo/configuracion" element={
+          <div className="app-container">
+            <HeaderAgronomo />
+            <div className="content-container">
+              <Configuracion />
+            </div>
+          </div>
+        } />
+
       </Routes>
     </Router>
     </AlertasProvider>

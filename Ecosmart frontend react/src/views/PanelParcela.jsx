@@ -16,7 +16,10 @@ const PanelParcelas = () => {
     const fetchParcelasYClima = async () => {
       setCargando(true);
       try {
-        const response = await fetch('http://localhost:5000/api/parcelas');
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+        const response = await fetch('http://localhost:5000/api/parcelas', {
+          headers: { 'X-User-Id': user.id }
+        });
         if (!response.ok) throw new Error('Error al cargar las parcelas');
         const data = await response.json();
         setParcelas(data);

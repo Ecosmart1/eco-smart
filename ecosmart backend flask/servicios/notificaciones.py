@@ -166,11 +166,11 @@ Este es un mensaje automático del sistema EcoSmart. Por favor, no respondas a e
             logger.info(f"Enviando correo desde {SMTP_CONFIG['remitente']} a {destinatario}")
             server.sendmail(SMTP_CONFIG['remitente'], destinatario, msg.as_string())
             
-        logger.info(f"✅ Notificación de alerta enviada correctamente a {destinatario}")
+        logger.info(f" Notificación de alerta enviada correctamente a {destinatario}")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Error al enviar correo de alerta: {e}", exc_info=True)
+        logger.error(f" Error al enviar correo de alerta: {e}", exc_info=True)
         return False
 
 

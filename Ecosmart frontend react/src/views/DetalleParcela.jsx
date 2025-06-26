@@ -11,7 +11,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { FaArrowLeft, FaEdit, FaTrash, FaSeedling } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaSeedling, FaMountain, FaMap } from 'react-icons/fa';
 import L from 'leaflet';
 import './DetalleParcela.css';
 import MeteorologiaWidget from './MeteorologiaWidget';
@@ -19,6 +19,8 @@ import { Icon } from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import servicioMeteo from '../services/servicioMeteo';
+import servicioRecomendaciones from '../services/servicioRecomendaciones';
 
 // Corregir el ícono de Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -38,7 +40,10 @@ const defaultIcon = new Icon({
   shadowSize: [41, 41]
 });
 
-const DetalleParcela = ({ API_URL }) => {
+const API_URL = "http://localhost:5000/api";
+const OPENWEATHERMAP_API_KEY = "1b6ee1662a615e3930de913f12f852be"; // <-- PON AQUÍ TU API KEY
+
+const DetalleParcela = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [parcela, setParcela] = useState(null);
@@ -46,6 +51,10 @@ const DetalleParcela = ({ API_URL }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [pronostico, setPronostico] = useState([]);
+  const [recomendacionClima, setRecomendacionClima] = useState('');
+  const [cargandoRecomendacion, setCargandoRecomendacion] = useState(false);
+  const [showOWMHeatmap, setShowOWMHeatmap] = useState(false);
 
   // Obtener el rol del usuario al montar el componente
   useEffect(() => {
@@ -86,11 +95,12 @@ const DetalleParcela = ({ API_URL }) => {
     const fetchParcelaData = async () => {
       try {
         setLoading(true);
-        
+        const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
         // Obtener datos de la parcela
-        const response = await axios.get(`${API_URL}/parcelas/${id}`);
+        const response = await axios.get(`${API_URL}/parcelas/${id}`, {
+          headers: { 'X-User-Id': user.id }
+        });
         setParcela(response.data);
-        
         
         setLoading(false);
       } catch (err) {
@@ -104,18 +114,106 @@ const DetalleParcela = ({ API_URL }) => {
   }, [id, API_URL]);
   
   // Función para eliminar parcela
-  const handleDelete = async () => {
-    if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
-      try {
-        await axios.delete(`${API_URL}/parcelas/${id}`);
-        navigate(`${getBaseRoute()}/parcelas`);
-      } catch (err) {
-        console.error('Error al eliminar parcela:', err);
-        setError('Error al eliminar la parcela. Intente nuevamente más tarde.');
+  // Función para eliminar parcela (CORREGIDA)
+const handleDelete = async () => {
+  if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
+    try {
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      
+      if (!user.id) {
+        setError('Error: Usuario no autenticado');
+        return;
+      }
+      
+      console.log('🔍 DEBUG: Eliminando parcela desde DetalleParcela:', id, 'Usuario:', user.id, 'Rol:', user.rol);
+      
+      // 🔧 AGREGAR HEADERS NECESARIOS
+      await axios.delete(`${API_URL}/parcelas/${id}`, {
+        headers: { 
+          'X-User-Id': user.id,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ DEBUG: Parcela eliminada exitosamente desde DetalleParcela');
+      
+      // Navegar de vuelta a la lista
+      navigate(`${getBaseRoute()}/parcelas`, {
+        state: { successMessage: 'Parcela eliminada exitosamente' }
+      });
+      
+    } catch (err) {
+      console.error('❌ DEBUG: Error al eliminar parcela desde DetalleParcela:', err);
+      console.error('Status:', err.response?.status);
+      console.error('Data:', err.response?.data);
+      
+      // Manejo específico para error 403
+      if (err.response?.status === 403) {
+        const errorMessage = err.response?.data?.detalle || 
+                           'No tienes permisos para eliminar esta parcela. Solo el propietario o un agrónomo pueden eliminarla.';
+        setError(errorMessage);
+      } else {
+        const errorMessage = err.response?.data?.error || err.message || 'Error desconocido';
+        setError(`Error al eliminar la parcela: ${errorMessage}`);
       }
     }
-  };
+  }
+};
   
+  // Obtener pronóstico de 5 días al cargar la parcela
+  useEffect(() => {
+    const cargarPronostico = async () => {
+      if (parcela && parcela.latitud && parcela.longitud) {
+        try {
+          const datos = await servicioMeteo.obtenerPronostico(parcela.latitud, parcela.longitud);
+          setPronostico(datos.pronostico || []);
+        } catch (err) {
+          setPronostico([]);
+        }
+      }
+    };
+    cargarPronostico();
+  }, [parcela]);
+
+  // Usar endpoint Flask para recomendaciones basadas en clima
+  useEffect(() => {
+    const obtenerRecomendacionClima = async () => {
+      if (pronostico.length > 0 && parcela) {
+        setCargandoRecomendacion(true);
+        try {
+          // Llama directamente al endpoint Flask que creaste
+          const response = await axios.post(
+            `${API_URL}/asistente/recomendar`,
+            {
+              parcela: {
+                id: parcela.id,
+                nombre: parcela.nombre,
+                cultivo: parcela.cultivo_actual,
+                ubicacion: parcela.ubicacion,
+                latitud: parcela.latitud,
+                longitud: parcela.longitud,
+                hectareas: parcela.hectareas,
+                fecha_siembra: parcela.fecha_siembra
+              },
+              pronostico: pronostico
+            }
+          );
+          const recomendaciones = response.data?.recomendaciones;
+          setRecomendacionClima(
+            Array.isArray(recomendaciones)
+              ? recomendaciones
+              : [recomendaciones || 'No se pudo obtener recomendación de la IA.']
+          );
+        } catch (err) {
+          setRecomendacionClima(['No se pudo obtener recomendación de la IA.']);
+        } finally {
+          setCargandoRecomendacion(false);
+        }
+      }
+    };
+    obtenerRecomendacionClima();
+  }, [pronostico, parcela, API_URL]);
+
   // Mostrar spinner mientras carga
   if (loading) {
     return (
@@ -181,7 +279,15 @@ const DetalleParcela = ({ API_URL }) => {
       
       {/* Título de la parcela */}
       <h2 className="mb-4">{parcela.nombre}</h2>
-      
+
+      {userRole === 'agronomo' && (
+        <div style={{ marginBottom: 18, marginTop: -18, color: '#22963e', fontWeight: 500, fontSize: '1.08em' }}>
+          Dueño: {parcela.usuario_nombre ? parcela.usuario_nombre : 'Sin asignar'}
+          {parcela.usuario_email && (
+            <span style={{ color: '#888', fontSize: '0.95em' }}> ({parcela.usuario_email})</span>
+          )}
+        </div>
+      )}
       <Row>
         {/* Columna izquierda - Información general y mapa */}
         <Col lg={7}>
@@ -218,6 +324,48 @@ const DetalleParcela = ({ API_URL }) => {
                     <td><strong>Coordenadas:</strong></td>
                     <td>{parcela.latitud}, {parcela.longitud}</td>
                   </tr>
+                  {/* Mostrar dueño y detalles de cultivo solo para agrónomo */}
+                  {userRole === 'agronomo' && (
+                    <>
+                      <tr>
+                        <td><strong>Etapa:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.etapa_desarrollo}</td>
+                      </tr>
+                    
+                      <tr>
+                        <td><strong>Variedad:</strong></td>
+                        <td>{parcela.variedad || (parcela.cultivo && parcela.cultivo.variedad) || '-'}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Edad:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.edad_dias ? `${parcela.cultivo.edad_dias} días` : (parcela.edad || '-')}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Coordenadas:</strong></td>
+                        <td>{parcela.latitud && parcela.longitud ? `${parcela.latitud}, ${parcela.longitud}` : '-'}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Hectáreas:</strong></td>
+                        <td>{parcela.hectareas ? `${parcela.hectareas} ha` : '-'}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Fecha de creación parcela:</strong></td>
+                        <td>
+                          {parcela.fecha_creacion
+                            ? (typeof parcela.fecha_creacion === 'string'
+                                ? new Date(parcela.fecha_creacion).toLocaleDateString()
+                                : new Date(parcela.fecha_creacion).toLocaleDateString())
+                            : '-'}
+                        </td>
+                      </tr>
+                      
+                      
+                      <tr>
+                        <td><strong>Progreso cosecha:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.progreso_cosecha}%</td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </Table>
             </Card.Body>
@@ -225,8 +373,15 @@ const DetalleParcela = ({ API_URL }) => {
           
           {/* Mapa */}
           <Card className="mb-4 shadow-sm">
-            <Card.Header className="bg-primary text-white">
+            <Card.Header className="bg-primary text-white d-flex justify-content-between align-items-center">
               <h4 className="mb-0">Ubicación</h4>
+              <Button
+                variant={showOWMHeatmap ? "secondary" : "success"}
+                size="sm"
+                onClick={() => setShowOWMHeatmap(v => !v)}
+              >
+                {showOWMHeatmap ? <> <FaMap /> Mapa base</> : (<><FaMountain /> Mapa Topográfico</>)}
+              </Button>
             </Card.Header>
             <Card.Body className="p-0">
               {parcela.latitud && parcela.longitud ? (
@@ -247,6 +402,15 @@ const DetalleParcela = ({ API_URL }) => {
                         {parcela.hectareas && `Área: ${parcela.hectareas} ha`}
                       </Popup>
                     </Marker>
+                    {showOWMHeatmap && (
+                       <TileLayer
+  url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+  attribution='Map data: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors'
+/>
+
+
+
+                    )}
                   </MapContainer>
                 </div>
               ) : (
@@ -263,12 +427,39 @@ const DetalleParcela = ({ API_URL }) => {
           {/* Pronóstico del clima */}
           <div className="mb-4">
             <MeteorologiaWidget 
-              ubicacion={{ 
-                lat: parcela.latitud, 
-                lon: parcela.longitud 
-              }} 
+              ubicacion={
+                parcela.latitud && parcela.longitud &&
+                !isNaN(Number(parcela.latitud)) && !isNaN(Number(parcela.longitud))
+                  ? { lat: Number(String(parcela.latitud).replace(',', '.')), lon: Number(String(parcela.longitud).replace(',', '.')) }
+                  : parcela.ubicacion // fallback a string ciudad
+              }
             />
           </div>
+          {/* Recomendaciones en formato caja */}
+          <Card className="mb-4 shadow-sm">
+            <Card.Header className="bg-warning text-dark">
+              <h4 className="mb-0">Recomendaciones</h4>
+            </Card.Header>
+            <Card.Body>
+              {cargandoRecomendacion ? (
+                <p>Consultando IA...</p>
+              ) : (
+                Array.isArray(recomendacionClima) && recomendacionClima.length > 0 ? (
+                  <ul style={{ paddingLeft: 20 }}>
+                    {recomendacionClima.map((rec, idx) => (
+                      <li key={idx} style={{ marginBottom: 8 }}>{rec}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    {typeof recomendacionClima === 'string'
+                      ? recomendacionClima
+                      : 'Analizando el pronóstico...'}
+                  </p>
+                )
+              )}
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
     </Container>

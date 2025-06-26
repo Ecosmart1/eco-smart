@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Button, Alert, Spinner } from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaSeedling, FaRuler, FaCalendarAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaSeedling, FaRuler, FaCalendarAlt, FaCheckCircle, FaUserCircle } from 'react-icons/fa';
 import './GestionParcelas.css';
 
 const GestionParcelas = ({ API_URL }) => {
@@ -51,7 +51,10 @@ const GestionParcelas = ({ API_URL }) => {
   const fetchParcelas = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/parcelas`);
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      const response = await axios.get(`${API_URL}/parcelas`, {
+        headers: { 'X-User-Id': user.id }
+      });
       setParcelas(response.data);
       setLoading(false);
     } catch (err) {
@@ -61,26 +64,36 @@ const GestionParcelas = ({ API_URL }) => {
     }
   };
 
-  // Función para eliminar parcela
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
-      try {
-        await axios.delete(`${API_URL}/parcelas/${id}`);
-        // Actualizar la lista de parcelas localmente (sin recargar)
-        setParcelas(parcelas.filter(parcela => parcela.id !== id));
-        // Mostrar mensaje de éxito
-        setSuccessMessage('Parcela eliminada exitosamente');
-        
-        // Ocultar el mensaje después de 5 segundos
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 5000);
-      } catch (err) {
-        console.error('Error al eliminar parcela:', err);
-        setError('Error al eliminar la parcela. Intente nuevamente.');
-      }
+ const handleDelete = async (id) => {
+  if (window.confirm('¿Está seguro que desea eliminar esta parcela? Esta acción no se puede deshacer.')) {
+    try {
+      const user = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+      
+      console.log('🔍 DEBUG Frontend: Eliminando parcela', id, 'Usuario:', user.id);
+      
+      await axios.delete(`${API_URL}/parcelas/${id}`, {
+        headers: { 
+          'X-User-Id': user.id,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ DEBUG Frontend: Parcela eliminada exitosamente');
+      
+      setParcelas(parcelas.filter(parcela => parcela.id !== id));
+      setSuccessMessage('Parcela eliminada exitosamente');
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+    } catch (err) {
+      console.error('❌ DEBUG Frontend Error:', err);
+      console.error('Status:', err.response?.status);
+      console.error('Data:', err.response?.data);
+      setError(`Error al eliminar la parcela: ${err.response?.data?.error || err.message}`);
     }
-  };
+  }
+};
 
   // Función para determinar la ruta base según el rol del usuario
   const getBaseRoute = () => {
@@ -192,17 +205,35 @@ const GestionParcelas = ({ API_URL }) => {
               </div>
               <div className="parcela-content">
                 <div className="parcela-info">
+                  {/* Mostrar dueño solo si el usuario es agrónomo */}
+                  {userRole === 'agronomo' && (
+                    <p>
+                      <FaUserCircle />
+                      <strong>Dueño:</strong>
+                      <span style={{ display: 'inline-block', width: 8 }}></span>
+                      {parcela.usuario_nombre ? parcela.usuario_nombre : 'Sin asignar'}
+                      {parcela.usuario_email && (
+                        <span style={{ color: '#888', fontSize: '0.95em' }}> ({parcela.usuario_email})</span>
+                      )}
+                    </p>
+                  )}
                   <p>
                     <FaSeedling /> 
-                    <strong>Cultivo:</strong> {parcela.cultivo_actual || 'Sin cultivo actual'}
+                    <strong>Cultivo:</strong>
+                    <span style={{ display: 'inline-block', width: 8 }}></span>
+                    {parcela.cultivo_actual || 'Sin cultivo actual'}
                   </p>
                   <p>
                     <FaRuler /> 
-                    <strong>Área : </strong> {parcela.hectareas || 0} ha
+                    <strong>Área:</strong>
+                    <span style={{ display: 'inline-block', width: 8 }}></span>
+                    {parcela.hectareas || 0} ha
                   </p>
                   <p>
                     <FaCalendarAlt /> 
-                    <strong>Fecha siembra : </strong> {parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}
+                    <strong>Fecha siembra:</strong>
+                    <span style={{ display: 'inline-block', width: 8 }}></span>
+                    {parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}
                   </p>
                 </div>
                 <div className="parcela-actions">
