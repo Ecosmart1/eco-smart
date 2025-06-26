@@ -316,10 +316,12 @@ const handleDelete = async () => {
                     <td><strong>Área:</strong></td>
                     <td>{parcela.hectareas || 0} hectáreas</td>
                   </tr>
-                  <tr>
-                    <td><strong>Fecha de siembra:</strong></td>
-                    <td>{parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}</td>
-                  </tr>
+                  {parcela.fecha_siembra && (
+                    <tr>
+                      <td><strong>Fecha de siembra:</strong></td>
+                      <td>{new Date(parcela.fecha_siembra).toLocaleDateString() }</td>
+                    </tr>
+                  )}
                   <tr>
                     <td><strong>Coordenadas:</strong></td>
                     <td>{parcela.latitud}, {parcela.longitud}</td>
@@ -327,19 +329,27 @@ const handleDelete = async () => {
                   {/* Mostrar dueño y detalles de cultivo solo para agrónomo */}
                   {userRole === 'agronomo' && (
                     <>
-                      <tr>
-                        <td><strong>Etapa:</strong></td>
-                        <td>{parcela.cultivo && parcela.cultivo.etapa_desarrollo}</td>
+                    {parcela.cultivo_actual && (
+                      <>
+                        <tr>
+                          <td><strong>Etapa:</strong></td>
+                          <td>{parcela.cultivo && parcela.cultivo.etapa_desarrollo}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Variedad:</strong></td>
+                          <td>{parcela.variedad || (parcela.cultivo && parcela.cultivo.variedad) || '-'}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Edad:</strong></td>
+                          <td>{parcela.cultivo && parcela.cultivo.edad_dias ? `${parcela.cultivo.edad_dias} días` : (parcela.edad || '-')}</td>
+                        </tr>
+                        <tr>
+                        <td><strong>Progreso cosecha:</strong></td>
+                        <td>{parcela.cultivo && parcela.cultivo.progreso_cosecha}%</td>
                       </tr>
-                    
-                      <tr>
-                        <td><strong>Variedad:</strong></td>
-                        <td>{parcela.variedad || (parcela.cultivo && parcela.cultivo.variedad) || '-'}</td>
-                      </tr>
-                      <tr>
-                        <td><strong>Edad:</strong></td>
-                        <td>{parcela.cultivo && parcela.cultivo.edad_dias ? `${parcela.cultivo.edad_dias} días` : (parcela.edad || '-')}</td>
-                      </tr>
+                      </>
+                    )}
+                      
                       <tr>
                         <td><strong>Coordenadas:</strong></td>
                         <td>{parcela.latitud && parcela.longitud ? `${parcela.latitud}, ${parcela.longitud}` : '-'}</td>
@@ -360,10 +370,7 @@ const handleDelete = async () => {
                       </tr>
                       
                       
-                      <tr>
-                        <td><strong>Progreso cosecha:</strong></td>
-                        <td>{parcela.cultivo && parcela.cultivo.progreso_cosecha}%</td>
-                      </tr>
+                      
                     </>
                   )}
                 </tbody>

@@ -23,7 +23,7 @@ export const AlertasProvider = ({ children }) => {
 
   // Esta función trae el total de alertas activas del sistema
   const fetchAlertasActivasTotales = useCallback(() => {
-    fetch('http://localhost:5000/api/alertas')
+    fetch(' ')
       .then(res => res.json())
       .then(data => setAlertasActivas(Array.isArray(data) ? data.length : 0))
       .catch(() => setAlertasActivas(0));

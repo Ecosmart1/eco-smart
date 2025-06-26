@@ -5,6 +5,7 @@ import "./vistascompartidas.css";
 import SensorService from '../services/serviciossensores';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import {useAlertas} from '../context/AlertasContext';
 
 function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [sensores, setSensores] = useState([]);
@@ -16,13 +17,12 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   const [parcelas, setParcelas] = useState([]);
   const [parcelaSeleccionada, setParcelaSeleccionada] = useState(null);
   const [cargandoParcelas, setCargandoParcelas] = useState(true);
-
   // NUEVO: Estado para condición seleccionada y popup de simulación terminada
   const [condicionSeleccionada, setCondicionSeleccionada] = useState(null);
   const [popupMensaje, setPopupMensaje] = useState('');
   const [tiempoRestante, setTiempoRestante] = useState(null);
   const [toastMostrado, setToastMostrado] = useState(false);
-
+  const [simulacionActivaAnterior, setSimulacionActivaAnterior] = useState(false);
   // Obtener información del usuario almacenada al iniciar sesión
   const [user, setUser] = useState(() => {
     const userStr = localStorage.getItem('ecosmart_user');
@@ -118,15 +118,6 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   }, [simulacionActiva, parametros]);
 
   // Fetch único cuando la simulación se detiene
-  useEffect(() => {
-    if (!simulacionActiva) {
-      fetchDatosSensores();
-      // Mostrar toast cuando termina la simulación
-      if (condicionSeleccionada) { // Solo muestra el toast si terminó por una condición
-        toast.info('¡La simulación ha terminado!', { position: "top-right", autoClose: 3500 });
-      }
-    }
-  }, [simulacionActiva, condicionSeleccionada]); // Añadir condicionSeleccionada como dependencia
 
 
   const fetchDatosSensores = async () => {
@@ -146,8 +137,6 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
       setError(err.message);
     }
   };
-
-  const [simulacionActivaAnterior, setSimulacionActivaAnterior] = useState(simulacionActiva);
 
   // MODIFICADO: Iniciar simulación con parámetros y parcela seleccionada
   const iniciarSimulacionConParametros = async (params = null) => {
@@ -291,35 +280,26 @@ function SensoresPanel({ API_URL = 'http://localhost:5000/api' }) {
   }, [simulacionActiva, API_URL]);
 
   // Mostrar toast y mensaje cuando termina la simulación (natural o manual)
-  useEffect(() => {
-    if (!simulacionActiva && !toastMostrado) {
-      toast.success('¡La simulación ha terminado!', {
-        position: "top-right",
-        autoClose: 3500,
-        style: { background: '#43a047', color: '#fff', fontWeight: 'bold' }
-      });
-      setPopupMensaje('¡La simulación ha terminado!');
-      setTimeout(() => setPopupMensaje(''), 3000);
-      setToastMostrado(true);
-    }
-    if (simulacionActiva) {
-      setToastMostrado(false);
-    }
-  }, [simulacionActiva, toastMostrado]);
 
   // NUEVO: Detectar transición de simulación activa a inactiva para mostrar mensaje solo en ese caso
-  useEffect(() => {
-    if (simulacionActivaAnterior && !simulacionActiva) {
-      toast.success('¡La simulación ha terminado!', {
-        position: "top-right",
-        autoClose: 3500,
-        style: { background: '#43a047', color: '#fff', fontWeight: 'bold' }
-      });
-      setPopupMensaje('¡La simulación ha terminado!');
-      setTimeout(() => setPopupMensaje(''), 3000);
-    }
-    setSimulacionActivaAnterior(simulacionActiva);
-  }, [simulacionActiva, simulacionActivaAnterior]);
+// ...existing code...
+
+useEffect(() => {
+  // Solo mostrar el toast si la simulación acaba de pasar de activa a inactiva
+  if (simulacionActivaAnterior && !simulacionActiva) {
+    toast.success('¡La simulación ha terminado!', {
+      position: "top-right",
+      autoClose: 3500,
+      style: { background: '#43a047', color: '#fff', fontWeight: 'bold' }
+    });
+    setPopupMensaje('¡La simulación ha terminado!');
+    setTimeout(() => setPopupMensaje(''), 3000);
+  }
+  setSimulacionActivaAnterior(simulacionActiva);
+}, [simulacionActiva, simulacionActivaAnterior]);
+
+// ...elimina los otros useEffect que muestran el toast al terminar la simulación...
+// Mostrar toast solo una vez cuando la simulación termina manualmente
 
   if (loading) {
     return <div className="loading">Cargando sensores...</div>;

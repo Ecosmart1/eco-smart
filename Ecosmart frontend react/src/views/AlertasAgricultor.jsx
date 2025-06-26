@@ -14,6 +14,7 @@ const AlertasUsuario = () => {
   const [alertas, setAlertas] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [usuario, setUsuario] = useState(null);
+  const [parcelasUsuario, setParcelasUsuario] = useState([]);
   const { fetchAlertasActivas } = useAlertas();
 
   useEffect(() => {
@@ -23,30 +24,67 @@ const AlertasUsuario = () => {
     const usuarioObj = JSON.parse(usuarioGuardado);
     setUsuario(usuarioObj);
 
-    // Traer alertas activas
-    fetch(`http://localhost:5000/api/alertas`)
+    // 1. Obtener parcelas del usuario
+    fetch(`http://localhost:5000/api/parcelas`, {
+      headers: {
+        'X-User-Id': usuarioObj.id
+      }
+    })
       .then(res => res.json())
-      .then(data => setAlertas(Array.isArray(data) ? data : []))
-      .catch(() => setAlertas([]));
+      .then(parcelas => {
+        const idsParcelas = Array.isArray(parcelas)
+          ? parcelas.map(p => p.id)
+          : [];
+        setParcelasUsuario(idsParcelas);
 
-    // Traer historial de alertas (inactivas)
-    fetch(`http://localhost:5000/api/alertas?inactivas=1`)
-      .then(res => res.json())
-      .then(data => setHistorial(Array.isArray(data) ? data : []))
-      .catch(() => setHistorial([]));
+        // 2. Obtener alertas activas
+        fetch(`http://localhost:5000/api/alertas`)
+          .then(res => res.json())
+          .then(alertasData => {
+            // 3. Filtrar alertas por parcelas del usuario
+            const alertasFiltradas = Array.isArray(alertasData)
+              ? alertasData.filter(a => idsParcelas.includes(a.parcela_id))
+              : [];
+            setAlertas(alertasFiltradas);
+          })
+          .catch(() => setAlertas([]));
+
+        // 4. Obtener historial de alertas (inactivas)
+        fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+          .then(res => res.json())
+          .then(historialData => {
+            const historialFiltrado = Array.isArray(historialData)
+              ? historialData.filter(a => idsParcelas.includes(a.parcela_id))
+              : [];
+            setHistorial(historialFiltrado);
+          })
+          .catch(() => setHistorial([]));
+      })
+      .catch(() => {
+        setParcelasUsuario([]);
+        setAlertas([]);
+        setHistorial([]);
+      });
   }, []);
 
   // Marcar alerta como revisada
   const marcarComoRevisada = (alertaId) => {
     fetch(`http://localhost:5000/api/alertas/${alertaId}/revisada`, {
-      method: 'PUT'
+      method: 'PUT',
+      headers: {
+        'X-User-Id': usuario?.id
+      }
     })
       .then(res => {
         if (res.ok) {
           setAlertas(alertas.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(); // Actualiza el número en el header
+          fetchAlertasActivas(usuario?.id); // Actualiza el número en el header
           // Opcional: recargar historial
-          fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+          fetch(`http://localhost:5000/api/alertas?inactivas=1`, {
+            headers: {
+              'X-User-Id': usuario?.id
+            }
+          })
             .then(res => res.json())
             .then(data => setHistorial(Array.isArray(data) ? data : []));
         }
@@ -56,13 +94,16 @@ const AlertasUsuario = () => {
   // Eliminar alerta
   const eliminarAlerta = (alertaId) => {
     fetch(`http://localhost:5000/api/alertas/${alertaId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'X-User-Id': usuario?.id
+      }
     })
       .then(res => {
         if (res.ok) {
           setAlertas(alertas.filter(a => a.id !== alertaId));
           setHistorial(historial.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(); // Actualiza el número en el header
+          fetchAlertasActivas(usuario?.id); // Actualiza el número en el header
         }
       });
   };
@@ -87,7 +128,7 @@ const AlertasUsuario = () => {
                   <div className="alerta-info-extra">
                     <span><b>Parcela:</b> {alerta.parcela}</span>
                   </div>
-                  <div className="alerta-acciones">
+                  <div className="accionesalertas">
                     <button
                       className="btn-alerta revisar"
                       onClick={() => marcarComoRevisada(alerta.id)}
