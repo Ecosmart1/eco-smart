@@ -22,7 +22,7 @@ import re
 from servicios.notificaciones import enviar_correo_alerta
 
 from servicios.detector_anomalias import detector
-
+import jwt
 
 
 
@@ -39,7 +39,7 @@ CORS(app, resources={
     }
 })
 
-
+SECRET_KEY="ecosmart"
 
 #base de datos
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
@@ -419,6 +419,16 @@ def obtener_usuarios():
         return jsonify({'error': 'Error al procesar la solicitud'}), 500
 
 
+def generar_token(usuario_id):
+    payload = {
+        "user_id": usuario_id,
+        "exp": datetime.utcnow() + timedelta(hours=1),  # expira en 1 hora
+        "iat": datetime.utcnow()  # emitido en
+    }
+
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
 @app.route('/api/login', methods=['POST'])
 def login_usuario():
     try:
@@ -438,7 +448,7 @@ def login_usuario():
         if 'email' not in data or 'password' not in data:
             return jsonify({'error': 'Faltan credenciales'}), 400
 
-        email = data['email'].strip().lower()
+        email = data['email'].strip()
         print(f"🔍 DEBUG: Buscando email: '{email}'")
         
         usuario = Usuario.query.filter_by(email=email).first()
@@ -464,11 +474,13 @@ def login_usuario():
         except Exception as log_error:
             current_app.logger.error(f"Error al registrar log de login: {log_error}")
 
+        token=generar_token(usuario.id)
         return jsonify({
             'id': usuario.id,
             'nombre': usuario.nombre,
             'email': usuario.email,
-            'rol': usuario.rol
+            'rol': usuario.rol,
+            'token': token
         })
 
     except Exception as e:
@@ -1816,37 +1828,47 @@ def actualizar_parcela(id):
     elif fecha_siembra == '' or fecha_siembra is None:
         parcela.fecha_siembra = None
 
+    tiene_cultivo = data.get('tiene_cultivo', False)
     cultivo_data = data.get('cultivo')
-    if cultivo_data:
-        from datetime import datetime
-        cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
-        fecha_siembra_cultivo = None
-        if cultivo_data.get('fecha_siembra'):
-            try:
-                fecha_siembra_cultivo = datetime.fromisoformat(cultivo_data['fecha_siembra'])
-            except Exception:
-                fecha_siembra_cultivo = datetime.now()
-        if cultivo:
-            cultivo.nombre = cultivo_data.get('nombre', cultivo.nombre)
-            cultivo.variedad = cultivo_data.get('variedad', cultivo.variedad)
-            cultivo.etapa_desarrollo = cultivo_data.get('etapa_desarrollo', cultivo.etapa_desarrollo)
-            cultivo.fecha_siembra = fecha_siembra_cultivo or cultivo.fecha_siembra
-            cultivo.dias_cosecha_estimados = cultivo_data.get('dias_cosecha_estimados', cultivo.dias_cosecha_estimados)
-            parcela.cultivo_actual = cultivo.nombre
-        else:
-            nuevo_cultivo = DetalleCultivo(
-                parcela_id=parcela.id,
-                nombre=cultivo_data.get('nombre'),
-                variedad=cultivo_data.get('variedad'),
-                etapa_desarrollo=cultivo_data.get('etapa_desarrollo', 'siembra'),
-                fecha_siembra=fecha_siembra_cultivo or datetime.now(),
-                dias_cosecha_estimados=cultivo_data.get('dias_cosecha_estimados'),
-                activo=True
-            )
-            db.session.add(nuevo_cultivo)
-            parcela.cultivo_actual = nuevo_cultivo.nombre
-            if nuevo_cultivo.fecha_siembra:
-                parcela.fecha_siembra = nuevo_cultivo.fecha_siembra.date()
+
+    if not tiene_cultivo:
+        # Eliminar el cultivo activo asociado a la parcela
+        cultivo_activo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+        if cultivo_activo:
+            db.session.delete(cultivo_activo)
+        parcela.cultivo_actual = None
+        parcela.fecha_siembra = None
+    else:
+        if cultivo_data:
+            from datetime import datetime
+            cultivo = DetalleCultivo.query.filter_by(parcela_id=parcela.id, activo=True).first()
+            fecha_siembra_cultivo = None
+            if cultivo_data.get('fecha_siembra'):
+                try:
+                    fecha_siembra_cultivo = datetime.fromisoformat(cultivo_data['fecha_siembra'])
+                except Exception:
+                    fecha_siembra_cultivo = datetime.now()
+            if cultivo:
+                cultivo.nombre = cultivo_data.get('nombre', cultivo.nombre)
+                cultivo.variedad = cultivo_data.get('variedad', cultivo.variedad)
+                cultivo.etapa_desarrollo = cultivo_data.get('etapa_desarrollo', cultivo.etapa_desarrollo)
+                cultivo.fecha_siembra = fecha_siembra_cultivo or cultivo.fecha_siembra
+                cultivo.dias_cosecha_estimados = cultivo_data.get('dias_cosecha_estimados', cultivo.dias_cosecha_estimados)
+                parcela.cultivo_actual = cultivo.nombre
+            else:
+                nuevo_cultivo = DetalleCultivo(
+                    parcela_id=parcela.id,
+                    nombre=cultivo_data.get('nombre'),
+                    variedad=cultivo_data.get('variedad'),
+                    etapa_desarrollo=cultivo_data.get('etapa_desarrollo', 'siembra'),
+                    fecha_siembra=fecha_siembra_cultivo or datetime.now(),
+                    dias_cosecha_estimados=cultivo_data.get('dias_cosecha_estimados'),
+                    activo=True
+                )
+                db.session.add(nuevo_cultivo)
+                parcela.cultivo_actual = nuevo_cultivo.nombre
+                if nuevo_cultivo.fecha_siembra:
+                    parcela.fecha_siembra = nuevo_cultivo.fecha_siembra.date()
 
     try:
         db.session.commit()

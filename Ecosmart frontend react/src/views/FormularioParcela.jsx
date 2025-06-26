@@ -197,24 +197,25 @@ useEffect(() => {
 
       // Preparar datos para enviar
       const parcelaData = {
-        nombre: formData.nombre.trim(),
-        ubicacion: formData.ubicacion.trim(),
-        hectareas: parseFloat(formData.hectareas),
-        latitud: formData.latitud ? parseFloat(formData.latitud) : null,
-        longitud: formData.longitud ? parseFloat(formData.longitud) : null
-      };
+  nombre: formData.nombre.trim(),
+  ubicacion: formData.ubicacion.trim(),
+  hectareas: parseFloat(formData.hectareas),
+  latitud: formData.latitud ? parseFloat(formData.latitud) : null,
+  longitud: formData.longitud ? parseFloat(formData.longitud) : null,
+  tiene_cultivo: formData.tiene_cultivo // <-- Asegúrate de enviar esto siempre
+};
 
-      if (formData.tiene_cultivo) {
-        const cultivoNombre = formData.cultivo.nombre === 'Otro' ? 
-          formData.cultivo.otro_cultivo.trim() : formData.cultivo.nombre;
-        parcelaData.cultivo = {
-          nombre: cultivoNombre,
-          variedad: formData.cultivo.variedad.trim() || null,
-          etapa_desarrollo: formData.cultivo.etapa_desarrollo,
-          fecha_siembra: formData.cultivo.fecha_siembra + 'T08:00:00',
-          dias_cosecha_estimados: parseInt(formData.cultivo.dias_cosecha_estimados)
-        };
-      }
+if (formData.tiene_cultivo) {
+  const cultivoNombre = formData.cultivo.nombre === 'Otro' ? 
+    formData.cultivo.otro_cultivo.trim() : formData.cultivo.nombre;
+  parcelaData.cultivo = {
+    nombre: cultivoNombre,
+    variedad: formData.cultivo.variedad.trim() || null,
+    etapa_desarrollo: formData.cultivo.etapa_desarrollo,
+    fecha_siembra: formData.cultivo.fecha_siembra + 'T08:00:00',
+    dias_cosecha_estimados: parseInt(formData.cultivo.dias_cosecha_estimados)
+  };
+}
 
       console.log('Datos a enviar:', parcelaData);
 

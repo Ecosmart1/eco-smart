@@ -46,6 +46,7 @@ const Login = () => {
       if (response.ok) {
         // Guarda el usuario en localStorage
         localStorage.setItem('ecosmart_user', JSON.stringify(data));
+        localStorage.setItem('ecosmart_token', data.token);
         // Redirige según el rol
         if (data.rol === 'tecnico') {
           navigate('/dashboard/tecnico');

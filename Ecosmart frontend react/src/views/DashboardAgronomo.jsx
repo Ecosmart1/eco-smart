@@ -77,10 +77,10 @@ const DashboardAgronomo = () => {
       return;
     }
     
-    if (!tokenGuardado) {
+    /*if (!tokenGuardado) {
       console.log('⚠️  Token faltante, creando token temporal para desarrollo');
       localStorage.setItem('ecosmart_token', 'temp_token_development');
-    }
+    }*/
     
     try {
       const usuarioObj = JSON.parse(usuarioGuardado);
@@ -157,7 +157,7 @@ const DashboardAgronomo = () => {
     
     if (!token) {
       console.log('Token faltante, creando temporal');
-      localStorage.setItem('ecosmart_token', 'temp_token_development');
+      //localStorage.setItem('ecosmart_token', 'temp_token_development');
     }
     
     try {
