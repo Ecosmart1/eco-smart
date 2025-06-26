@@ -95,18 +95,14 @@ EcoSmart/
 .\start-ecosmart.ps1
 ```
 
-#### **Linux**
-
-```bash
-# Desde la raíz del proyecto
-./start-ecostmart.sh
-```
-### **Mac**
+#### **Linux/Mac**
 
 ```bash
 # Desde la raíz del proyecto
 chmod +x start-ecostmart.sh
+./start-ecostmart.sh
 ```
+
 Estos scripts:
 - Crean y activan el entorno virtual de Python.
 - Instalan dependencias del backend y frontend.
