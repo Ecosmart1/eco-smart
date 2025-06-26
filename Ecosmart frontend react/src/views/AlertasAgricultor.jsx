@@ -14,7 +14,6 @@ const AlertasUsuario = () => {
   const [alertas, setAlertas] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [usuario, setUsuario] = useState(null);
-  const [parcelasUsuario, setParcelasUsuario] = useState([]);
   const { fetchAlertasActivas } = useAlertas();
 
   useEffect(() => {
@@ -24,67 +23,33 @@ const AlertasUsuario = () => {
     const usuarioObj = JSON.parse(usuarioGuardado);
     setUsuario(usuarioObj);
 
-    // 1. Obtener parcelas del usuario
-    fetch(`http://localhost:5000/api/parcelas`, {
-      headers: {
-        'X-User-Id': usuarioObj.id
-      }
-    })
+    // Traer alertas activas SOLO para este usuario usando el endpoint del contexto
+    fetch(`http://localhost:5000/api/alertas?user_id=${usuarioObj.id}`)
       .then(res => res.json())
-      .then(parcelas => {
-        const idsParcelas = Array.isArray(parcelas)
-          ? parcelas.map(p => p.id)
-          : [];
-        setParcelasUsuario(idsParcelas);
+      .then(data => setAlertas(Array.isArray(data) ? data : []))
+      .catch(() => setAlertas([]));
 
-        // 2. Obtener alertas activas
-        fetch(`http://localhost:5000/api/alertas`)
-          .then(res => res.json())
-          .then(alertasData => {
-            // 3. Filtrar alertas por parcelas del usuario
-            const alertasFiltradas = Array.isArray(alertasData)
-              ? alertasData.filter(a => idsParcelas.includes(a.parcela_id))
-              : [];
-            setAlertas(alertasFiltradas);
-          })
-          .catch(() => setAlertas([]));
-
-        // 4. Obtener historial de alertas (inactivas)
-        fetch(`http://localhost:5000/api/alertas?inactivas=1`)
-          .then(res => res.json())
-          .then(historialData => {
-            const historialFiltrado = Array.isArray(historialData)
-              ? historialData.filter(a => idsParcelas.includes(a.parcela_id))
-              : [];
-            setHistorial(historialFiltrado);
-          })
-          .catch(() => setHistorial([]));
-      })
-      .catch(() => {
-        setParcelasUsuario([]);
-        setAlertas([]);
-        setHistorial([]);
-      });
+    // Traer historial de alertas (inactivas) SOLO para este usuario
+    fetch(`http://localhost:5000/api/alertas?inactivas=1&user_id=${usuarioObj.id}`)
+      .then(res => res.json())
+      .then(data => setHistorial(Array.isArray(data) ? data : []))
+      .catch(() => setHistorial([]));
   }, []);
 
   // Marcar alerta como revisada
   const marcarComoRevisada = (alertaId) => {
     fetch(`http://localhost:5000/api/alertas/${alertaId}/revisada`, {
-      method: 'PUT',
-      headers: {
-        'X-User-Id': usuario?.id
-      }
+      method: 'PUT'
     })
       .then(res => {
-        if (res.ok) {
-          setAlertas(alertas.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(usuario?.id); // Actualiza el número en el header
+        if (res.ok && usuario) {
+          // Vuelve a cargar alertas para mantener sincronía con el contexto
+          fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
+            .then(res => res.json())
+            .then(data => setAlertas(Array.isArray(data) ? data : []));
+          fetchAlertasActivas(usuario.id); // Actualiza el número en el header
           // Opcional: recargar historial
-          fetch(`http://localhost:5000/api/alertas?inactivas=1`, {
-            headers: {
-              'X-User-Id': usuario?.id
-            }
-          })
+          fetch(`http://localhost:5000/api/alertas?inactivas=1&user_id=${usuario.id}`)
             .then(res => res.json())
             .then(data => setHistorial(Array.isArray(data) ? data : []));
         }
@@ -94,16 +59,19 @@ const AlertasUsuario = () => {
   // Eliminar alerta
   const eliminarAlerta = (alertaId) => {
     fetch(`http://localhost:5000/api/alertas/${alertaId}`, {
-      method: 'DELETE',
-      headers: {
-        'X-User-Id': usuario?.id
-      }
+      method: 'DELETE'
     })
       .then(res => {
-        if (res.ok) {
-          setAlertas(alertas.filter(a => a.id !== alertaId));
-          setHistorial(historial.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(usuario?.id); // Actualiza el número en el header
+        if (res.ok && usuario) {
+          // Vuelve a cargar alertas para mantener sincronía con el contexto
+          fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
+            .then(res => res.json())
+            .then(data => setAlertas(Array.isArray(data) ? data : []));
+          fetchAlertasActivas(usuario.id); // Actualiza el número en el header
+          // Opcional: recargar historial
+          fetch(`http://localhost:5000/api/alertas?inactivas=1&user_id=${usuario.id}`)
+            .then(res => res.json())
+            .then(data => setHistorial(Array.isArray(data) ? data : []));
         }
       });
   };
