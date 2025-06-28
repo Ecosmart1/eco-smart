@@ -87,8 +87,8 @@ const DashboardAgronomo = () => {
       console.log('Usuario parseado:', usuarioObj);
       
       // Verificar rol
-      if (!usuarioObj.rol || (usuarioObj.rol !== 'agronomo' && usuarioObj.rol !== 'tecnico')) {
-        console.log('Rol no válido:', usuarioObj.rol);
+      if (!usuarioObj.rol || usuarioObj.rol !== 'agronomo') {
+        console.log('Rol no válido para DashboardAgronomo:', usuarioObj.rol);
         localStorage.clear(); // Limpiar datos corruptos
         navigate('/login');
         return;

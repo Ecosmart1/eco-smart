@@ -42,7 +42,7 @@ CORS(app, resources={
 
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1313@localhost:5432/ecosmart_v2'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -1635,9 +1635,6 @@ def eliminar_usuario(id):
     db.session.commit()
     return jsonify({'mensaje': 'Usuario eliminado correctamente'})
 
-# ...existing code...
-
-# ...existing code...
 
 @app.route('/api/parcelas', methods=['POST'])
 def agregar_parcela():
@@ -2049,14 +2046,24 @@ def obtener_mensajes(conv_id):
         # Obtener mensajes
         mensajes = Mensaje.query.filter_by(conversacion_id=conv_id).order_by(Mensaje.created_at).all()
         
+        # Definir último mensaje - tomar el último de la lista si hay mensajes
+        ultimo_mensaje = mensajes[-1] if mensajes else None
+        
+        # Convertir mensajes a formato JSON para devolverlos
+        mensajes_json = [{
+            'sender': msg.sender,
+            'content': msg.content,
+            'timestamp': msg.timestamp.isoformat() if hasattr(msg, 'timestamp') else None
+        } for msg in mensajes]
+        
         return jsonify({
             'id': conversacion.id,
             'created_at': conversacion.created_at.isoformat(),
-            'last_message': ultimo_mensaje.content if ultimo_mensaje else ""
+            'last_message': ultimo_mensaje.content if ultimo_mensaje else "",
+            'messages': mensajes_json  # Añadir los mensajes a la respuesta
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 # Endpoint para crear nueva conversación
 @app.route('/api/conversaciones', methods=['POST'])
 def crear_conversacion():
@@ -2230,13 +2237,8 @@ def chat():
         print("Error general en /api/chat:", str(e))
         return jsonify({'error': str(e)}), 500
     
-# Add this endpoint near the other parcelas endpoints
 
-# Add these imports if not already present
-from datetime import datetime, timedelta, UTC
-import random
 
-# Add this endpoint near your other parcela endpoints
 @app.route('/api/parcelas/recomendaciones', methods=['GET'])
 def obtener_recomendaciones_parcelas():
     """Devuelve recomendaciones para las parcelas basadas en los datos de los sensores"""
@@ -2703,8 +2705,8 @@ def obtener_datos_sensores_recientes(parcela_id):
         return {}
 
 
-# Añadir esta función para construir el mensaje enriquecido
-# Modifica la función construir_mensaje_sistema_avanzado para manejar correctamente los datos de sensores
+#función para construir el mensaje enriquecido
+#función construir_mensaje_sistema_avanzado para manejar correctamente los datos de sensores
 def construir_mensaje_sistema_avanzado(usuario, parcelas, datos_sensores):
     mensaje = f"""Eres un asistente agrícola especializado de EcoSmart, la plataforma de gestión agrícola inteligente.
 
@@ -3307,7 +3309,7 @@ def crear_alerta():
 @app.route('/')
 def home():
     return "<h2>EcoSmart Backend funcionando correctamente en el puerto 5000 🚀</h2>"
-# ...existing code...
+
 
 # Agregar endpoint de debug para ver rutas
 @app.route('/api/debug/routes', methods=['GET'])
@@ -3326,7 +3328,7 @@ def debug_routes():
     })
     
     
-    # ...existing code...
+
 
 @app.route('/api/cultivos', methods=['GET'])
 def listar_cultivos():
@@ -3427,7 +3429,6 @@ def obtener_cultivo_por_parcela(parcela_id):
         return jsonify({'error': f"Error al obtener cultivo: {str(e)}"}), 500
 
 #endpoints informes
-# Agregar estos endpoints al final del archivo, antes de if __name__ == '__main__':
 
 
 @app.route('/api/informes/resumen', methods=['GET'])
@@ -3898,22 +3899,7 @@ def marcar_multiples_alertas_informes():
     
 
 
-    try:
-        parcela_id = request.args.get('parcela_id')
-        anomalias = detector.detectar_anomalias_basicas(parcela_id)
-        
-        return jsonify({
-            'success': True,
-            'anomalias': anomalias,
-            'total': len(anomalias)
-        }), 200
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Error al obtener anomalías: {str(e)}'
-        }), 500
-# AGREGAR ESTE ENDPOINT PARA ANOMALÍAS CON NOMBRES DE PARCELA
+
 @app.route('/api/anomalias', methods=['GET'])
 def obtener_anomalias_con_nombres():
     try:
@@ -3969,7 +3955,6 @@ def obtener_salud_parcela(parcela_id):
             'message': f'Error al obtener salud de parcela: {str(e)}'
         }), 500
 
-# AGREGAR al final del archivo, antes de la última línea:
 
 @app.route('/api/configuracion/rangos', methods=['GET'])
 def obtener_rangos():
@@ -4111,9 +4096,7 @@ def obtener_cultivos_disponibles():
             'success': False,
             'message': f'Error al obtener cultivos: {str(e)}'
         }), 500
-# AGREGAR al final de api_principal.py (antes de if __name__ == '__main__':):
 
-# REEMPLAZAR el endpoint individual:
 
 @app.route('/api/anomalias/<int:anomalia_id>', methods=['DELETE'])
 def eliminar_anomalia(anomalia_id):
@@ -4148,33 +4131,7 @@ def eliminar_anomalia(anomalia_id):
             'success': False,
             'message': f'Error: {str(e)}'
         }), 500
-    """Eliminar una anomalía específica"""
-    try:
-        # Buscar la anomalía por ID (usando la tabla de lecturas)
-        anomalia = LecturaSensor.query.get(anomalia_id)
-        
-        if not anomalia:
-            return jsonify({
-                'success': False,
-                'message': 'Anomalía no encontrada'
-            }), 404
-        
-        # Eliminar la anomalía
-        db.session.delete(anomalia)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Anomalía eliminada exitosamente'
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error eliminando anomalía: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': f'Error eliminando anomalía: {str(e)}'
-        }), 500
+    
 
 @app.route('/api/anomalias/eliminar-multiples', methods=['POST'])
 def eliminar_anomalias_multiples():
@@ -4207,7 +4164,6 @@ def eliminar_anomalias_multiples():
             'message': f'Error eliminando anomalías: {str(e)}'
         }), 500
 
-# REEMPLAZAR el endpoint en api_principal.py:
 
 @app.route('/api/anomalias/limpiar-todas', methods=['DELETE'])
 def limpiar_todas_anomalias():

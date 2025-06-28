@@ -83,11 +83,19 @@ export const servicioRangos = {
 // Obtener parcelas disponibles
 async obtenerParcelas(user) {
   try {
+    // Verificar que el usuario esté disponible
+    if (!user || !user.id) {
+      console.error('Usuario no válido para obtener parcelas:', user);
+      throw new Error('Usuario no válido');
+    }
+    
+    console.log('🔍 Obteniendo parcelas para usuario:', user);
+    
     const response = await fetch(`${API_BASE_URL}/parcelas`, {
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Id': user.id,           
-        'X-User-Rol': 'agronomo'
+        'X-User-Id': user.id.toString(),           
+        'X-User-Rol': user.rol || 'agronomo'
       }
     });
     

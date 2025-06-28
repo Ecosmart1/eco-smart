@@ -5,6 +5,7 @@ import './EstadoCultivos.css';
 
 const EstadoCultivos = ({ API_URL }) => {
   // Estados del componente
+  const [usuario, setUsuario] = useState(null);
   const [parcelas, setParcelas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [filtroActivo, setFiltroActivo] = useState('todos');
@@ -83,9 +84,23 @@ const determinarEstado = (cultivo) => {
 };
 
 
-// REEMPLAZAR desde línea 24 hasta línea 52:
-
+// CARGAR USUARIO AL MONTAR EL COMPONENTE
 useEffect(() => {
+  const usuarioGuardado = localStorage.getItem('ecosmart_user');
+  if (usuarioGuardado) {
+    try {
+      const usuarioObj = JSON.parse(usuarioGuardado);
+      setUsuario(usuarioObj);
+    } catch (error) {
+      console.error('Error al parsear usuario:', error);
+    }
+  }
+}, []);
+
+// CARGAR PARCELAS CUANDO EL USUARIO ESTÉ DISPONIBLE
+useEffect(() => {
+  if (!usuario) return; // Solo cargar si hay usuario
+  
   const cargarParcelas = async () => {
     try {
       setCargando(true);
@@ -94,7 +109,7 @@ useEffect(() => {
       const response = await fetch(`${API_URL}/parcelas`, {
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': user.id // Agregar user ID para logs
+          'X-User-Id': usuario.id // Usar usuario.id en lugar de user.id
         }
       });
       
@@ -141,7 +156,7 @@ useEffect(() => {
   };
   
   cargarParcelas();
-}, [API_URL]);
+}, [API_URL, usuario]); // Agregar usuario como dependencia
 
 
 

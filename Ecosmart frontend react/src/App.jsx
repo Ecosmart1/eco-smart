@@ -261,7 +261,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      <DetalleParcela />
+      <DetalleParcela API_URL={API_URL} />
     </div>
   </div>
 } />

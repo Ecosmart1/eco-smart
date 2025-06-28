@@ -10,6 +10,7 @@ const ConfiguradorRangos = ({ onClose, onSuccess }) => {
   const [error, setError] = useState(null);
   const [editando, setEditando] = useState(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [usuario, setUsuario] = useState(null);
 
   // Estado del formulario
   const [formulario, setFormulario] = useState({
@@ -25,16 +26,46 @@ const ConfiguradorRangos = ({ onClose, onSuccess }) => {
   });
 
   useEffect(() => {
-    cargarDatos();
+    // Cargar usuario desde localStorage y cargar datos inmediatamente
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    if (usuarioGuardado) {
+      try {
+        const usuarioObj = JSON.parse(usuarioGuardado);
+        setUsuario(usuarioObj);
+        // Cargar datos inmediatamente después de establecer el usuario
+        cargarDatos(usuarioObj);
+      } catch (error) {
+        console.error('Error al parsear usuario desde localStorage:', error);
+        setError('Error al cargar datos del usuario');
+        setLoading(false);
+      }
+    } else {
+      setError('No se encontró información del usuario');
+      setLoading(false);
+    }
   }, []);
 
-const cargarDatos = async () => {
+const cargarDatos = async (usuarioParam = null) => {
   try {
     setLoading(true);
+    
+    // Usar el usuario pasado como parámetro o el del estado
+    const usuarioAUsar = usuarioParam || usuario;
+    
+    // Verificar que el usuario esté disponible
+    if (!usuarioAUsar) {
+      console.warn('Usuario no disponible para cargar datos');
+      setError('Usuario no disponible');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('🔍 Cargando datos para usuario:', usuarioAUsar);
+    
     const [rangosData, cultivosData, parcelasData] = await Promise.all([
       servicioRangos.obtenerRangos(),
       servicioRangos.obtenerCultivos(),
-      servicioRangos.obtenerParcelas()
+      servicioRangos.obtenerParcelas(usuarioAUsar) // Pasar el usuario aquí
     ]);
     
     console.log('🏡 Parcelas desde API:', parcelasData);
