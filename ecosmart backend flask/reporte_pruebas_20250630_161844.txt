@@ -1,0 +1,96 @@
+REPORTE DE PRUEBAS UNITARIAS - ECOSMART
+============================================================
+
+Fecha de ejecución: 2025-06-30T16:18:44.283325
+Total de pruebas: 43
+Pruebas exitosas: 38
+Pruebas fallidas: 5
+Porcentaje de éxito: 88.4%
+
+DETALLES POR CATEGORÍA:
+----------------------------------------
+
+DATABASE:
+  ✅ PASS Conectividad: Conexión exitosa
+  ❌ FAIL Error general: 'Engine' object has no attribute 'table_names'
+
+MODELS:
+  ✅ PASS Usuario model: Usuario: agricultor agricultez agri
+  ✅ PASS Usuario.id: Campo existe
+  ✅ PASS Usuario.nombre: Campo existe
+  ✅ PASS Usuario.email: Campo existe
+  ✅ PASS Usuario.password: Campo existe
+  ✅ PASS Usuario.rol: Campo existe
+  ✅ PASS Parcela model: Parcela: GGGGGGGG
+  ✅ PASS Parcela.id: Campo existe
+  ✅ PASS Parcela.nombre: Campo existe
+  ✅ PASS Parcela.ubicacion: Campo existe
+  ✅ PASS Parcela.hectareas: Campo existe
+  ✅ PASS Parcela.usuario_id: Campo existe
+  ✅ PASS Relación Usuario-Parcela: 2 parcelas del usuario
+
+AUTH:
+  ❌ FAIL Login agricultor: Usuario no encontrado
+  ❌ FAIL Login agrónomo: Usuario no encontrado
+  ✅ PASS Usuario técnico: Técnico: tecnico tecniquez tecnicin
+  ✅ PASS Rol agricultor: 2 usuarios
+  ✅ PASS Rol agronomo: 1 usuarios
+  ✅ PASS Rol tecnico: 1 usuarios
+
+API:
+  ✅ PASS Health check: API responde correctamente
+  ❌ FAIL Login endpoint: Status: 401
+  ✅ PASS Parcelas endpoint: 2 parcelas
+  ✅ PASS Sensores endpoint: 4 sensores
+
+SERVICES:
+  ✅ PASS Detector anomalías: 0 anomalías detectadas
+  ✅ PASS Sistema logs: Servicio disponible
+  ✅ PASS OpenRouter service: Servicio disponible
+  ✅ PASS Sistema notificaciones: Servicio disponible
+
+INTEGRATION:
+  ❌ FAIL Flujo completo: Error en login
+  ✅ PASS CORS configuración: Headers CORS: presentes
+
+FRONTEND:
+  ✅ PASS Archivo package.json: Existe
+  ✅ PASS Archivo vite.config.js: Existe
+  ✅ PASS Archivo src/App.jsx: Existe
+  ✅ PASS Archivo src/main.jsx: Existe
+  ✅ PASS Componentes React: 34 componentes encontrados
+  ✅ PASS Componente DashboardAgricultor.jsx: Existe
+  ✅ PASS Componente DashboardAgronomo.jsx: Existe
+  ✅ PASS Componente DashboardTecnico.jsx: Existe
+  ✅ PASS Componente Login.jsx: Existe
+  ✅ PASS Componente headeragricultor.jsx: Existe
+  ✅ PASS Componente HeaderAgronomo.jsx: Existe
+  ✅ PASS Servicios JS: 7 servicios encontrados
+
+============================================================
+INFORMACIÓN DEL SISTEMA:
+============================================================
+Python: 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+Sistema: posix
+Directorio de trabajo: /home/vicente/Documentos/eco-smart/ecosmart backend flask
+
+COMPONENTES PRINCIPALES VERIFICADOS:
+----------------------------------------
+Backend Flask:
+  - Conectividad a base de datos PostgreSQL
+  - Modelos de datos (Usuario, Parcela, Sensor, etc.)
+  - Sistema de autenticación
+  - API endpoints principales
+  - Servicios (anomalías, logs, notificaciones)
+
+Frontend React:
+  - Estructura de archivos
+  - Componentes principales
+  - Servicios de integración
+  - Configuración de build
+
+Integración:
+  - Comunicación Frontend-Backend
+  - Configuración CORS
+  - Flujos de autenticación
+  - Manejo de estados de usuario

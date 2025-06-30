@@ -43,7 +43,7 @@ CORS(app, resources={
 SECRET_KEY="ecosmart"
 
 #base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:p1p3@localhost:5432/Ecosmart'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ecosmart@localhost:5432/ecosmart'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -823,7 +823,7 @@ def exportar_csv():
 def listar_parcelas():
     user_id = request.headers.get('X-User-Id')
     user = Usuario.query.get(user_id)
-    if user and user.rol == 'agronomo':
+    if user and (user.rol == 'agronomo' or user.rol == 'tecnico'):
         parcelas = Parcela.query.all()
     else:
         parcelas = Parcela.query.filter_by(usuario_id=user_id).all()
@@ -2093,32 +2093,21 @@ def crear_conversacion():
     try:
         data = request.json
         user_id = data.get('user_id')
-        
-        # Validación explícita
         if not user_id:
-            print(f"Error: user_id faltante o inválido: {user_id}")
             return jsonify({'error': 'Se requiere user_id válido'}), 400
-            
-        # Verificar si el usuario existe
         usuario = Usuario.query.get(user_id)
         if not usuario:
-            print(f"Error: Usuario con id {user_id} no encontrado")
             return jsonify({'error': f'Usuario con id {user_id} no encontrado'}), 404
-        
-        print(f"Creando conversación para usuario {user_id}")
         conversacion = Conversacion(usuario_id=user_id)
         db.session.add(conversacion)
         db.session.commit()
-        
         return jsonify({
             'id': conversacion.id,
             'created_at': conversacion.created_at.isoformat()
         })
     except Exception as e:
-        print(f"Error al crear conversación: {str(e)}")
         db.session.rollback()
         return jsonify({'error': f'Error al crear conversación: {str(e)}'}), 500
-
 # Endpoint para eliminar conversación
 # En el backend:
 @app.route('/api/conversaciones/<conv_id>', methods=['DELETE'])
@@ -2150,9 +2139,12 @@ def eliminar_conversacion(conv_id):
 # Endpoint para obtener mensajes de una conversación
 @app.route('/api/chat/<int:conv_id>', methods=['GET'])
 def obtener_conversacion(conv_id):
-    conversacion = Conversacion.query.get_or_404(conv_id)
+    user_id = request.args.get('user_id')
+    if not user_id:
+        return jsonify([])  # O error
+    conversaciones = Conversacion.query.filter_by(usuario_id=user_id).order_by(Conversacion.created_at.desc()).all()
     mensajes = Mensaje.query.filter_by(conversacion_id=conv_id).order_by(Mensaje.timestamp).all()
-    
+
     return jsonify({
         'conversation_id': conv_id,
         'messages': [{
@@ -3191,12 +3183,15 @@ def obtener_alertas():
         parcelas_usuario = Parcela.query.filter_by(usuario_id=user_id).all()
         parcelas_ids = [p.id for p in parcelas_usuario]
         query = query.filter(AlertaSensor.parcela.in_(parcelas_ids))
+    # Si NO hay user_id, NO filtra por usuario
+
     if inactivas == "1":
         query = query.filter(AlertaSensor.activa == False)
     else:
         query = query.filter(AlertaSensor.activa == True)
 
-    alertas = query.order_by(AlertaSensor.timestamp.desc()).limit(20).all()
+    alertas = query.order_by(AlertaSensor.timestamp.desc()).all()
+    # ...formatea y retorna...
 
     resultado = []
     for alerta in alertas:

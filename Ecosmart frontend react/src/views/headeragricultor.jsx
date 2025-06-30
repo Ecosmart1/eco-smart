@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAlertas } from '../context/AlertasContext';
-import './HeaderAgricultor.css';
+import './headeragricultor.css';
 
 const HeaderAgricultor = ({ activeItem }) => {
   const [usuario, setUsuario] = useState(null);

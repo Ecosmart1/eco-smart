@@ -83,30 +83,22 @@ const ChatContainer = ({ userId }) => {
   }, [mensajes]);
 
   const cargarConversaciones = async () => {
-    try {
-      const res = await getConversaciones(userId);
-      setConversaciones(res.data);
-    } catch (error) {
-      console.error("Error al cargar conversaciones:", error);
-    }
-  };
+  try {
+    console.log("Cargando conversaciones para userId:", userId);
+    const res = await getConversaciones(userId);
+    console.log("Conversaciones recibidas:", res);
+    setConversaciones(res.data || res); // depende de cómo responde tu backend
+  } catch (error) {
+    console.error("Error al cargar conversaciones:", error);
+  }
+};
 
   const cargarMensajes = async (convId) => {
     try {
       const res = await getConversacion(convId, userId);
       setMensajes(res.data.messages);
     } catch (error) {
-      console.error("Error al cargar mensajes:", error);
-      // Mostrar mensaje de error al usuario
-      setMensajes([{
-        sender: 'sistema',
-        content: `Error: ${error.message}`,
-        timestamp: new Date().toISOString()
-      }]);
-      // Si el error es de permisos, deseleccionar la conversación
-      if (error.message.includes('permiso')) {
-        setConversacionActual(null);
-      }
+      setMensajes([{ sender: 'sistema', content: `Error: ${error.message}`, timestamp: new Date().toISOString() }]);
     }
   };
 
@@ -397,7 +389,6 @@ const handleEnviarMensajeEjemplo = async (texto, convIdParam) => {
     <div className="chat-container">
       <div className="sidebar">
         <button onClick={handleNuevaConversacion}>Nueva conversación</button>
-        
         {/* Selector de parcela para contextualizar */}
         <div className="chat-context-selector">
           <label htmlFor="selector-parcela">Contexto de datos:</label>
@@ -430,7 +421,7 @@ const handleEnviarMensajeEjemplo = async (texto, convIdParam) => {
               >
                 <span>{new Date(conv.created_at).toLocaleString()}</span>
                 <button onClick={(e) => {
-                  e.stopPropagation(); // Prevenir que se seleccione la conversación
+                  e.stopPropagation();
                   handleEliminarConversacion(conv.id);
                 }}>Eliminar</button>
               </div>
@@ -445,7 +436,44 @@ const handleEnviarMensajeEjemplo = async (texto, convIdParam) => {
       </div>
       
       <div className="chat-area">
-        {!conversacionActual && mensajes.length === 0 ? (
+        {/* Si hay una conversación seleccionada, muestra los mensajes */}
+        {conversacionActual ? (
+          <>
+            <div className="mensajes">
+              {mensajes.length > 0 ? (
+                mensajes.map((msg, idx) => (
+                  <div key={idx} className={`mensaje ${msg.sender}`}>
+                    <div className="contenido">
+                      {msg.sender === 'assistant'
+                        ? <Markdown options={{ forceBlock: true }}>{msg.content}</Markdown>
+                        : msg.content}
+                    </div>
+                    <div className="timestamp">{new Date(msg.timestamp).toLocaleTimeString()}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="no-mensajes">
+                  <p>No hay mensajes en esta conversación.</p>
+                </div>
+              )}
+              <div ref={mensajesFinRef}></div>
+            </div>
+            <div className="entrada-mensaje">
+              <input
+                type="text"
+                value={mensaje}
+                onChange={(e) => setMensaje(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleEnviarMensaje()}
+                placeholder="Escribe un mensaje..."
+                disabled={cargando}
+              />
+              <button onClick={handleEnviarMensaje} disabled={cargando || !mensaje.trim()}>
+                Enviar
+              </button>
+            </div>
+          </>
+        ) : (
+          // Si no hay conversación seleccionada, muestra bienvenida o ejemplos
           <div className="bienvenida-chat">
             <div className="bienvenida-contenido">
               <img src="/logo-ecosmart.png" alt="EcoSmart Assistant" className="chat-logo" />
@@ -490,68 +518,6 @@ const handleEnviarMensajeEjemplo = async (texto, convIdParam) => {
               </button>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="mensajes">
-              {parcelaSeleccionada && (
-                <div className="contexto-mensaje">
-                  <i className="fas fa-info-circle"></i> 
-                  Estás consultando con datos de la parcela: <strong>{getParcelaNombre(parcelaSeleccionada)}</strong>
-                </div>
-              )}
-              
-              {mensajes.map((msg, idx) => (
-                <div key={idx} className={`mensaje ${msg.sender}`}>
-                  <div className="contenido">
-                    {msg.sender === 'assistant'
-                      ? <Markdown
-                          options={{
-                            forceBlock: true,
-                            overrides: {
-                              h1: { props: { style: { fontSize: '1.2em', margin: '8px 0 4px 0' } } },
-                              h2: { props: { style: { fontSize: '1.1em', margin: '8px 0 4px 0' } } },
-                              h3: { props: { style: { fontSize: '1em', margin: '8px 0 4px 0' } } },
-                              ul: { props: { style: { margin: '2px 0', paddingLeft: '22px', lineHeight: '1.3' } } },
-                              ol: { props: { style: { margin: '2px 0', paddingLeft: '22px', lineHeight: '1.3' } } },
-                              li: { props: { style: { marginBottom: '2px', lineHeight: '1.3' } } },
-                              p: { props: { style: { margin: 0, lineHeight: '1.4' } } }
-                            }
-                          }}
-                        >
-                          {msg.content}
-                        </Markdown>
-                      : msg.content}
-                  </div>
-                  <div className="timestamp">{new Date(msg.timestamp).toLocaleTimeString()}</div>
-                </div>
-              ))}
-              {cargando && (
-                <div className="mensaje cargando">
-                  El asistente está escribiendo
-                  <div className="dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              )}
-              <div ref={mensajesFinRef}></div> {/* Referencia para scroll */}
-            </div>
-            
-            <div className="entrada-mensaje">
-              <input
-                type="text"
-                value={mensaje}
-                onChange={(e) => setMensaje(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleEnviarMensaje()}
-                placeholder={`Escribe un mensaje${parcelaSeleccionada ? ` sobre ${getParcelaNombre(parcelaSeleccionada)}` : ''}...`}
-                disabled={cargando}
-              />
-              <button onClick={handleEnviarMensaje} disabled={cargando || !mensaje.trim()}>
-                Enviar
-              </button>
-            </div>
-          </>
         )}
       </div>
     </div>

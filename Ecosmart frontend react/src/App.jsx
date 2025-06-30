@@ -100,7 +100,7 @@ function App() {
           <div className="app-container">
             <HeaderTecnico />
             <div className="content-container">
-              <AlertasAgricultor userId={getUserId()} tipoUsuario="tecnico" />
+              <AlertasTecnico />
             </div>
           </div>
         } />
@@ -252,7 +252,7 @@ function App() {
   <div className="app-container">
     <HeaderAgronomo />
     <div className="content-container">
-      <AlertasTecnico />
+      <AlertasTecnico/>
     </div>
   </div>
 } />

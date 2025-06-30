@@ -1,23 +1,13 @@
 const API_URL = 'http://localhost:5000/api';
 
 // Obtener todas las conversaciones de un usuario
-// Obtener todas las conversaciones de un usuario
 export const getConversaciones = async (userId) => {
   try {
-    const response = await fetch(`${API_URL}/conversaciones/${userId}`);
-    
-    if (!response.ok) {
-      if (response.status === 500) {
-        console.error('Error 500 en servidor - Retornando lista vacía');
-        return { data: [] }; // Devuelve lista vacía en caso de error 500
-      }
-      throw new Error('Error al obtener conversaciones');
-    }
-    
-    return { data: await response.json() };
+    const res = await fetch(`${API_URL}/conversaciones?user_id=${userId}`);
+    return await res.json();
   } catch (error) {
     console.error('Error en getConversaciones:', error);
-    return { data: [] }; // Devuelve lista vacía en caso de cualquier error
+    throw error;
   }
 };
 

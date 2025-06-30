@@ -127,10 +127,10 @@ const HeaderAgronomo = ({ activeItem }) => {
             aria-label="Ver alertas"
             style={{ position: 'relative' }}
           >
-            <div className="notification-container-agronomo">
+            <div className="notification-container">
               <i className="fas fa-bell"></i>
-              {totalAlertas > 0 && (
-                <span className="notification-counter">{totalAlertas}</span>
+              {alertasActivas > 0 && (
+                <span className="notification-counter">{alertasActivas}</span>
               )}
             </div>
           </button>
