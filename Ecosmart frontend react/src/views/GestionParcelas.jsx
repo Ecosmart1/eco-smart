@@ -229,12 +229,15 @@ const GestionParcelas = ({ API_URL }) => {
                     <span style={{ display: 'inline-block', width: 8 }}></span>
                     {parcela.hectareas || 0} ha
                   </p>
-                  <p>
+                  {parcela.cultivo_actual && (
+                    <p>
                     <FaCalendarAlt /> 
                     <strong>Fecha siembra:</strong>
                     <span style={{ display: 'inline-block', width: 8 }}></span>
                     {parcela.fecha_siembra ? new Date(parcela.fecha_siembra).toLocaleDateString() : 'No especificada'}
                   </p>
+                  )}
+                  
                 </div>
                 <div className="parcela-actions">
                   <Button 

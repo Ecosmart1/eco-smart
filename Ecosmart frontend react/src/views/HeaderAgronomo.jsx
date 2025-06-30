@@ -11,8 +11,10 @@ const HeaderAgronomo = ({ activeItem }) => {
   const [alertas, setAlertas] = useState([]);
   const { alertasActivas, fetchAlertasActivas } = useAlertas();
   const navigate = useNavigate();
-  const menuRef = useRef(null);
-  const alertasRef = useRef(null);
+
+  const menuRef = useRef();
+  const alertasRef = useRef();
+  const { totalAlertas, fetchAlertasActivasTotales } = useAlertas();
 
   useEffect(() => {
     const usuarioGuardado = localStorage.getItem('ecosmart_user');
@@ -127,8 +129,8 @@ const HeaderAgronomo = ({ activeItem }) => {
           >
             <div className="notification-container-agronomo">
               <i className="fas fa-bell"></i>
-              {alertasActivas > 0 && (
-                <span className="notification-counter-agronomo">{alertasActivas}</span>
+              {totalAlertas > 0 && (
+                <span className="notification-counter">{totalAlertas}</span>
               )}
             </div>
           </button>

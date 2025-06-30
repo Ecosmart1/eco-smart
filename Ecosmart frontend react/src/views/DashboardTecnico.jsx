@@ -29,41 +29,40 @@ const DashboardTecnico = () => {
   const [usuariosReales, setUsuariosReales] = useState([]);
   const [parcelasReales, setParcelasReales] = useState([]);
 
-  // Verificar autenticación al cargar
-  // REEMPLAZAR el useEffect completo en DashboardTecnico.jsx:
-
-useEffect(() => {
-  console.log('🔍 DASHBOARD DEBUG: useEffect ejecutado');
-  
-  const usuarioGuardado = localStorage.getItem('ecosmart_user');
-  
-  console.log('🔍 DASHBOARD DEBUG: Usuario en localStorage:', usuarioGuardado ? 'Existe' : 'No existe');
-  
-  if (!usuarioGuardado) {
-    console.log('🔍 DASHBOARD DEBUG: No hay usuario, redirigiendo a login...');
-    navigate('/login');
-    return;
-  }
-  
-  try {
-    const usuarioObj = JSON.parse(usuarioGuardado);
-    console.log('🔍 DASHBOARD DEBUG: Usuario parseado:', usuarioObj);
-    console.log('🔍 DASHBOARD DEBUG: Rol del usuario:', usuarioObj.rol);
+  // Permitir acceso a técnico y agrónomo
+  useEffect(() => {
+    console.log('🔍 DASHBOARD DEBUG: useEffect ejecutado');
     
-    if (usuarioObj.rol !== 'tecnico') {
-      console.log('🔍 DASHBOARD DEBUG: Usuario no es técnico, redirigiendo...');
+    const usuarioGuardado = localStorage.getItem('ecosmart_user');
+    
+    console.log('🔍 DASHBOARD DEBUG: Usuario en localStorage:', usuarioGuardado ? 'Existe' : 'No existe');
+    
+    if (!usuarioGuardado) {
+      console.log('🔍 DASHBOARD DEBUG: No hay usuario, redirigiendo a login...');
       navigate('/login');
       return;
     }
     
-    console.log('🔍 DASHBOARD DEBUG: Usuario técnico válido, cargando dashboard...');
-    setUsuario(usuarioObj);
-    cargarDashboardData();
-  } catch (error) {
-    console.error('🔍 DASHBOARD DEBUG: Error al verificar usuario:', error);
-    navigate('/login');
-  }
-}, [navigate]);
+    try {
+      const usuarioObj = JSON.parse(usuarioGuardado);
+      console.log('🔍 DASHBOARD DEBUG: Usuario parseado:', usuarioObj);
+      console.log('🔍 DASHBOARD DEBUG: Rol del usuario:', usuarioObj.rol);
+      
+      // Permitir técnico o agrónomo
+      if (usuarioObj.rol !== 'tecnico' && usuarioObj.rol !== 'agronomo') {
+        console.log('🔍 DASHBOARD DEBUG: Usuario no es técnico ni agrónomo, redirigiendo...');
+        navigate('/login');
+        return;
+      }
+      
+      console.log('🔍 DASHBOARD DEBUG: Usuario válido, cargando dashboard...');
+      setUsuario(usuarioObj);
+      cargarDashboardData();
+    } catch (error) {
+      console.error('🔍 DASHBOARD DEBUG: Error al verificar usuario:', error);
+      navigate('/login');
+    }
+  }, [navigate]);
 
   // Cargar todos los datos del dashboard
   const cargarDashboardData = async () => {
@@ -279,8 +278,6 @@ useEffect(() => {
     }
   };
 
-// ...existing code...
-
   if (cargando) {
     return (
       <div className="dashboard-loading">
@@ -335,7 +332,11 @@ useEffect(() => {
 
         {/* Tarjetas de estadísticas principales */}
         <div className="stats-grid">
-          <div className="stat-card usuarios">
+          <div
+  className="stat-card usuarios"
+  onClick={() => navigate('/dashboard/tecnico/Usuarios')}
+  style={{ cursor: 'pointer' }}
+>
             <div className="stat-icon">
               <i className="fas fa-users"></i>
             </div>

@@ -104,7 +104,8 @@ useEffect(() => {
   const cargarParcelas = async () => {
     try {
       setCargando(true);
-      
+      const usuario = JSON.parse(localStorage.getItem('ecosmart_user') || '{}');
+
       // CAMBIO: Usar endpoint correcto sin token por ahora
       const response = await fetch(`${API_URL}/parcelas`, {
         headers: {
@@ -451,71 +452,74 @@ useEffect(() => {
 <div className="cultivos-grid">
   {parcelas
     .filter(p => filtroActivo === 'todos' || p.estado === filtroActivo)
-    .map(parcela => (
-      <div key={parcela.id} className={`cultivo-card estado-${parcela.estado}`}>
-        <div className="cultivo-header">
-          <h3>{parcela.cultivo_actual || 'Sin cultivo'}</h3>
-          <span className={`estado-badge ${parcela.estado}`}>
-            {parcela.estado?.replace('-', ' ')?.toUpperCase() || 'SIN CULTIVO'}
-          </span>
-        </div>
-        
-        <div className="cultivo-info">
-          {/* SOLO INFORMACIÓN ESENCIAL */}
-          <div className="info-esencial">
-            <p><strong>Parcela:</strong> {parcela.nombre}</p>
-            <p><strong>Ubicación:</strong> {parcela.ubicacion}</p>
+    .map(parcela =>
+      parcela.cultivo_actual && (
+        <div key={parcela.id} className={`cultivo-card estado-${parcela.estado}`}>
+          <div className="cultivo-header">
+            <h3>{parcela.cultivo_actual || 'Sin cultivo'}</h3>
+            <span className={`estado-badge ${parcela.estado}`}>
+              {parcela.estado?.replace('-', ' ')?.toUpperCase() || 'SIN CULTIVO'}
+            </span>
+          </div>
+          
+          <div className="cultivo-info">
+            {/* SOLO INFORMACIÓN ESENCIAL */}
+            <div className="info-esencial">
+              <p><strong>Parcela:</strong> {parcela.nombre}</p>
+              <p><strong>Ubicación:</strong> {parcela.ubicacion}</p>
+              
+              {/* MOSTRAR SOLO SI HAY CULTIVO */}
+              {parcela.cultivo ? (
+                <>
+                  <p><strong>Variedad:</strong> {parcela.cultivo.variedad || 'No especificada'}</p>
+                  <div className="edad-destacada">
+                    <p><strong>Edad:</strong> 
+                      <span className="valor-edad">
+                        {parcela.cultivo_procesado?.edad_formateada || 'Calculando...'}
+                      </span>
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="sin-cultivo-texto">
+                  <i className="fas fa-info-circle"></i>
+                  Sin cultivo activo
+                </p>
+              )}
+            </div>
             
-            {/* MOSTRAR SOLO SI HAY CULTIVO */}
-            {parcela.cultivo ? (
-              <>
-                <p><strong>Variedad:</strong> {parcela.cultivo.variedad || 'No especificada'}</p>
-                <div className="edad-destacada">
-                  <p><strong>Edad:</strong> 
-                    <span className="valor-edad">
-                      {parcela.cultivo_procesado?.edad_formateada || 'Calculando...'}
-                    </span>
-                  </p>
-                </div>
-              </>
-            ) : (
-              <p className="sin-cultivo-texto">
-                <i className="fas fa-info-circle"></i>
-                Sin cultivo activo
-              </p>
-            )}
+            {/* ÚLTIMA REVISIÓN */}
+            <div className="ultima-revision">
+              <small>
+                <i className="fas fa-clock"></i>
+                Última revisión: {new Date().toLocaleDateString('es-ES')}
+              </small>
+            </div>
           </div>
           
-          {/* ÚLTIMA REVISIÓN */}
-          <div className="ultima-revision">
-            <small>
-              <i className="fas fa-clock"></i>
-              Última revisión: {new Date().toLocaleDateString('es-ES')}
-            </small>
+          <div className="cultivo-acciones">
+            <Link to={`/dashboard/agronomo/cultivos/${parcela.id}`}>
+              <button className="btn-ver-detalle btn-primary">
+                <i className="fas fa-eye"></i>
+                Ver detalles
+              </button>
+            </Link>
+            
+            <label className="btn-analizar">
+              <i className="fas fa-camera"></i>
+              Analizar
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => analizarImagen(e, parcela)} 
+                style={{ display: 'none' }}
+              />
+            </label>
           </div>
         </div>
-        
-        <div className="cultivo-acciones">
-          <Link to={`/dashboard/agronomo/cultivos/${parcela.id}`}>
-            <button className="btn-ver-detalle btn-primary">
-              <i className="fas fa-eye"></i>
-              Ver detalles
-            </button>
-          </Link>
-          
-          <label className="btn-analizar">
-            <i className="fas fa-camera"></i>
-            Analizar
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={(e) => analizarImagen(e, parcela)} 
-              style={{ display: 'none' }}
-            />
-          </label>
-        </div>
-      </div>
-    ))}
+      )
+    )
+  }
 </div>
 
 {/* MENSAJE CUANDO NO HAY PARCELAS */}

@@ -6,6 +6,7 @@ export const useAlertas = () => useContext(AlertasContext);
 
 export const AlertasProvider = ({ children }) => {
   const [alertasActivas, setAlertasActivas] = useState(0);
+  const [totalAlertas, setTotalAlertas] = useState(0);
 
   // Esta función trae la cantidad de alertas activas para un usuario
   const fetchAlertasActivas = useCallback((usuarioId) => {
@@ -25,12 +26,17 @@ export const AlertasProvider = ({ children }) => {
   const fetchAlertasActivasTotales = useCallback(() => {
     fetch('http://localhost:5000/api/alertas')
       .then(res => res.json())
-      .then(data => setAlertasActivas(Array.isArray(data) ? data.length : 0))
-      .catch(() => setAlertasActivas(0));
+      .then(data => setTotalAlertas(Array.isArray(data) ? data.length : 0))
+      .catch(() => setTotalAlertas(0));
   }, []);
 
   return (
-    <AlertasContext.Provider value={{ alertasActivas, fetchAlertasActivas, fetchAlertasActivasTotales }}>
+    <AlertasContext.Provider value={{
+      alertasActivas,
+      fetchAlertasActivas,
+      fetchAlertasActivasTotales,
+      totalAlertas
+    }}>
       {children}
     </AlertasContext.Provider>
   );

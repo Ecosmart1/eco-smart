@@ -23,7 +23,9 @@ const Usuarios = () => {
     // Verificar autenticación
     const usuario = localStorage.getItem('ecosmart_user');
     const token = localStorage.getItem('ecosmart_token');
-    
+    console.log('Token en localStorage:', token ? 'Existe' : 'No existe');
+    console.log(token);
+    console.log('Token en localStorage:', token ? token.substring(0, 30) + '...' : 'No existe');
     if (!usuario || !token) {
       navigate('/login');
       return;

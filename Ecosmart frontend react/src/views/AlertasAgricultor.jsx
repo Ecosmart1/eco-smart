@@ -23,14 +23,14 @@ const AlertasUsuario = () => {
     const usuarioObj = JSON.parse(usuarioGuardado);
     setUsuario(usuarioObj);
 
-    // Traer alertas activas
-    fetch(`http://localhost:5000/api/alertas`)
+    // Traer alertas activas SOLO para este usuario usando el endpoint del contexto
+    fetch(`http://localhost:5000/api/alertas?user_id=${usuarioObj.id}`)
       .then(res => res.json())
       .then(data => setAlertas(Array.isArray(data) ? data : []))
       .catch(() => setAlertas([]));
 
-    // Traer historial de alertas (inactivas)
-    fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+    // Traer historial de alertas (inactivas) SOLO para este usuario
+    fetch(`http://localhost:5000/api/alertas?inactivas=1&user_id=${usuarioObj.id}`)
       .then(res => res.json())
       .then(data => setHistorial(Array.isArray(data) ? data : []))
       .catch(() => setHistorial([]));
@@ -42,11 +42,14 @@ const AlertasUsuario = () => {
       method: 'PUT'
     })
       .then(res => {
-        if (res.ok) {
-          setAlertas(alertas.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(); // Actualiza el número en el header
+        if (res.ok && usuario) {
+          // Vuelve a cargar alertas para mantener sincronía con el contexto
+          fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
+            .then(res => res.json())
+            .then(data => setAlertas(Array.isArray(data) ? data : []));
+          fetchAlertasActivas(usuario.id); // Actualiza el número en el header
           // Opcional: recargar historial
-          fetch(`http://localhost:5000/api/alertas?inactivas=1`)
+          fetch(`http://localhost:5000/api/alertas?inactivas=1&user_id=${usuario.id}`)
             .then(res => res.json())
             .then(data => setHistorial(Array.isArray(data) ? data : []));
         }
@@ -59,10 +62,16 @@ const AlertasUsuario = () => {
       method: 'DELETE'
     })
       .then(res => {
-        if (res.ok) {
-          setAlertas(alertas.filter(a => a.id !== alertaId));
-          setHistorial(historial.filter(a => a.id !== alertaId));
-          fetchAlertasActivas(); // Actualiza el número en el header
+        if (res.ok && usuario) {
+          // Vuelve a cargar alertas para mantener sincronía con el contexto
+          fetch(`http://localhost:5000/api/alertas?user_id=${usuario.id}`)
+            .then(res => res.json())
+            .then(data => setAlertas(Array.isArray(data) ? data : []));
+          fetchAlertasActivas(usuario.id); // Actualiza el número en el header
+          // Opcional: recargar historial
+          fetch(`http://localhost:5000/api/alertas?inactivas=1&user_id=${usuario.id}`)
+            .then(res => res.json())
+            .then(data => setHistorial(Array.isArray(data) ? data : []));
         }
       });
   };
@@ -87,7 +96,7 @@ const AlertasUsuario = () => {
                   <div className="alerta-info-extra">
                     <span><b>Parcela:</b> {alerta.parcela}</span>
                   </div>
-                  <div className="alerta-acciones">
+                  <div className="accionesalertas">
                     <button
                       className="btn-alerta revisar"
                       onClick={() => marcarComoRevisada(alerta.id)}
