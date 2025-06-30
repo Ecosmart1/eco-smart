@@ -114,6 +114,51 @@
     background-color: #f8f9fa;
     color: #218838;
   }
+  .notification-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-container i {
+  font-size: 1.2rem;
+  color: #218838;
+}
+
+.notification-counter {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  border: 2px solid white;
+}
+.header-user-alertas {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.icono-campana {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.icono-campana:hover {
+  background-color: #f8f9fa;
+}
   
   .dropdown-divider {
     height: 1px;
